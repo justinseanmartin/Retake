@@ -3,6 +3,20 @@
 Requests for The Button Heist, collected while building Retake, to share with its author. Each says
 what would help, why, and what we found; the suggestions are only suggestions.
 
+**Where they stand (2026-10-26).** Shared with the maintainer, who answered all but the last in
+0.7.0 and 0.7.1 (released 2026-10-24 and 2026-10-26). Retake now pins the 0.7.1 release; what it
+changes for Retake is in [TODO.md](TODO.md), under Verified.
+
+| Ask | Status |
+| --- | --- |
+| [1. A version that changes when the contract does](#1-a-version-that-changes-when-the-contract-does) | Done: contract hashes between releases (#1479, #1485). |
+| [2. Published Debug device frameworks per release](#2-published-debug-device-frameworks-per-release) | Done: `theinsidejob-<version>.zip` (#1478). |
+| [3. Injection as a supported way to use TheInsideJob](#3-injection-as-a-supported-way-to-use-theinsidejob) | Done: documented and covered by CI (#1478, #1483). |
+| [4. Building The Button Heist's Tuist project on Xcode 27.1](#4-building-the-button-heists-tuist-project-on-xcode-271) | Done (#1481). |
+| [5. A public way to drive an app from Swift](#5-a-public-way-to-drive-an-app-from-swift) | Done: `ButtonHeist.withSession` (#1483). |
+| [6. Two connection details found along the way](#6-two-connection-details-found-along-the-way) | Both fixed (#1480). |
+| [7. Optional: a build stamp in the binary](#7-optional-a-build-stamp-in-the-binary) | Open, and needed less now that (1) is done. |
+
 **Context.** Retake records App Store preview videos by driving an app with The Button Heist on a
 USB-connected device. Rather than asking apps to link TheInsideJob, Retake builds it as one Debug
 framework (through The Button Heist's SwiftPM `TheInsideJob` product, wrapped in a dynamic library
@@ -30,6 +44,10 @@ A version that changes with the contract makes incompatible builds refuse each o
 handshake, for every client, however the app was built: linked from source through SwiftPM, a
 local checkout, a vendored framework, or injected.
 
+**Done** in #1479 and #1485. Builds between releases report the release with a 12-character
+contract hash (`0.7.1-d53fb59edbf3`), CI requires the hash to change with the commands or the wire
+format, and a mismatch is refused at the handshake with `protocolMismatch` before any command runs.
+
 ## 2. Published Debug device frameworks per release
 
 **Ask.** Publish TheInsideJob, built Debug for iOS devices, with each release, next to the CLI and
@@ -49,6 +67,11 @@ self-contained framework (29 MB, unstripped) that links only system libraries, w
 (`unable to find bundle named AccessibilitySnapshotBH_AccessibilitySnapshotModel`), and works with
 them copied inside the framework.
 
+**Done** in #1478. Each release publishes `theinsidejob-<version>.zip`, with its checksum in
+`checksums.txt`: one `TheInsideJob.xcframework` with device and simulator slices, its dependencies
+linked statically, the resource bundles inside, licenses, and `VERSION` and `XCODE_VERSION` files.
+Builds between releases have no published bundle.
+
 ## 3. Injection as a supported way to use TheInsideJob
 
 **Ask.** Treat loading TheInsideJob into an unmodified Debug app with `DYLD_INSERT_LIBRARIES` as a
@@ -59,6 +82,10 @@ environment configuration it relies on, working for an injected copy.
 by accident. Tested on iOS 26.6.2: the injected framework started itself, took the port and token
 from `INSIDEJOB_PORT` and `INSIDEJOB_TOKEN`, and drove the app over the USB tunnel, including
 synthetic touches.
+
+**Done** in #1478 and #1483. `docs/PREBUILT-IOS.md`, "Inject into a development app", documents
+the steps Retake takes, and the integration CI covers an unlinked host, injection at launch, and
+the public Swift client.
 
 ## 4. Building The Button Heist's Tuist project on Xcode 27.1
 
@@ -75,6 +102,8 @@ the command line:
 
 The SwiftPM build (2) hit neither.
 
+**Done** in #1481.
+
 ## 5. A public way to drive an app from Swift
 
 **Ask.** Make the parts of `TheFence` that run commands public, or add a small public client API
@@ -88,6 +117,10 @@ CLI imports. Retake uses that SPI for now, pinned to one commit. A public surfac
 follow releases without depending on tooling SPI. The typed actions in `ThePlans`
 (`HeistActionCommand`, `TapTarget`, `DragTarget`) are already public and worked well.
 
+**Done** in #1483. `ButtonHeist.withSession(_:operation:)` connects once and disconnects on every
+exit path; within it, `run` executes a plan (DSL or `HeistPlan`) and returns its `HeistResult` with
+the device's timing, and `captureInterface()` reads the current screen without discovery scrolling.
+
 ## 6. Two connection details found along the way
 
 - **The USB tunnel counts as a network connection.** With `INSIDEJOB_SCOPE=simulator,usb`, a
@@ -98,6 +131,11 @@ follow releases without depending on tooling SPI. The typed actions in `ThePlans
   takes `[address]:port` as a direct target only for loopback; anything else becomes a discovery
   query and fails with "No devices found". A config file's target with the same address connects.
   A public way to pass a direct target and token would save writing a temporary config file.
+
+**Both fixed** in #1480. The default `simulator,usb` scope now admits the CoreDevice tunnel
+(recognized by its address pair, which the code notes to revisit if CoreDevice's addressing
+changes), and an explicit `host:port` or `[IPv6]:port` works as `deviceFilter`, `--device` or
+`BUTTONHEIST_DEVICE`.
 
 ## 7. Optional: a build stamp in the binary
 
@@ -114,3 +152,7 @@ adds is the exact commit, for a tool's records, when nothing else says it: an ap
 else's script, or linking The Button Heist from a local checkout or a vendored framework. For an
 app that pins it as a Swift package, the commit in `Package.resolved` is enough. Today the
 framework's `Info.plist` has a generic `1.0` (`1`), and a static link leaves no framework at all.
+
+**Open.** The release bundle's `VERSION` file names the version, but nothing in the framework
+itself does. With (1) done, the version the handshake reports is precise enough for Retake's
+compatibility check, so this matters only for records of builds made outside a release.

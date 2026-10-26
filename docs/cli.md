@@ -154,7 +154,7 @@ no project and no device.
 1. Adds the TheInsideJob framework Retake is built against to the app's `Frameworks/`.
 2. Adds Retake's support library to `Frameworks/`.
 3. Adds a `Retake` dictionary to the app's `Info.plist`, recording the Retake version that embedded
-   it, its support library's contract version, and the Button Heist commit it embedded.
+   it, its support library's contract version, and the Button Heist version it embedded.
 4. Re-signs everything it added, and the app, with the identity and provisioning profile the app
    was signed with, unless `--identity` and `--profile` say otherwise, keeping the app's
    entitlements.
@@ -182,10 +182,13 @@ embedding every build again, when two things agree:
 - **The support library's contract version**, a number that changes only when what Retake and its
   library expect of each other changes: the environment it reads, how defaults and files are
   delivered, how it reports at launch.
-- **The Button Heist commit** embedded, which must be the one this Retake's client is built from.
+- **The Button Heist version** embedded, which must be the one this Retake's client is built
+  against. Builds between releases carry a hash of The Button Heist's contract in their version,
+  so equal versions mean the same commands and wire format.
 
-`record`, `rehearse`, `inspect` and `doctor` check both at launch, from what the support library
-reports, and stop (3) when either differs, saying to embed the app again. An upgrade of Retake
+`record`, `rehearse`, `inspect` and `doctor` check both at launch: the contract version from what
+the support library reports, and The Button Heist's version at its own handshake, which refuses a
+mismatch before any command runs. They stop (3) when either differs, saying to embed the app again. An upgrade of Retake
 that changes neither works with apps already on devices.
 
 A build script that installs the app itself, on several devices:
@@ -299,7 +302,7 @@ For each scene, in order:
    the app's code runs, Retake's support library builds the take's data from the set's `state`
    (`clean` or `live`; see the README) and deletes earlier takes' copies.
    If the support library doesn't report in, or reports an
-   [incompatible](#compatibility-with-an-embedded-app) contract or Button Heist commit, the scene
+   [incompatible](#compatibility-with-an-embedded-app) contract or Button Heist version, the scene
    fails (3) before its first step, saying to `retake embed` or `retake install` the app again.
 3. Plays the setup steps, then records the lead-in, the steps with their holds, and the tail.
    After each step, and when each `waitFor` is satisfied, records the elements on screen in the
@@ -462,9 +465,9 @@ version of Retake.
 retake version [--json]
 ```
 
-Prints Retake's version and the version and commit of The Button Heist it's built against. For a
-Retake built from a local clone of The Button Heist (`RETAKE_BUTTONHEIST_PATH`), it also prints
-the clone's path, and the commit ends in `-dirty` when the clone had uncommitted changes.
+Prints Retake's version and the version of The Button Heist it's built against. For a Retake built
+from a local clone of The Button Heist (`RETAKE_BUTTONHEIST_PATH`), it also prints the clone's path
+and commit, which ends in `-dirty` when the clone had uncommitted changes.
 
 ## Schemas
 
@@ -528,14 +531,15 @@ Nothing personal is written: not the device's name, nor its UDID.
 | `retake.app.bundle-id` | The app's bundle ID. |
 | `retake.app.version` | The app's `CFBundleShortVersionString`, such as `1.9.0`. |
 | `retake.app.build` | The app's `CFBundleVersion`, such as `412`. |
-| `retake.buttonheist.version` | The Button Heist version the app reported, such as `0.6.38`. |
-| `retake.buttonheist.commit` | The full commit of The Button Heist that drove the app: the one embedded in it, which is the one Retake is built against, ending in `-dirty` for a Retake built from a local clone with uncommitted changes. |
+| `retake.buttonheist.version` | The Button Heist version that drove the app, such as `0.7.1`: the one embedded in it, which is the one Retake is built against. A build between releases ends in its contract hash, such as `0.7.1-d53fb59edbf3`. |
+| `retake.buttonheist.commit` | Only for a Retake built from a local clone of The Button Heist: the clone's full commit, ending in `-dirty` when it had uncommitted changes. |
 | `retake.device.model` | The device's hardware identifier, such as `iPad13,4`. |
 | `retake.device.type` | `iphone` or `ipad`. |
 | `retake.device.os` | The iOS version and build, such as `26.6.2 (23G90)`. |
 
-`retake.buttonheist.version` alone doesn't tell builds of The Button Heist apart between releases,
-which report the last release's version; the commit does.
+`retake.buttonheist.version` tells any two builds of The Button Heist apart that could disagree,
+releases or not, since builds between releases carry their contract hash. The commit is recorded
+only where the version can't say where the build came from: a local clone.
 
 ### A video's fields
 
@@ -546,7 +550,7 @@ which report the last release's version; the commit does.
 | `retake.device.type` | The device type this video was rendered for. |
 | `retake.app.versions` | JSON array: each distinct app version and build among the video's takes, as `{"version", "build"}`. |
 | `retake.devices` | JSON array: each distinct device among the takes, as `{"model", "marketingName", "os"}`. |
-| `retake.buttonheist.versions` | JSON array: each distinct Button Heist among the takes, as `{"version", "commit"}`. |
+| `retake.buttonheist.versions` | JSON array: each distinct Button Heist among the takes, as `{"version"}`, with `"commit"` for a take recorded by a Retake built from a local clone. |
 | `retake.takes` | JSON array: for each take in the video, its scene, take number, and the take's own fields above. |
 
 The three summary fields are always arrays, holding one entry when every take agrees, so a reader
@@ -574,11 +578,11 @@ recorded on a later build than the other:
     { "model": "iPhone18,5", "marketingName": "iPhone 17e", "os": "26.6.2 (23G90)" }
   ],
   "buttonHeistVersions": [
-    { "version": "0.6.38", "commit": "d6257101…" }
+    { "version": "0.7.1" }
   ],
   "takes": [
-    { "scene": "create-note", "take": 3, "retake": "0.1.0", "app": { "version": "1.9.0", "build": "412" }, "device": { "model": "iPhone18,5", "os": "26.6.2 (23G90)" }, "buttonHeist": { "version": "0.6.38", "commit": "d6257101…" } },
-    { "scene": "share-note", "take": 1, "retake": "0.1.0", "app": { "version": "1.9.0", "build": "415" }, "device": { "model": "iPhone18,5", "os": "26.6.2 (23G90)" }, "buttonHeist": { "version": "0.6.38", "commit": "d6257101…" } }
+    { "scene": "create-note", "take": 3, "retake": "0.1.0", "app": { "version": "1.9.0", "build": "412" }, "device": { "model": "iPhone18,5", "os": "26.6.2 (23G90)" }, "buttonHeist": { "version": "0.7.1" } },
+    { "scene": "share-note", "take": 1, "retake": "0.1.0", "app": { "version": "1.9.0", "build": "415" }, "device": { "model": "iPhone18,5", "os": "26.6.2 (23G90)" }, "buttonHeist": { "version": "0.7.1" } }
   ]
 }
 ```

@@ -422,7 +422,7 @@ later can be traced to the app and the setup behind it:
 
 - the version of Retake that made it;
 - the app's version and build (`CFBundleShortVersionString` and `CFBundleVersion`);
-- the version of The Button Heist that drove the app, and its commit;
+- the version of The Button Heist that drove the app;
 - the device's model, such as "iPad Pro (11-inch) (3rd generation)" (`iPad13,4`), and its iOS
   version.
 
@@ -461,21 +461,23 @@ which acts on the app through its accessibility interface: steps find elements t
 does, and touches are synthesised inside the app.
 
 > [!IMPORTANT]
-> **Each Retake release is built against exactly one version of The Button Heist, and works only
-> with that version.** The Button Heist has no stable contract yet: its client and in-app server
-> must be the same version, and its commands change between releases. Retake doesn't try to
-> support several versions at once. `retake version` prints the version it's built against.
+> **Each Retake release is built against exactly one release of The Button Heist, and works only
+> with that release.** The Button Heist's client and in-app server must be the same version, and
+> its commands change between releases. Retake doesn't try to support several versions at once.
+> `retake version` prints the version it's built against.
 >
-> Retake always supplies TheInsideJob itself, built from the same commit as its client, so the two
-> always match. An app that links its own is refused by `embed` and `install`. And when an app
-> was embedded by a Retake built against a different commit, `record` stops before the first
-> step and asks for it to be embedded again.
+> Retake always supplies TheInsideJob itself, the framework The Button Heist publishes with that
+> release, so it always matches Retake's client. An app that links its own is refused by `embed`
+> and `install`. And when an app was embedded by a Retake built against a different version,
+> `record` stops before the first step and asks for it to be embedded again.
 >
 > Once The Button Heist reaches a stable contract (a 1.0), Retake will consider supporting a range
 > of versions rather than pinning one.
 
-Retake currently pins The Button Heist's main branch at a fixed commit, rather than a release, to
-pick up changes ahead of the next one. A Retake release always names the exact commit it pins.
+The Button Heist's version is precise: builds between releases report the release they follow
+with a hash of their commands and wire format appended, such as `0.7.1-d53fb59edbf3`, and an app
+and a client whose versions differ refuse each other before any command runs. So the version
+alone says whether an app and a Retake can work together, and it's what Retake checks and records.
 
 ## Project layout
 
@@ -514,20 +516,20 @@ Retake is a Swift package. To work on it you need only Xcode.
 `.xcode-version` names the Xcode that Retake's releases are built with. For working on Retake it's
 the version known to work, not a requirement: nothing checks it locally, and other versions usually
 work too. If a build fails on yours, that's the version to try. Releases are different: the release
-build uses exactly that version, and fails without it, so every released `retake` and the framework
-it installs come from the same toolchain.
+build uses exactly that version, and fails without it. TheInsideJob isn't built by Retake at all;
+it's The Button Heist's own release build, which records its Xcode in the bundle's `XCODE_VERSION`.
 
 ```sh
 swift build
 swift test
-scripts/build-insidejob.sh     # builds the in-app framework Retake installs, from the pinned commit
+scripts/fetch-insidejob.sh     # downloads the TheInsideJob Retake installs, for the pinned release
 ```
 
-`swift build` fetches The Button Heist at the pinned commit, since Retake links its client library
-directly. `scripts/build-insidejob.sh` builds TheInsideJob, with everything it depends on, as a
-single Debug iOS framework, which a locally built `retake` installs into apps. Released builds
-include it. Both consume The Button Heist through its Swift packages, as apps do, so neither needs
-The Button Heist's own development tools.
+`swift build` fetches The Button Heist's packages at the pinned release, since Retake links its
+client library directly. `scripts/fetch-insidejob.sh` downloads the same release's
+`theinsidejob-<version>.zip`, checks it against the release's checksums, and puts its
+`TheInsideJob.xcframework` where a locally built `retake` installs it from. Released builds include
+it. Neither needs The Button Heist's own development tools.
 
 ### Working on Retake and The Button Heist together
 
@@ -536,13 +538,15 @@ For changes that span both, point Retake at a local clone of The Button Heist:
 ```sh
 export RETAKE_BUTTONHEIST_PATH=../TheButtonHeist
 swift build
-scripts/build-insidejob.sh
+scripts/fetch-insidejob.sh
 ```
 
-With `RETAKE_BUTTONHEIST_PATH` set, both builds use that clone instead of the pinned commit. One
+With `RETAKE_BUTTONHEIST_PATH` set, `swift build` uses that clone instead of the pinned release,
+and `scripts/fetch-insidejob.sh` builds TheInsideJob from it rather than downloading it. One
 variable drives both on purpose: Retake's client and the framework it installs must come from the
-same source, or they can disagree while reporting the same version. Rebuild both after changing
-the clone.
+same source. A clone between releases reports a version with its contract hash, so a framework
+built from a different state of the clone is refused at the handshake rather than half working.
+Rebuild both after changing the clone.
 
 A build from a clone says so. `retake version` names the clone's path and commit, ending in
 `-dirty` when it has uncommitted changes, and so does each take's metadata. Release builds refuse
@@ -550,5 +554,6 @@ to run with the variable set.
 
 ## License
 
-Apache License 2.0; see [LICENSE](LICENSE). Retake's releases include TheInsideJob, built from
-The Button Heist (also Apache 2.0) and its dependencies, whose licenses are shipped with it.
+Apache License 2.0; see [LICENSE](LICENSE). Retake's releases include TheInsideJob as The Button
+Heist (also Apache 2.0) publishes it, with its dependencies linked in and their licenses shipped
+with it.

@@ -77,10 +77,49 @@ Xcode 27.1, with a throwaway SwiftUI app that has no reference to The Button Hei
   releases too: `5ab16a57` (#1476) added a required `source` field to the interface snapshot
   element, decoded strictly, so a client from `9e56a7dc` and a server from `d6257101`, both
   reporting `0.6.38`, would pass the handshake and then fail to read the interface. Pinning by
-  commit, and building both sides from it, is what keeps them matched.
+  commit, and building both sides from it, is what keeps them matched. (Since 0.7.1, versions
+  between releases carry a contract hash and the handshake refuses a mismatch; see the 0.7.1 entry
+  below.)
+
+- **Proof of concept 1 again, on The Button Heist 0.7.1's release (2026-10-26).** 0.7.0 and 0.7.1
+  answered most of [ASKS.md](ASKS.md), so Retake moved from a commit on main to the 0.7.1 release:
+  `Package.swift` pins it `exact:`, and `retake version` reads its version from `TheScore`, so the
+  two can't drift. `spikes/client071` reran proof of concept 1 through the public API alone, on the
+  same iPad (iOS 26.6.2) from Xcode 27.1, against the test app with the release's framework
+  injected. Everything held:
+  - **The published framework injects as is.** `theinsidejob-0.7.1.zip` matched its checksum; its
+    `ios-arm64` `TheInsideJob.framework` (28 MB, both AccessibilitySnapshotBH resource bundles
+    inside, linking only system libraries) was copied into `Frameworks/`, signed with the app, and
+    loaded through `DYLD_INSERT_LIBRARIES`. It was built with Xcode 26.6 (its `XCODE_VERSION`),
+    which didn't matter. No build of The Button Heist is needed.
+  - **The default scope admits the USB tunnel.** Launched with no `INSIDEJOB_SCOPE`, the app took
+    the connection over the tunnel; `network` is no longer needed.
+  - **A direct `[address]:port` works as `deviceFilter`**, connecting in 44–72 ms. No config file.
+  - **The public client covers what Retake needs, with no SPI.** In one
+    `ButtonHeist.withSession`, `heist.run { … }` ran: tap by label, `TypeText` into a field found
+    by `.value("Name")`, `dismissKeyboard()`, a drag, a tap then a `WaitFor` on a sheet, and a **tap
+    by point** (at an element's frame centre, from `captureInterface()`), which the first proof of
+    concept never sent. A tap on a missing element came back as a failed `HeistResult`, not a throw.
+    `captureInterface()` took 47–133 ms for the 7-element screen.
+  - **Timing still comes from the device**, and now with clock times. Each step's result has
+    `interactionMs`, `elapsedMs` until the screen settled, and `lastTreeChangeElapsedMs`; a wait's
+    `elapsedMs` (2,261 ms for the sheet shown 1.5 s after the tap). New: each step's evidence holds
+    the interface's absolute timestamps before and after it (seconds since 2001 on the device's
+    clock, `814733660.149781`), which could place steps on the movie's clock better than elapsed
+    times measured from when Retake sent each step.
+  - **A mismatched client is refused before anything runs.** A client from main (`5d05a318`,
+    reporting `0.7.1-d53fb59edbf3`) against the `0.7.1` app threw a `FenceError` with code
+    `protocol.mismatch`, naming both versions. The app's screen was untouched afterwards (`Taps 0`,
+    `Name is empty`), where at `d6257101` a mismatched client's commands all ran.
+  - **A local clone needs `.package(name: "TheButtonHeist", path:)`.** SwiftPM names a path
+    package after its directory, so a clone not called `TheButtonHeist` failed to resolve the
+    products; `Package.swift` and the spike name it explicitly.
+  - Taps took 180–310 ms on the device, typing six letters 520–660 ms, a drag 720–760 ms. A tap
+    that closes a sheet returns before the sheet has gone; a scene needs a `waitFor` after it.
 
 - **Proof of concept 1: The Button Heist's client library drives the app from Retake's own process
-  (2026-10-24).** A small macOS program linked against the `ButtonHeist` and `TheScore` products at
+  (2026-10-24).** At `d6257101`. The SPI, the `network` scope and the config file below are no
+  longer needed as of 0.7.1; see above. A small macOS program linked against the `ButtonHeist` and `TheScore` products at
   `d6257101`, by a SwiftPM path dependency, drove the test app on the iPad with TheInsideJob
   injected from the same commit. Everything Retake needs worked, with no command-line tool:
   - **Connecting** over the USB tunnel took 35–42 ms. `EnvironmentConfig.resolve(...)` and
@@ -258,19 +297,21 @@ Each could still change Retake's shape, so they come before the real code.
       push, iCloud, associated domains): re-signing must keep them, with the app's own profile.
 - [ ] Apps signed with Xcode-managed (automatic) profiles: reuse `embedded.mobileprovision` as is.
 - [ ] Refusing apps that link TheInsideJob already, statically and as a framework: detection by
-      framework and by symbol in the executable and `*.debug.dylib`, with no false positives from
-      the app merely depending on other Button Heist modules.
+      framework (`TheInsideJob.framework`, the release's name, or anything named for it) and by
+      symbol in the executable and `*.debug.dylib`, with no false positives from the app merely
+      depending on other Button Heist modules. An app embedded by Retake has the same framework
+      name, which `embed` replaces when it finds its own `Retake` `Info.plist` dictionary.
 - [ ] `retake embed` in place, then installing with `devicectl` directly: that the app launches
       normally from the home screen with nothing loaded, and records when Retake launches it.
 - [ ] Embedding twice, and embedding over another Retake version's embed: finding and replacing
       what the earlier one added (by the `Retake` `Info.plist` dictionary) and re-signing cleanly.
 - [ ] Adding to `Info.plist` after the build: re-signing seals it again, and nothing else
       (asset catalogs, app extensions' own plists) needs to agree.
-- [ ] The launch check: how the support library reports in, with its contract version and the
-      embedded Button Heist commit, before the first step (a value read through The Button Heist,
-      or a file written to the take's home that `devicectl` copies back), so `record` can fail
-      clearly when the installed app wasn't embedded or was embedded by an incompatible Retake.
-      Embedding the commit into the support library at build time, from the same pin.
+- [ ] The launch check: how the support library reports in, with its contract version, before the
+      first step (a value read through The Button Heist, or a file written to the take's home that
+      `devicectl` copies back), so `record` can fail clearly when the installed app wasn't embedded
+      or was embedded by an incompatible Retake. The Button Heist's own version needs no check of
+      Retake's: its handshake refuses a mismatch (see Verified).
 - [ ] Whether `doctor` can read the installed app's `Info.plist` `Retake` dictionary over
       `devicectl` without launching it, or must launch it.
 - [ ] `install --scheme` against plain projects and workspaces, and `build.command` with a
@@ -284,17 +325,23 @@ Each could still change Retake's shape, so they come before the real code.
       recognize them and fail (3) naming the UDID; and that `-allowProvisioningUpdates` registers
       it when asked.
 
-### Building TheInsideJob
+### Getting TheInsideJob
 
-- [ ] The wrapper depending on The Button Heist by URL at a `revision:`, rather than a local path,
-      as Retake will. The tested commit, `9e56a7dc`, is on the public repository's main.
-- [ ] `RETAKE_BUTTONHEIST_PATH` switching both manifests to `.package(path:)`: what it does to
-      `Package.resolved` when switched on and off (it shouldn't leave a local path committed), and
-      recording the clone's commit and dirty state at build time for `retake version` and take
-      metadata. CI and the release build fail when it's set.
-- [ ] Stripping the framework for release, and whether a stripped Debug build still starts.
-- [ ] The licenses of everything the framework contains (The Button Heist is Apache 2.0;
-      AccessibilitySnapshotBH to check), for the release.
+Retake installs the framework The Button Heist publishes with each release, rather than building
+it (see Verified, 0.7.1).
+
+- [ ] `scripts/fetch-insidejob.sh`: download `theinsidejob-<version>.zip` for the pinned release,
+      check it against `checksums.txt`, and unpack it where `retake` finds it; and how a released
+      `retake` carries it (in the mise tarball's `share/`, or fetched on first use into
+      `~/Library/Caches/retake/`).
+- [ ] With `RETAKE_BUTTONHEIST_PATH`, building the framework from the clone: The Button Heist's
+      `scripts/package-insidejob.sh` (which needs its tooling), or the SwiftPM wrapper from
+      `spikes/insidejob`, whose output is named `RetakeInsideJob.framework` and has to be the same
+      layout as the release's. Recording the clone's commit and dirty state at build time for
+      `retake version` and take metadata. CI and the release build fail when it's set.
+- [ ] Whether to keep the dSYMs the release ships beside the framework, for symbolicating a crash
+      in a take.
+- [x] Licenses: the release bundle ships them (`Licenses/`), for Retake's release to carry.
 
 ### Linking The Button Heist's client
 
@@ -302,15 +349,19 @@ Each could still change Retake's shape, so they come before the real code.
       Verified.
 - [x] An app whose TheInsideJob differs but reports the same version: commands run, replies don't
       decode. See Verified.
-- [ ] Pinning a `revision:` in Package.swift, and moving the pin forward, for tracking main.
-- [ ] Tap by point, `activate`, and long press, which the proof of concept didn't send.
+- [x] Pinning a release in Package.swift (`exact: "0.7.1"`), with no SPI. See Verified.
+- [x] A mismatched app is refused at the handshake, with nothing run. See Verified.
+- [x] Tap by point. See Verified.
+- [ ] `activate` and long press, which neither proof of concept sent.
 - [ ] Recording timing: placing each step's start and end on the movie's clock from the device's
-      own `elapsedMs`, measured from when Retake sent it, rather than from replies that arrive
-      about 100 ms late.
-- [ ] Whether a failed decode drops the connection: after each, the client reconnected before the
-      next command, though the proof of concept asked for no automatic reconnect.
-- [ ] Building Retake with the SPI import in release mode, and whether SwiftPM resolves The Button
-      Heist by URL at a `revision:` for a library product with `@_spi` use.
+      own measurements, rather than from replies that arrive about 100 ms late. Try the absolute
+      interface timestamps each step's evidence now carries, with the device's clock offset from
+      the Mac's measured once per take, against `elapsedMs` from when Retake sent the step.
+- [ ] One `heist.run` per scene step, in one `withSession` per take: whether a session holds for a
+      whole take (CoreDevice tore the tunnel down after idle `devicectl` use before), and the cost
+      of building a plan per step.
+- [ ] Mapping a `protocol.mismatch` failure at connect to `record`'s exit status 3, saying to embed
+      the app again.
 
 ### In-memory defaults
 
