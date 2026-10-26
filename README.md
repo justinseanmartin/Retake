@@ -339,7 +339,7 @@ every device type it names, from that type's takes of the same scenes:
           "text": "Jot it down",
           "y": 0.12,
           "color": "#1F6FEB",
-          "to": { "clip": "sync", "step": "synced" },
+          "to": { "clip": "sync", "step": "synced", "offset": -0.2 },
           "ipad": { "y": 0.08 }
         }
       ]
@@ -435,11 +435,17 @@ which still works, given per device type where layouts differ.
 ### Captions
 
 A clip's `captions` are text over the video, each shown from its `from` to its `to`, which are
-anchors and default to the clip's own, so a caption with neither is up for the whole clip. A
-caption can run on over the clips after it: its `to` anchors in a later clip's take when it names
-that clip by its `id`, as `{ "clip": "sync", "step": "synced" }` does above. Any number can be up
-at once, and they may overlap; where each sits is the edit's to say. An anchor outside what its
-clip plays fails the `cut`, naming the caption.
+anchors and default to the clip's own, so a caption with neither is up for the whole clip. Any
+number can be up at once, and they may overlap; where each sits is the edit's to say.
+
+A caption can run on over the clips after it. Its `to` names a later clip by its `id`, and is then
+an anchor in that clip's take, with everything an anchor takes: a `step`, and an `offset`,
+`fraction` or `edge` from it, as `{ "clip": "sync", "step": "synced", "offset": -0.2 }` does above.
+`{ "clip": "sync" }` alone keeps the caption up to the end of that clip, where its own `to` lands,
+so the caption leaves as the next clip starts to fade in. Only `to` can name another clip: a
+caption that starts in a later clip belongs to that clip.
+
+An anchor outside the part of the take its clip plays fails the `cut`, naming the caption.
 
 `y` places a caption's centre as a share of the video's height, from 0 at the top to 1 at the
 bottom, measured on the video itself, so after any band an `aspect` crops away. Since it's a share
