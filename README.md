@@ -452,7 +452,8 @@ retake record --device ipad create-note
 An alias stands for both of a device's identities, which differ and which Retake needs both of: its
 UDID, for installing and launching, and its screen-capture device, for recording. Without an
 alias, `--device` also takes a UDID or a device's name, and with one device connected it can be left
-out. A project's `retake.json` can name a default alias.
+out. A project's `retake.json` can name a default alias, and `RETAKE_DEVICE` names yours for a
+shell session, over the project's.
 
 ## The Button Heist, and Retake's version pin
 
@@ -489,7 +490,7 @@ sets/*.json          # starting states, and the files they copy
 scenes/iphone/*.json
 scenes/ipad/*.json
 edits/*.json
-output/              # takes and videos; gitignored
+RetakeOutput/        # takes and videos; gitignored, and movable with --output-dir
 ```
 
 ### Schemas

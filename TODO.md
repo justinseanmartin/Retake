@@ -317,7 +317,7 @@ Each could still change Retake's shape, so they come before the real code.
 - [ ] `install --scheme` against plain projects and workspaces, and `build.command` with a
       generated one (Tuist, XcodeGen).
 - [ ] Finding the `.app` from `xcodebuild -showBuildSettings` (`TARGET_BUILD_DIR`,
-      `FULL_PRODUCT_NAME`) with build products under `output/build/`, including schemes that
+      `FULL_PRODUCT_NAME`) with build products under `RetakeOutput/build/`, including schemes that
       build several apps.
 - [ ] A development-signed Release-configuration build: that injection works (dyld honoring
       `DYLD_INSERT_LIBRARIES` depends on the signing, not the configuration).
