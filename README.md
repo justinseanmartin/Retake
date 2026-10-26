@@ -22,7 +22,7 @@ recording by hand, no editing timeline to rebuild, and no guessing which frames 
 - [Quick start](#quick-start)
 - [Your app](#your-app)
 - [Sets: the state a take starts from](#sets-the-state-a-take-starts-from)
-  ([`state`](#state-clean-or-live))
+  ([`state`](#state-clean-cloned-or-live))
 - [Scenes: the walk through the app](#scenes-the-walk-through-the-app)
 - [Takes: footage and a step log](#takes-footage-and-a-step-log)
 - [Edits: the video cut from the takes](#edits-the-video-cut-from-the-takes)
@@ -158,32 +158,48 @@ added to the launch, for your app's own Debug-only flags and for the language an
 builds on another set, so what every set shares is written once. `state` and `aspect` are below,
 and every field is in the [set reference](docs/reference/set.md).
 
-### `state`: clean or live
+### `state`: clean, cloned or live
 
-Each take gets its own copy of the app's data, so it starts the same way every time, and recording
-never changes the data you use the app with. `state` says what that copy starts from.
+A set's `state` says what the app's data starts as for a take, and whether the take's changes are
+kept. In the order to reach for them:
 
-In `clean`, the default, the app's files and defaults start empty, apart from the set's `files` and
-`defaults`, and the copy is thrown away after the take. In `live`, they start as the app's real data
-and defaults, with the set's written into them, and the take's changes are kept as the app's.
+- **`clean`**, the default: the app's files and defaults start empty, apart from the set's `files`
+  and `defaults`. A take depends only on the set, so it's the same on any device and any day, which
+  is what previews need: one edit cuts every device's takes, and recording again reproduces the
+  video.
+- **`cloned`**: the app's files and defaults start as its real ones, with the set's on top, but
+  what the take changes is thrown away. For a set that needs the app's real data, such as an
+  account signed in by hand, without recording ever changing the data you use the app with. A
+  take then depends on the device's data as well as the set, so takes on different devices, or on
+  different days, can differ.
+- **`live`**: the app's real files and defaults, with the set's written into them, and the take's
+  changes are kept as the app's. Only for takes whose changes should persist, such as a sequence of
+  takes that build on each other.
 
-Use `clean` for previews: a take depends only on the set, so it's the same on any device and
-any day. `live` is for the rare set that needs the app's real data
-and its changes to persist, such as a sequence of takes that build on each other.
+`clean` and `cloned` give each take its own copy of the app's data, so recording never changes the
+data you use the app with.
 
 **How it works.** At launch, before any of the app's code runs, Retake's support library builds the
 take's home folder inside the app's container, puts the set's files in it, and points the app at
 it. Every standard folder lookup follows: `NSHomeDirectory()`, `FileManager`'s Documents,
 Application Support and Caches, `URL.documentsDirectory`, `NSTemporaryDirectory()`, and the
-databases and files your code opens there, SQLite included. Each take's copy is
-deleted when the app next launches under Retake.
+databases and files your code opens there, SQLite included. A `cloned` take's copy is a clone of
+the real files (`clonefile`), which takes no time to make and no space until the take writes to it.
+
+Each take's copy is deleted when the app next launches under Retake, and `record` and `rehearse`
+launch it once more at the end of a run to delete the last, so no copy is left on the device.
+`retake clean --on-device` does the same on demand, after a run that was interrupted. Only the app
+itself can delete files in its container, so both launch it in a mode that deletes them and quits
+before any of the app's own code runs.
 
 ### Defaults in memory
 
-In `clean`, Retake replaces `UserDefaults.standard` for the take with an in-memory
+In `clean` and `cloned`, Retake replaces `UserDefaults.standard` for the take with an in-memory
 store. The app reads and writes it as it always does, through `UserDefaults` and `@AppStorage`;
-nothing is written to the app's real defaults, and everything is gone when the app quits. So
-every take starts from exactly the set's values, whatever the last one changed.
+nothing is written to the app's real defaults, and everything is gone when the app quits. In
+`clean`, every take starts from exactly the set's values, whatever the last one changed. In
+`cloned`, a key the set doesn't give, and the take hasn't written or removed, reads through to the
+app's real defaults, so the take sees them without copying them, and can't change them.
 
 It behaves as the real defaults do in the ways an app notices: values the app registers with
 `register(defaults:)` still apply beneath the set's; the typed getters (`bool(forKey:)`,

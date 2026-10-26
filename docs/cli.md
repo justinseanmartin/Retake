@@ -351,7 +351,8 @@ Plays a scene as `record` does, without recording it: launches on the scene's se
 and steps with their holds, and prints each step as it plays. `--from <step>` skips to a step
 (numbered from 1), playing the steps before it without their holds.
 
-Writes nothing. Fails (1) at the first step that doesn't run, naming it.
+Writes nothing, and deletes the take's copy of the app's data from the device at the end, as
+`record` does. Fails (1) at the first step that doesn't run, naming it.
 
 ### `retake record`
 
@@ -377,7 +378,7 @@ For each scene, in order:
 1. Stops the app, and copies the set's files and defaults to the device.
 2. Launches the app with the set's environment and arguments, and the scene's environment. Before
    the app's code runs, Retake's support library builds the take's data from the set's `state`
-   (`clean` or `live`; see the README) and deletes earlier takes' copies.
+   (`clean`, `cloned` or `live`; see the README) and deletes earlier takes' copies.
    If the support library doesn't report in, or reports an
    [incompatible](#compatibility-with-an-embedded-app) contract or Button Heist version, the scene
    fails (3) before its first step, saying to `retake embed` or `retake install` the app again.
@@ -386,6 +387,10 @@ For each scene, in order:
    step log.
 4. Writes `RetakeOutput/takes/<type>/<scene>/<n>.mov` and its step log `<n>.json`, `<n>` being
    one more than the scene's last take.
+
+After the last scene, when any take was `clean` or `cloned`, launches the app once more to delete
+the take's copy of its data and the staged set files from the device, as
+[`clean --on-device`](#retake-clean) does, so none is left behind.
 
 A take whose step fails is kept, marked failed, for its footage to show what went wrong; it can't
 be pinned by an edit. Recording carries on with the next scene unless `--stop-on-failure` is given,
@@ -417,10 +422,17 @@ another take first.
 
 ```
 retake clean [--takes | --videos] [--type <type>] [--yes]
+retake clean --on-device [--device <device>]
 ```
 
 Deletes every take and every rendered video, or with `--takes` or `--videos` only those, of both
 device types unless `--type` names one. Asks first, unless `--yes`.
+
+`--on-device` deletes, instead, what Retake leaves in the app's container on the device: takes'
+copies of the app's data, and staged set files. `record` and `rehearse` do this at the end of a
+run, so it's for one that was interrupted. Only the app can delete files in its container, so this
+launches it in a mode that deletes them and quits before any of the app's own code runs. It never
+touches the app's real data, nor takes or videos on the Mac.
 
 Edits' pins are left as they are, now pointing at takes that don't exist, so `cut` fails until
 they're recorded and conformed again. `retake clean` then `retake record` starts everything
@@ -569,7 +581,7 @@ the version, and `retake schema` prints them.
 | --- | --- |
 | `RetakeOutput/takes/<type>/<scene>/<n>.mov` | A take's footage. |
 | `RetakeOutput/takes/<type>/<scene>/<n>.json` | A take's step log, and what it was recorded with: device, app version and build, set and state, Retake and Button Heist versions. |
-| On the device, in the app's container: `tmp/RetakeSet/`, `tmp/RetakeTakes/` | The set's files, staged for launch, and the take's copy of the app's data, deleted at the next launch. A `live` take writes into the app's real data instead. |
+| On the device, in the app's container: `tmp/RetakeSet/`, `tmp/RetakeTakes/` | The set's files, staged for launch, and the take's copy of the app's data, deleted at the end of the run (or by `clean --on-device`). A `live` take writes into the app's real data instead. |
 | `RetakeOutput/videos/<type>/<video>/` | Rendered videos. |
 | `RetakeOutput/build/` | The app as `install` builds it, and the copy it embeds Retake in. |
 | The `.app` given to `embed` | Changed in place, unless `--output` says otherwise. |
@@ -604,7 +616,7 @@ Nothing personal is written: not the device's name, nor its UDID.
 | `retake.scene` | The scene's name. |
 | `retake.take` | The take's number. |
 | `retake.set` | The set's name. |
-| `retake.state` | The set's `state`: `clean` or `live`. |
+| `retake.state` | The set's `state`: `clean`, `cloned` or `live`. |
 | `retake.app.bundle-id` | The app's bundle ID. |
 | `retake.app.version` | The app's `CFBundleShortVersionString`, such as `1.9.0`. |
 | `retake.app.build` | The app's `CFBundleVersion`, such as `412`. |

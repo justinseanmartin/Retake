@@ -387,24 +387,34 @@ it (see Verified, 0.7.1).
 A take gets its own copy of the app's data, built in the container at launch by the injected
 library and pointed to in place of the real one, so recording never changes the app's real data:
 empty plus the set's files (`clean`), or a clone of the real data with the set's files on top
-(`cloned`). `live` uses the real data, and keeps the take's changes. The README documents `clean`
-(the default) and `live`; `cloned` works for files (tested above) but is dropped from v1, since its
-defaults half is untested and no preview needs it. `state` replaces the earlier `reset` field.
+(`cloned`). `live` uses the real data, and keeps the take's changes. All three are in v0.0.1, in the
+README's order of use: `clean` (the default), then `cloned` when a take needs the app's real data,
+then `live` when its changes should persist. `cloned` works for files (tested above, with a
+synthetic 200 MB file in a sample app, not a real app's data); its defaults half is untested.
+`state` replaces the earlier `reset` field.
 
 - [ ] App group containers: redirecting `containerURL(forSecurityApplicationGroupIdentifier:)` to
       a per-take copy of each group's container, alongside suites in the in-memory defaults. Where
       the copy can live, since a group container is shared with the app's extensions, which aren't
       launched with the injected library.
 - [ ] Core Data, and SQLite opened before the first take's library runs, on the redirected paths.
-- [ ] (If `cloned` returns.) Space: confirm on a nearly full device that a `cloned` take of a large container takes no
+- [ ] Space: confirm on a nearly full device that a `cloned` take of a large container takes no
       real space until written (its speed says it's a clone, but space wasn't measured).
+- [ ] `cloned` on a real app's data, not just the sample app's synthetic file.
 - [ ] Anything that resolves the home directory before the library's constructor runs (another
       injected library's or framework's initializer) keeps the real path. Check the order holds
       with TheInsideJob and the defaults library both injected, and in an app with many frameworks.
 - [ ] `live` mode for defaults: writing the set's `defaults` into the real defaults at launch.
-- [ ] (If `cloned` returns.) `cloned` mode for defaults: copying the app's real defaults into the in-memory store before
-      replacing `UserDefaults.standard`. (A cloned `Library/Preferences` plist does nothing:
-      `cfprefsd` reads the real container's.)
+- [ ] `cloned` mode for defaults, read through rather than copied: the in-memory store holds the
+      set's values and the take's writes, with a marker for each key the take removes, and
+      falls back to the real defaults for every other key (read before
+      `UserDefaults.standard` is replaced, without writing to them). No copy of a large defaults
+      file at launch. Check `dictionaryRepresentation`, KVO and `@AppStorage` see real values
+      through it. (A cloned `Library/Preferences` plist does nothing: `cfprefsd` reads the real
+      container's.)
+- [ ] Cleaning up at the end of a run: a launch in a delete-and-quit mode, before any of the app's
+      code runs, that removes `tmp/RetakeTakes/` and `tmp/RetakeSet/`, for `record`, `rehearse`
+      and `clean --on-device`. How long that launch takes, and that the app never shows.
 - [ ] Where the take's home lives. `tmp/RetakeTakes/` worked; iOS can purge `tmp` while the app
       isn't running, which is harmless between takes but worth knowing.
 
