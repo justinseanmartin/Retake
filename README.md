@@ -323,6 +323,7 @@ every device type it names, from that type's takes of the same scenes:
     "ipad": { "create-note": 2, "share-note": 2 }
   },
   "music": { "file": "audio/theme.m4a", "volume": 0.6, "fadeOut": 1.5 },
+  "touchSound": { "file": "audio/tap.m4a", "volume": 0.5 },
   "background": "#F4F1EA",
   "clips": [
     {
@@ -331,6 +332,8 @@ every device type it names, from that type's takes of the same scenes:
       "from": { "step": "start", "offset": 1.2 },
       "to": { "step": "new-note", "offset": 0.6 },
       "speed": 1.5,
+      "touches": true,
+      "sounds": [{ "file": "audio/pop.m4a", "at": { "step": "new-note" } }],
       "captions": [
         {
           "text": "Jot it down",
@@ -350,6 +353,9 @@ every device type it names, from that type's takes of the same scenes:
       "speed": 1,
       "ipad": { "speed": 1.3 },
       "takeAudio": true,
+      "sounds": [
+        { "file": "audio/chime.m4a", "at": { "step": "synced" }, "volume": 0.8, "duration": 1.2 }
+      ],
       "crossfade": 0.4
     }
   ]
@@ -410,7 +416,7 @@ types rather than pixels.
 - **Blur** an element over a stretch of the take, for anything private it shows.
 - **Pop in stills** from other takes.
 - **Cue sound effects**, which play at normal speed however fast the clip plays, or play the take's
-  own sound.
+  own sound; see [sound](#sound).
 - **Show the device turning**, when a scene turns it; see [turns](#turns).
 
 Spotlights and blurs name an element the way steps do, by its accessibility label, and Retake finds
@@ -458,6 +464,24 @@ the caption appears:
   }
 ]
 ```
+
+### Sound
+
+A video's sound is the edit's music, under the sound of its clips:
+
+- **`music`** plays under the whole video, at its `volume`, fading out over `fadeOut` seconds at
+  the end.
+- **A clip's `sounds`** are effects, each starting at its `at`, an anchor in the clip's take. They
+  play at normal speed however fast the clip plays, so a sound lands on its moment without being
+  sped up. `volume` sets its level, and `duration` cuts it short, fading out, for an effect longer
+  than the moment it's for.
+- **A clip's `takeAudio`** plays the take's own sound, recorded from the device, with the clip, at
+  the speed the clip plays; the edit's `takeAudioVolume` sets its level for every clip that plays
+  it.
+- **The edit's `touchSound`** plays with every touch a clip draws (`touches`), at its `volume`.
+
+Sound files are paths relative to the directory holding the configuration file, as every path in
+an edit is.
 
 ### Turns
 
