@@ -425,6 +425,11 @@ synthetic 200 MB file in a sample app, not a real app's data); its defaults half
 - [ ] The camera permission prompt, if any, for a mise-installed `retake` recording a
       device, and how it's attributed (the terminal, or `retake`).
 - [ ] The clean status bar on iPad, and from `recordsLaunch`.
+- [ ] A take with `recordsLaunch`: that its step log still lines up with the movie when the
+      recording starts before launch, with the launch, the support library's report and the launch
+      check, and The Button Heist's connection all falling between the movie's start and the first
+      step. The step log's times are on the movie's clock, so the launch itself needs a mark there
+      for an edit to cut on (`start` is the movie's first frame, before the app is up).
 - [ ] Takes of one device type on two models with different screen sizes: warn, or refuse.
 
 ### `aspect` and orientation

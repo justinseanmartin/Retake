@@ -323,6 +323,7 @@ every device type it names, from that type's takes of the same scenes:
     "ipad": { "create-note": 2, "share-note": 2 }
   },
   "music": { "file": "audio/theme.m4a", "volume": 0.6, "fadeOut": 1.5 },
+  "background": "#F4F1EA",
   "clips": [
     {
       "intent": "The empty library, then New Note tapped.",
@@ -330,9 +331,18 @@ every device type it names, from that type's takes of the same scenes:
       "from": { "step": "start", "offset": 1.2 },
       "to": { "step": "new-note", "offset": 0.6 },
       "speed": 1.5,
-      "caption": { "text": "Jot it down", "y": 220, "color": "#1F6FEB", "ipad": { "y": 1440 } }
+      "captions": [
+        {
+          "text": "Jot it down",
+          "y": 0.12,
+          "color": "#1F6FEB",
+          "to": { "clip": "sync", "step": "synced" },
+          "ipad": { "y": 0.08 }
+        }
+      ]
     },
     {
+      "id": "sync",
       "intent": "The note syncing, cut just before its badge settles.",
       "take": "create-note",
       "from": { "step": "reorder", "fraction": 0.5 },
@@ -351,8 +361,9 @@ doesn't change any video until you pin the new take with `retake conform`.
 
 ### Anchors: times that follow the app
 
-Every time in an edit — a clip's `from` and `to`, a sound's `at`, a blur's `from` and `to`, a
-still's `at` — is an anchor: a moment in the take, given by a step and where to go from it.
+Every time in an edit — a clip's `from` and `to`, a caption's `from` and `to`, a sound's `at`, a
+blur's `from` and `to`, a still's `at` — is an anchor: a moment in the clip's take, given by a step
+and where to go from it.
 
 An anchor's `step` is a step's `id`, its number from 1, or a negative number counting back from the
 last (`-1` is the last step); `start` and `end` are the take's first and last frames, lead-in and
@@ -394,7 +405,7 @@ types rather than pixels.
 - **Play faster or slower**, to skip waits without cutting them.
 - **Cross-fade** into the clip before, with its sound fading over a longer time if needed.
 - **Draw the take's touches**, from the step log.
-- **Carry a caption**, which can stay up over the clips after it.
+- **Carry captions**, any number, each up between two moments; see [captions](#captions).
 - **Spotlight** an element, dimming the rest, with a pulsing ring around it.
 - **Blur** an element over a stretch of the take, for anything private it shows.
 - **Pop in stills** from other takes.
@@ -415,6 +426,39 @@ The frame used is the element's in the latest snapshot at or before the moment. 
 between snapshots, such as a keyboard sliding up, is better covered by a `rect` in screen points,
 which still works, given per device type where layouts differ.
 
+### Captions
+
+A clip's `captions` are text over the video, each shown from its `from` to its `to`, which are
+anchors and default to the clip's own, so a caption with neither is up for the whole clip. A
+caption can run on over the clips after it: its `to` anchors in a later clip's take when it names
+that clip by its `id`, as `{ "clip": "sync", "step": "synced" }` does above. Any number can be up
+at once, and they may overlap; where each sits is the edit's to say. An anchor outside what its
+clip plays fails the `cut`, naming the caption.
+
+`y` places a caption's centre as a share of the video's height, from 0 at the top to 1 at the
+bottom, measured on the video itself, so after any band an `aspect` crops away. Since it's a share
+rather than pixels, one value suits every size of a device type's video; a per-device value is for
+layouts that differ, where each needs the caption clear of something else.
+
+A caption can show an SF Symbol before its text, and animate it. `rotate` is the one animation so
+far, turning the symbol by `degrees` (clockwise when positive) over `duration` seconds, from when
+the caption appears:
+
+```json
+"captions": [
+  {
+    "text": "Turn for two pages",
+    "y": 0.1,
+    "color": "#6A3DE8",
+    "from": { "step": "turn", "offset": -0.4 },
+    "symbol": {
+      "name": "rotate.right",
+      "animation": { "rotate": { "degrees": 90, "duration": 0.4 } }
+    }
+  }
+]
+```
+
 ### Turns
 
 When a scene turns the device, its take holds both shapes: the recording keeps the shape it
@@ -426,7 +470,8 @@ the app is sideways while the device is landscape, as a camera fixed to the devi
 
 `"turnBlur": { "duration": 0.6 }` blurs each turn, easing in just before it and out after, which
 hides the in-between frames of the rotation and the device's short gap in frames as the screen
-changes shape. Both can be set for the whole edit, or for one clip.
+changes shape. Both can be set for the whole edit, or for one clip. The letterbox bands, and the
+corners a turn uncovers, are the edit's `background` colour, black unless it says otherwise.
 
 The `intent` fields aren't read by the render. They say what each clip is there to show in your
 app's terms, so whoever changes the video later — you, or an agent — knows what each moment is for.
