@@ -5,7 +5,8 @@ what would help, why, and what we found; the suggestions are only suggestions.
 
 **Where they stand (2026-10-26).** Shared with the maintainer, who answered all but the last in
 0.7.0 and 0.7.1 (released 2026-10-24 and 2026-10-26). Retake now pins the 0.7.1 release; what it
-changes for Retake is in [TODO.md](TODO.md), under Verified.
+changes for Retake is in [the proofs of concept](docs/records/2026-10-26-proofs-of-concept.md),
+under "Proof of concept 1 again".
 
 | Ask | Status |
 | --- | --- |
