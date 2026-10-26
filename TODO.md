@@ -4,6 +4,10 @@ Working notes: what's been verified, what's unknown, and what to test before it'
 user-facing; the README and docs/cli.md describe Retake as it will be. Requests for The Button
 Heist are in [ASKS.md](ASKS.md).
 
+Each commit of v0.0.1 closes the items in its area, by checking them or marking them for after
+v0.0.1 (see [the plan](docs/records/2026-10-26-v0.0.1-implementation-plan.md)), so by the release
+every unchecked item is marked *After v0.0.1*.
+
 ## Verified
 
 Tested 2026-10-23 on an iPad Pro 11-inch (3rd generation, iPad13,4) on iOS 26.6.2, from a Mac on
@@ -292,7 +296,7 @@ Each could still change Retake's shape, so they come before the real code.
 
 ### Injection and install
 
-- [ ] On an iPhone, and on the oldest iOS Retake will support.
+- [ ] On an iPhone, and on iOS 17, the oldest Retake supports.
 - [ ] An app with extensions, and with entitlements a wildcard profile can't carry (app groups,
       push, iCloud, associated domains): re-signing must keep them, with the app's own profile.
 - [ ] Apps signed with Xcode-managed (automatic) profiles: reuse `embedded.mobileprovision` as is.
@@ -366,9 +370,9 @@ it (see Verified, 0.7.1).
 ### In-memory defaults
 
 - [ ] Which of KVO and `didChangeNotification` `@AppStorage` relies on, by turning each off.
-- [ ] Suites, `UserDefaults(suiteName:)`, including app groups.
-- [ ] Values JSON can't express — `Data`, `Date` — in a set's `defaults`: a typed encoding, or a
-      plist alongside the set.
+- [ ] *After v0.0.1.* Suites, `UserDefaults(suiteName:)`, including app groups.
+- [ ] *After v0.0.1.* Values JSON can't express — `Data`, `Date` — in a set's `defaults`: a typed
+      encoding, or a plist alongside the set.
 - [ ] Delivering the values by a file copied into the container rather than an environment
       variable, for size and types.
 - [ ] Order: that the library's constructor always runs before anything in the app or its
@@ -378,7 +382,7 @@ it (see Verified, 0.7.1).
 
 ### Sets
 
-- [ ] Copying into app group containers with `devicectl`.
+- [ ] *After v0.0.1.* Copying into app group containers with `devicectl`.
 - [ ] Copying into `Library/Preferences` while `defaults` isn't used: whether `cfprefsd` serves a
       cached copy instead.
 
@@ -393,10 +397,11 @@ then `live` when its changes should persist. `cloned` works for files (tested ab
 synthetic 200 MB file in a sample app, not a real app's data); its defaults half is untested.
 `state` replaces the earlier `reset` field.
 
-- [ ] App group containers: redirecting `containerURL(forSecurityApplicationGroupIdentifier:)` to
-      a per-take copy of each group's container, alongside suites in the in-memory defaults. Where
-      the copy can live, since a group container is shared with the app's extensions, which aren't
-      launched with the injected library.
+- [ ] *After v0.0.1.* App group containers: redirecting
+      `containerURL(forSecurityApplicationGroupIdentifier:)` to a per-take copy of each group's
+      container, alongside suites in the in-memory defaults. Where the copy can live, since a group
+      container is shared with the app's extensions, which aren't launched with the injected
+      library.
 - [ ] Core Data, and SQLite opened before the first take's library runs, on the redirected paths.
 - [ ] Space: confirm on a nearly full device that a `cloned` take of a large container takes no
       real space until written (its speed says it's a clone, but space wasn't measured).
@@ -430,7 +435,9 @@ synthetic 200 MB file in a sample app, not a real app's data); its defaults half
       check, and The Button Heist's connection all falling between the movie's start and the first
       step. The step log's times are on the movie's clock, so the launch itself needs a mark there
       for an edit to cut on (`start` is the movie's first frame, before the app is up).
-- [ ] Takes of one device type on two models with different screen sizes: warn, or refuse.
+- [x] Takes of one device type on two models with different screen sizes: `record` allows it, and
+      `cut` refuses an edit that mixes them, naming the takes on each (README, "One edit for every
+      device type").
 
 ### `aspect` and orientation
 
@@ -446,7 +453,8 @@ synthetic 200 MB file in a sample app, not a real app's data); its defaults half
       the app's window has turned, not The Button Heist's `.screenChanged`.
 - [ ] Turning the right way: which quarter turn each landscape orientation needs in the file, and
       in the edit, so the footage's rotation reads as the device turning.
-- [ ] `aspect` with apps that read `UIScreen.main.bounds`, with UIKit apps, and with multiple windows.
+- [ ] `aspect` with apps that read `UIScreen.main.bounds`, with UIKit apps, and with multiple
+      windows.
 - [ ] Restoring the device's orientation after a take, and what `orientation set` leaves behind
       (the device reported `faceUp` before the test).
 
@@ -455,14 +463,16 @@ synthetic 200 MB file in a sample app, not a real app's data); its defaults half
 It has device commands Retake was going to work around. Each needs trying on a device before the
 README's "things a set can't control" changes:
 
-- [ ] `device simulate statusBar`: an explicit status bar, rather than relying on capture cleaning it.
+- [ ] *After v0.0.1.* `device simulate statusBar`: an explicit status bar, rather than relying on
+      capture cleaning it.
 - [ ] `device orientation set` / `rotate`: see proof of concept 4.
-- [ ] `device settings appearance`: light and dark, as set fields.
-- [ ] `device simulate location`: a location, as a set field.
-- [ ] `device capture screen-record`: whether it records sound, at full frame rate, for long enough,
-      and without the step-clock alignment the CoreMediaIO recorder gives. Likely not a
-      replacement, but worth knowing.
-- [ ] `devicectl` can copy files to and from an app's container but not delete them.
+- [ ] *After v0.0.1.* `device settings appearance`: light and dark, as set fields.
+- [ ] *After v0.0.1.* `device simulate location`: a location, as a set field.
+- [ ] *After v0.0.1.* `device capture screen-record`: whether it records sound, at full frame rate,
+      for long enough, and without the step-clock alignment the CoreMediaIO recorder gives. Likely
+      not a replacement, but worth knowing.
+- [x] `devicectl` can copy files to and from an app's container but not delete them. See Verified,
+      the take state's cleanup; hence the support library's cleanup launch.
 
 ### Editing
 
@@ -476,12 +486,12 @@ README's "things a set can't control" changes:
       detection (such as a sheet's arrival found by luminance).
 - [ ] `conform` turning plain seconds into anchors: picking the latest step at or before each time
       gives readable anchors, or whether the nearest edge (start or end, either side) is better.
-- [ ] Per-device overrides: which fields may be overridden (any clip field, top-level fields), and
-      how an override of a nested object merges (replace or merge).
+- [x] Per-device overrides: any clip or top-level field; an object merges key by key, and a list
+      or a single value replaces (README, "One edit for every device type").
 - [ ] Element snapshots in the step log: the cost of fetching the interface after each step (it
       runs during the step's hold, but could cause hitches in what's recorded), its size per take,
-      and matching a spotlight's or blur's label when several elements share it (an index, or
-      traits, as steps disambiguate).
+      and matching a spotlight's or blur's label when several elements share it, which uses the
+      same choice as a step's target (README), settled with steps' targets in commit 6.
 - [ ] `waitFor`: what The Button Heist offers for waiting on an element (a wait command, or
       polling the interface), and how precisely the step log can time the element's arrival.
 
@@ -514,13 +524,15 @@ README's "things a set can't control" changes:
 - [x] The GitHub repository: `justinseanmartin/Retake`, public, for mise's `github:` backend (and a
       Homebrew tap later).
 - [x] License: Apache 2.0, as The Button Heist is.
-- [ ] Where the schemas are hosted, at a URL naming the version (a GitHub Pages site, or the
-      release's assets, if editors follow their redirects), and the URL's form.
-- [ ] Whether `$schema` is required in a file, or only written by `init` and `conform`.
-- [ ] Add `.xcode-version` (Xcode 27.1, the version tested so far), and have the release workflow
-      select exactly that version and fail without it. Locally it stays advisory.
-- [ ] The metadata keys' namespace. QuickTime convention is reverse DNS (`com.example.retake.*`);
-      the docs use a bare `retake.*` until there's a domain or organization to name.
+- [x] Where the schemas are hosted: GitHub Pages, at
+      `https://justinseanmartin.github.io/Retake/schemas/<version>/<kind>.schema.json`.
+- [x] `$schema` is optional in a file. `init` and `conform` set it to the schema's published URL;
+      no schema file is copied into a project.
+- [x] `.xcode-version` names Xcode 27.1, the version tested so far. The release workflow selecting
+      exactly that version, and failing without it, is part of the release; locally it stays
+      advisory.
+- [x] The metadata keys' namespace: a bare `retake.*`, kept rather than QuickTime's reverse-DNS
+      convention.
 - [ ] Developer ID signing and notarization for the direct download (no Developer ID certificate is
       set up yet).
 - [ ] mise's `github:` backend with the release tarball's layout (`bin/`, `share/`).

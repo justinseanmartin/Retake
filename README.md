@@ -72,8 +72,8 @@ retake doctor
 
 - A Mac with Apple silicon, running macOS 14 or later.
 - Xcode, for `devicectl` and `codesign`. Its version doesn't matter to Retake.
-- A physical iPhone or iPad, connected **by USB**. Devices over Wi-Fi can't be recorded, and a
-  simulator recording stutters where a preview needs to be smooth.
+- A physical iPhone or iPad on iOS 17 or later, connected **by USB**. Devices over Wi-Fi can't be
+  recorded, and a simulator recording stutters where a preview needs to be smooth.
 - A development signing identity and a provisioning profile that covers your app and the device:
   whatever you already use to run Debug builds on it.
 
@@ -152,11 +152,12 @@ its launch environment. A scene names its set, so every take of the scene starts
 ```
 
 `files` are put in the app's data before launch, at the paths the app reads them from, so an app
-that keeps its data in Documents or Application Support starts on a known state with no code at
-all. `defaults` are what `UserDefaults.standard` holds at launch. `environment` and `arguments` are
-added to the launch, for your app's own Debug-only flags and for the language and locale. `extends`
-builds on another set, so what every set shares is written once. `state` and `aspect` are below,
-and every field is in the [set reference](docs/reference/set.md).
+that keeps its data in Documents or Application Support starts on a known state with no code at all.
+`defaults` are what `UserDefaults.standard` holds at launch: strings, numbers, booleans, and lists
+and dictionaries of them, as JSON has; a `Data` or `Date` value can't be given yet. `environment`
+and `arguments` are added to the launch, for your app's own Debug-only flags and for the language
+and locale. `extends` builds on another set, so what every set shares is written once. `state` and
+`aspect` are below, and every field is in the [set reference](docs/reference/set.md).
 
 ### `state`: clean, cloned or live
 
@@ -402,9 +403,16 @@ end, a fraction outside -1 to 1 or with no step on that side — fails the `cut`
 Anything in a clip, or at the top of the edit, can be given again under a device type, such as
 `"ipad": { "speed": 1.3 }`, and applies only to that type's video. That's for what is a choice of
 design rather than of timing: a caption's height clear of each layout, a clip a little faster where
-an animation runs longer. The canvas, frame rate and
-size come from App Store Connect's preview specifications for each type, so an edit names device
-types rather than pixels.
+an animation runs longer. The canvas, frame rate and size come from App Store Connect's preview
+specifications for each type, so an edit names device types rather than pixels.
+
+An override is laid over what it overrides: an object merges key by key, so `"ipad": { "y": 0.08 }`
+in a caption changes only its `y`, while a list or a single value replaces what's there, so an
+override of a clip's `captions` gives that type's video its whole list.
+
+One device type's takes in an edit must come from devices with the same screen, since positions in
+the step log are the screen's points: `cut` refuses an edit whose iPhone takes, say, mix a 6.1-inch
+and a 6.9-inch iPhone, naming the takes on each.
 
 ### What a clip can do
 
@@ -428,9 +436,10 @@ spotlight lands on the same button on every device, with no rectangles to measur
 "blurs": [{ "element": { "label": "Name" }, "from": { "step": "type-name" }, "to": { "step": "end" } }]
 ```
 
-The frame used is the element's in the latest snapshot at or before the moment. Something moving
-between snapshots, such as a keyboard sliding up, is better covered by a `rect` in screen points,
-which still works, given per device type where layouts differ.
+An element is matched as a step's target is, so where several share a label, the same choice picks
+one. The frame used is the element's in the latest snapshot at or before the moment. Something
+moving between snapshots, such as a keyboard sliding up, is better covered by a `rect` in screen
+points, which still works, given per device type where layouts differ.
 
 ### Captions
 
@@ -588,9 +597,12 @@ RetakeOutput/        # takes and videos; gitignored, and movable with --output-d
 
 Every file Retake reads has a [JSON Schema](https://json-schema.org), released with Retake and
 versioned with it: `retake.json`, sets, scenes and edits. Each file names its schema in a
-`"$schema"` key, which `retake init` writes, so editors that read JSON Schema, VS Code among them,
-complete fields as you type, describe them on hover, and mark mistakes. `retake schema` prints the
-schemas, for tools and agents.
+`"$schema"` key: the URL its schema is published at, which names Retake's version, such as
+`https://justinseanmartin.github.io/Retake/schemas/0.0.1/edit.schema.json`. Editors that read JSON
+Schema, VS Code among them, fetch it from there, and complete fields as you type, describe them on
+hover, and mark mistakes; nothing is copied into the project. `retake init` and `retake conform` set
+the key, and it's optional: a file without one is read the same way. `retake schema` prints the
+schemas, for tools and agents, or writes them to a directory for working offline.
 
 Retake reads the files strictly, against the same schemas: a key it doesn't know is an error, not
 ignored, and every error names the file and the field, such as

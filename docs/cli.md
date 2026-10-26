@@ -86,9 +86,10 @@ edits/video1.json: clips[3].from.fraction: 1.4 is outside -1 to 1
 scenes/ipad/create-note.json: steps[2]: unknown key "tapp"
 ```
 
-Each file's `"$schema"` key says which schema it was written against. A file without one is read
-against this Retake's; one naming another version's is read against this Retake's too, with a
-warning when the versions differ, since the schema can't be older or newer than the code reading it.
+Each file's `"$schema"` key says which schema it was written against, and is optional. A file
+without one is read against this Retake's; one naming another version's is read against this
+Retake's too, with a warning when the versions differ, since the schema can't be older or newer than
+the code reading it.
 
 ### Output
 
@@ -156,9 +157,9 @@ each, and exits with the worst status among them.
 retake init [--bundle-id <id>] [--scheme <name>]
 ```
 
-Creates `retake.json` and the folders `sets/`, `scenes/iphone/`, `scenes/ipad/` and `edits/` in
-the current directory, and adds `RetakeOutput/` to `.gitignore`. `retake.json` names its schema in
-`"$schema"`, as every file should, for editors to complete and check it. Asks for the bundle ID and scheme when
+Creates `retake.json` and the folders `sets/`, `scenes/iphone/`, `scenes/ipad/` and `edits/` in the
+current directory, and adds `RetakeOutput/` to `.gitignore`. `retake.json` names its schema's URL in
+`"$schema"`, which editors fetch to complete and check it. Asks for the bundle ID and scheme when
 they aren't given and can't be found in an Xcode project in the directory.
 
 Fails (2) if `retake.json` already exists.
@@ -479,8 +480,9 @@ device or iOS version, or Button Heist, naming the takes on each; the video's
 [metadata](#a-videos-fields) lists all of them.
 
 Fails (1) if a pinned take is missing or failed, an anchor doesn't resolve, an element a
-spotlight or blur names isn't in the take's step log at that moment, or the result is outside App
-Store Connect's limits for a preview, such as its length.
+spotlight or blur names isn't in the take's step log at that moment, one device type's takes come
+from devices with different screens (naming the takes on each), or the result is outside App Store
+Connect's limits for a preview, such as its length.
 
 ### `retake status`
 
@@ -562,7 +564,8 @@ and commit, which ends in `-dirty` when the clone had uncommitted changes.
 
 Each kind of file Retake reads has a [JSON Schema](https://json-schema.org) (draft 2020-12):
 `retake.json`, sets, scenes and edits. They're published with each release, at a URL that names
-the version, and `retake schema` prints them.
+the version, `https://justinseanmartin.github.io/Retake/schemas/<version>/<kind>.schema.json`, and
+`retake schema` prints them.
 
 - **They are generated, not written.** Retake's Swift types for the files are the only source of
   truth: each field's description, type, range and default are written once, on the type, and the
