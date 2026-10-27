@@ -1,0 +1,7 @@
+// Copy to Signing.local.xcconfig, beside this file, and fill in your own.
+
+// Your team's ID, from developer.apple.com, or Xcode's Signing & Capabilities.
+DEVELOPMENT_TEAM = ABCDE12345
+
+// A prefix only you use; the app's bundle ID is this with ".notes" after it.
+BUNDLE_ID_PREFIX = com.yourname.retake
