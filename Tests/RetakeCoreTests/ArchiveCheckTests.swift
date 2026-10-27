@@ -1,0 +1,86 @@
+import Foundation
+import RetakeCore
+import Testing
+
+struct ArchiveCheckTests {
+    let root: URL
+
+    init() throws {
+        root = FileManager.default.temporaryDirectory.appending(path: "RetakeCheck-\(UUID().uuidString)", directoryHint: .isDirectory)
+    }
+
+    /// An app at `path` under the root, with frameworks named `frameworks`, and extensions.
+    @discardableResult
+    func app(_ path: String, frameworks: [String] = [], extensions: [String: [String]] = [:]) throws -> URL {
+        let url = root.appending(path: path, directoryHint: .isDirectory)
+        func make(_ bundle: URL, _ executable: String, _ frameworks: [String]) throws {
+            try FileManager.default.createDirectory(at: bundle.appending(path: "Frameworks"), withIntermediateDirectories: true)
+            let info: [String: Any] = ["CFBundleExecutable": executable, "CFBundleIdentifier": "com.example.\(executable)"]
+            try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0).write(to: bundle.appending(path: "Info.plist"))
+            try Data().write(to: bundle.appending(path: executable))
+            for name in frameworks {
+                let framework = bundle.appending(path: "Frameworks/\(name)")
+                if name.hasSuffix(".framework") {
+                    try FileManager.default.createDirectory(at: framework, withIntermediateDirectories: true)
+                } else {
+                    try Data().write(to: framework)
+                }
+            }
+        }
+        try make(url, "Notes", frameworks)
+        for (name, frameworks) in extensions {
+            try make(url.appending(path: "PlugIns/\(name).appex", directoryHint: .isDirectory), name, frameworks)
+        }
+        return url
+    }
+
+    func check(_ path: String, symbols: @escaping (URL) -> [String] = { _ in [] }) throws -> [String] {
+        try ArchiveCheck.check(root.appending(path: path), symbols: symbols)
+    }
+
+    @Test func aCleanAppArchiveOrIPAHasNothing() throws {
+        try app("Notes.app", frameworks: ["Firebase.framework"])
+        #expect(try check("Notes.app") == [])
+        try app("Notes.xcarchive/Products/Applications/Notes.app", frameworks: ["Firebase.framework"])
+        #expect(try check("Notes.xcarchive") == [])
+    }
+
+    @Test func anEmbeddedAppIsCaughtInAnArchive() throws {
+        try app("Notes.xcarchive/Products/Applications/Notes.app", frameworks: ["TheInsideJob.framework", "RetakeSupport.dylib"])
+        #expect(try check("Notes.xcarchive") == [
+            "Products/Applications/Notes.app/Frameworks/RetakeSupport.dylib",
+            "Products/Applications/Notes.app/Frameworks/TheInsideJob.framework",
+        ])
+    }
+
+    @Test func aStaticLinkIsCaughtByItsSymbols() throws {
+        try app("Notes.app")
+        let found = try check("Notes.app") { $0.lastPathComponent == "Notes" ? ["_$s12TheInsideJob6ServerC"] : [] }
+        #expect(found == ["Notes (TheInsideJob linked into it)"])
+    }
+
+    @Test func anExtensionsFrameworksAreLookedThroughToo() throws {
+        try app("Notes.app", extensions: ["Widget": ["TheInsideJob.framework"]])
+        #expect(try check("Notes.app") == ["PlugIns/Widget.appex/Frameworks/TheInsideJob.framework"])
+    }
+
+    @Test func anIPAIsUnpackedAndLookedThrough() throws {
+        try app("ipa/Payload/Notes.app", frameworks: ["TheInsideJob.framework"])
+        let ipa = root.appending(path: "Notes.ipa")
+        let result = try Subprocess.run("/usr/bin/ditto", ["-c", "-k", root.appending(path: "ipa").path, ipa.path])
+        #expect(result.status == 0)
+        let found = try check("Notes.ipa")
+        #expect(found == ["Payload/Notes.app/Frameworks/TheInsideJob.framework"])
+    }
+
+    @Test func somethingElseIsMisuse() throws {
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try Data().write(to: root.appending(path: "notes.txt"))
+        do {
+            _ = try check("notes.txt")
+            Issue.record("checked a text file")
+        } catch let error as RetakeError {
+            #expect(error.status == .usage)
+        }
+    }
+}

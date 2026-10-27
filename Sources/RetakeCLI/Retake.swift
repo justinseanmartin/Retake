@@ -37,6 +37,8 @@ public struct Retake: AsyncParsableCommand {
     /// docs/cli.md gives it, which differs from ArgumentParser's own for misuse (2, not 64).
     public static func runAndExit(_ arguments: [String]? = nil) async -> Never {
         let outcome = await run(arguments)
+        // What the command printed comes before how it ended, though only standard error is unbuffered.
+        fflush(stdout)
         if !outcome.output.isEmpty {
             FileHandle.standardOutput.write(Data((outcome.output + "\n").utf8))
         }

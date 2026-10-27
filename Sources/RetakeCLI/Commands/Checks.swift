@@ -15,7 +15,15 @@ struct Check: AsyncParsableCommand {
     var path: String
 
     func run() async throws {
-        throw RetakeError.notImplemented("check")
+        let current = URL(filePath: FileManager.default.currentDirectoryPath, directoryHint: .isDirectory)
+        let url = URL(filePath: path, relativeTo: current).standardizedFileURL
+        let found = try ArchiveCheck.check(url)
+        guard !found.isEmpty else {
+            print("Neither TheInsideJob nor Retake's support library is in \(url.lastPathComponent).")
+            return
+        }
+        for place in found { print("\(url.lastPathComponent): \(place)") }
+        throw RetakeError(.failed, "\(url.lastPathComponent) contains TheInsideJob or Retake's support library, which must never ship.")
     }
 }
 
