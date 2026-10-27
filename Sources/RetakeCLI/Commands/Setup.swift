@@ -127,18 +127,169 @@ struct Doctor: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Checks the setup end to end.",
         discussion: """
-            Checks Xcode and its tools, the device, signing, the installed app and its embed, and that \
-            the app launches and answers. Exits 0 when everything passed, otherwise with the status of \
-            the first failure.
+            Checks Xcode and its tools, the device, signing, the installed app, and that the app \
+            launches with Retake and answers. A check that needs one that failed is skipped. Exits 0 \
+            when nothing failed, otherwise with the status of the first failure.
             """,
     )
 
     @OptionGroup var project: ProjectOptions
     @OptionGroup var device: DeviceOptions
+    @OptionGroup var output: OutputOptions
+
+    typealias Check = RetakeCore.Doctor.Check
 
     func run() async throws {
-        _ = try project.locate()
-        throw RetakeError.notImplemented("doctor")
+        let located = try project.locate()
+        var checks: [Check] = []
+        func add(_ check: Check) {
+            checks.append(check)
+            if !output.json { Self.show(check) }
+        }
+
+        add(Self.tools())
+        var target: Device?
+        if checks.last?.outcome == .failed {
+            add(.skipped("device", needing: "Xcode's tools"))
+        } else {
+            do {
+                let found = try DeviceDirectory.current()
+                let chosen = try found.resolve(device.choice(
+                    configuration: located.settings.device.map { ($0, located.configuration) },
+                    connected: found.recordable.map(\.udid),
+                ))
+                add(Self.device(chosen, in: found))
+                if checks.last?.outcome != .failed { target = chosen }
+            } catch {
+                add(.failed("device", error))
+            }
+        }
+
+        let bundleID = Result { () throws(RetakeError) in try Installer.bundleID(for: located) }
+        guard let target else {
+            for name in ["signing", "app", "launch"] { add(.skipped(name, needing: "a device")) }
+            return try finish(checks)
+        }
+        switch bundleID {
+        case .success(let id): add(Self.signing(bundleID: id, device: target))
+        case .failure(let error): add(Check("signing", .warned, "Can't tell which app to check signing for: \(error.message)"))
+        }
+        switch bundleID {
+        case .success(let id):
+            if let installed = Launcher.installedVersion(bundleID: id, on: target) {
+                let version = [installed.version, installed.build.map { "(\($0))" }].compactMap(\.self).joined(separator: " ")
+                add(Check("app", .passed, "\(id)\(version.isEmpty ? "" : " \(version)") is installed on \(target.name)."))
+            } else {
+                add(Check("app", .failed, "\(id) isn't installed on \(target.name); run `retake install`.", status: .environment))
+            }
+        case .failure(let error):
+            add(.failed("app", error))
+        }
+        if checks.last?.outcome == .failed {
+            add(.skipped("launch", needing: "the app installed"))
+        } else {
+            add(await Self.launch(located, on: target))
+        }
+        try finish(checks)
+    }
+
+    func finish(_ checks: [Check]) throws {
+        if output.json {
+            print(JSONWriter.write(.array(checks.map { check in
+                .object(JSONObject([
+                    .init(key: "check", value: .string(check.name)),
+                    .init(key: "outcome", value: .string(check.outcome.rawValue)),
+                    .init(key: "detail", value: .string(check.detail)),
+                ]))
+            })), terminator: "")
+        }
+        let status = RetakeCore.Doctor.status(of: checks)
+        guard status == .done else {
+            let failed = checks.filter { $0.outcome == .failed }.count
+            throw RetakeError(status, "\(failed) check\(failed == 1 ? "" : "s") failed.")
+        }
+    }
+
+    static func show(_ check: Check) {
+        let mark = switch check.outcome {
+        case .passed: "✓"
+        case .warned: "!"
+        case .failed: "✖"
+        case .skipped: "-"
+        }
+        Swift.print("\(mark) \(check.name): \(check.detail)")
+    }
+
+    /// Xcode, `devicectl` and `codesign`.
+    static func tools() -> Check {
+        guard let developer = try? Subprocess.run("/usr/bin/xcode-select", ["-p"]), developer.status == 0 else {
+            return Check("tools", .failed, "Xcode isn't installed, or xcode-select doesn't name it.", status: .environment)
+        }
+        let missing = ["devicectl", "codesign"].filter { tool in
+            (try? Subprocess.run("/usr/bin/xcrun", ["--find", tool]))?.status != 0
+        }
+        let folder = developer.outputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard missing.isEmpty else {
+            return Check("tools", .failed, "\(missing.joined(separator: " and ")) isn't found in \(folder).", status: .environment)
+        }
+        return Check("tools", .passed, "devicectl and codesign, from \(folder).")
+    }
+
+    /// Connected by USB, paired, and its screen offered for capture.
+    static func device(_ device: Device, in directory: DeviceDirectory) -> Check {
+        let described = "\(device.name) (\([device.marketingName ?? device.model, device.osVersion.map { "iOS \($0)" }].compactMap(\.self).joined(separator: ", ")))"
+        guard device.isPaired else {
+            return Check("device", .failed, "\(described) isn't paired with this Mac: unlock it, and trust this Mac.", status: .environment)
+        }
+        let alias = directory.aliases.aliases.first { $0.udid == device.udid }
+        let screens = ScreenCaptureDevices().captureDevices(waitingFor: device.name, timeout: 10)
+        guard screens.contains(where: { $0.uniqueID == alias?.captureID || $0.name == device.name }) else {
+            return Check("device", .failed, "\(described)'s screen isn't offered for recording: is it unlocked?", status: .environment)
+        }
+        return Check("device", .passed, "\(described), connected by USB, paired, its screen offered for recording.")
+    }
+
+    /// A development identity, and a profile that covers the app and the device.
+    static func signing(bundleID: String, device: Device) -> Check {
+        let listed = (try? Subprocess.run("/usr/bin/security", ["find-identity", "-v", "-p", "codesigning"]))?.outputText ?? ""
+        let identities = RetakeCore.Doctor.identities(fromFindIdentity: listed)
+        guard identities.contains(where: \.isDevelopment) else {
+            return Check("signing", .failed, "There's no development signing identity in the keychain; add your account in Xcode.", status: .environment)
+        }
+        let folders = ["Library/Developer/Xcode/UserData/Provisioning Profiles", "Library/MobileDevice/Provisioning Profiles"]
+            .map { FileManager.default.homeDirectoryForCurrentUser.appending(path: $0, directoryHint: .isDirectory) }
+        let profiles = folders.flatMap { folder in
+            ((try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []).filter { $0.hasSuffix(".mobileprovision") }
+                .compactMap { name in (try? Signing.profile(at: folder.appending(path: name))).flatMap(RetakeCore.Doctor.Profile.init) }
+        }
+        let (profile, why) = RetakeCore.Doctor.covering(profiles, bundleID: bundleID, udid: device.udid, identities: identities)
+        guard let profile else {
+            return Check(
+                "signing", .failed,
+                "\(why) Building with `retake install --allow-provisioning-updates` lets Xcode make one.", status: .environment,
+            )
+        }
+        let until = profile.expires.formatted(date: .abbreviated, time: .omitted)
+        let identity = identities.first { $0.isDevelopment && profile.certificates.contains($0.sha1) }
+        return Check("signing", .passed, "\(identity?.name ?? "A development identity"), with \"\(profile.name)\" for \(bundleID), until \(until).")
+    }
+
+    /// The app launched with Retake, its support library reporting in and The Button Heist answering.
+    static func launch(_ project: Project, on device: Device) async -> Check {
+        let started = Date()
+        do {
+            let set = try project.settings.defaultSet.map { name throws(RetakeError) in try AppSession.set(name, in: project, namedBy: "retake.json's defaultSet") }
+                ?? ResolvedSet(name: "(none)")
+            try await AppSession.run("doctor", in: project, set: set, scene: SceneFile(set: set.name, steps: []), on: device, report: { _ in }) { _, _ in }
+            let seconds = String(format: "%.1f", Date().timeIntervalSince(started))
+            return Check(
+                "launch", .passed,
+                "Launched on \(set.name == "(none)" ? "a clean state" : set.name) and cleaned up, in \(seconds) s: Retake's support library "
+                    + "(contract \(SupportLibrary.contractVersion)) and The Button Heist \(RetakeVersion.current.buttonHeist.version) answered.",
+            )
+        } catch {
+            return .failed("launch", error)
+        }
     }
 }
 
