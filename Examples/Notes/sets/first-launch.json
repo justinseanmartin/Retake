@@ -1,0 +1,4 @@
+{
+  "$schema": "https://justinseanmartin.github.io/Retake/schemas/0.0.1/set.schema.json",
+  "arguments": ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+}
