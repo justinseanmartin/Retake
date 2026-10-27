@@ -61,20 +61,18 @@ struct SceneFileTests {
     }
 
     @Test func elementsCanBeNamedEveryWayTogether() {
-        let scene = steps(#"{"tap": {"label": "Delete", "identifier": "row.delete", "occurrence": 2}}, {"type": {"text": "a"}}, {"orientation": "landscape-left"}, {"inspect": {}}, {"inspect": true}"#).scene
+        let scene = steps(#"{"tap": {"label": "Delete", "identifier": "row.delete", "occurrence": 2}}, {"type": {"text": "a"}}, {"orientation": "landscape-left"}"#).scene
         #expect(scene?.steps.map(\.action) == [
             .tapElement(ElementTarget(label: "Delete", identifier: "row.delete", occurrence: 2)),
             .type(text: "a", into: nil),
             .orientation(.landscapeLeft),
-            .inspect,
-            .inspect,
         ])
     }
 
     @Test(arguments: [
         (#"{"tapp": {"label": "a"}}"#, #"scenes/ipad/create-note.json: steps[0]: unknown key "tapp"; did you mean "tap"?"#),
         (#"{"tap": {"label": "a"}, "drag": {"from": {"x": 1, "y": 1}, "to": {"x": 2, "y": 2}}}"#, #"scenes/ipad/create-note.json: steps[0]: does one thing, so "tap" and "drag" can't be given together"#),
-        (#"{"id": "pause"}"#, "scenes/ipad/create-note.json: steps[0]: has nothing to do: give an action (tap, drag, type, activate, orientation, waitFor, inspect) or a hold"),
+        (#"{"id": "pause"}"#, "scenes/ipad/create-note.json: steps[0]: has nothing to do: give an action (tap, drag, type, activate, orientation, waitFor) or a hold"),
         (#"{"tap": {"x": 10, "y": 10, "label": "a"}}"#, #"scenes/ipad/create-note.json: steps[0].tap: taps a point ("x" and "y") or an element, not both"#),
         (#"{"tap": {"x": 10}}"#, #"scenes/ipad/create-note.json: steps[0].tap: is missing "y""#),
         (#"{"tap": {"occurrence": 2}}"#, #"scenes/ipad/create-note.json: steps[0].tap: needs an element to name: its "label", "value" or "identifier""#),
@@ -83,7 +81,7 @@ struct SceneFileTests {
         (#"{"type": {"text": ""}}"#, "scenes/ipad/create-note.json: steps[0].type.text: can't be empty"),
         (#"{"type": {"text": "a", "into": {}}}"#, #"scenes/ipad/create-note.json: steps[0].type.into: needs an element to name: its "label", "value" or "identifier""#),
         (#"{"orientation": "sideways"}"#, #"scenes/ipad/create-note.json: steps[0].orientation: "sideways" isn't one of portrait, portrait-upside-down, landscape-left or landscape-right"#),
-        (#"{"inspect": false}"#, "scenes/ipad/create-note.json: steps[0].inspect: expected true or {}, found true or false"),
+        (#"{"inspect": true}"#, "scenes/ipad/create-note.json: steps[0]: unknown key \"inspect\""),
         (#"{"hold": -1}"#, "scenes/ipad/create-note.json: steps[0].hold: -1 must be at least 0"),
         (#"{"id": "3", "hold": 1}"#, #"scenes/ipad/create-note.json: steps[0].id: "3" looks like a number, which anchors count steps by; give it a name"#),
         (#"{"id": "-1", "hold": 1}"#, #"scenes/ipad/create-note.json: steps[0].id: "-1" looks like a number, which anchors count steps by; give it a name"#),

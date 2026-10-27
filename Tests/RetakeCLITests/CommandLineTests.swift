@@ -18,7 +18,7 @@ struct CommandLineTests {
         ["embed", "build/MyApp.app", "--output", "out/MyApp.app", "--identity", "ABC", "--profile", "p.mobileprovision", "--json"],
         ["install", "--scheme", "MyApp", "--workspace", "MyApp.xcworkspace", "--configuration", "Debug", "--allow-provisioning-updates"],
         ["install", "--app", "build/MyApp.app", "--device", "ipad", "--identity", "ABC", "--profile", "p.mobileprovision"],
-        ["inspect", "--set", "returning-user", "--watch"],
+        ["compose", "create-note", "--set", "returning-user", "--device", "ipad", "--json"],
         ["record", "create-note", "--dry-run", "--from", "3"],
         ["record", "--for", "video1", "--dry-run"],
         ["record"],

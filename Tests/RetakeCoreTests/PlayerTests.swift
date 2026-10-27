@@ -79,6 +79,21 @@ struct PlayerTests {
         #expect(driver.runs == 2, "nothing after the failed step runs")
     }
 
+    @Test func anElementThatMatchesSeveralSaysHowToNameOne() {
+        let message = """
+            element inflation failed [ambiguous]: 2 elements match: label="Delete" (scope: interface) — use ordinal 0–1 to select one
+              label="Delete" [button] (visible)
+              label="Delete" [header] (visible)
+            """
+        #expect(Player.ambiguity(message) == """
+            2 elements match it, so which is meant isn't clear. Name it more closely, with its label, value and identifier together, or give "occurrence" (1 to 2, in the order VoiceOver reads the screen):
+              label="Delete" [button] (visible)
+              label="Delete" [header] (visible)
+            """)
+        #expect(Player.ambiguity("element inflation failed [notFound]: No match for: label=\"Nope\"") == nil)
+        #expect(Player.ambiguity("10+ elements match: label=\"Row\" (scope: interface) — use ordinal 0, 1, 2, ... to select one")?.contains("(from 1,") == true)
+    }
+
     @Test func aWaitThatRunsOutSaysWhatItWaitedFor() async {
         let driver = FakeDriver()
         driver.failingRun = 0

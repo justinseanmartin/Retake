@@ -46,9 +46,8 @@ struct StepPlanTests {
         #expect(typed.target == nil)
     }
 
-    @Test func turnsInspectsAndHoldsAreRetakesOwn() throws {
+    @Test func turnsAndHoldsAreRetakesOwn() throws {
         #expect(try StepPlay.make(for: Step(.orientation(.landscapeLeft))) == .turn(.landscapeLeft))
-        #expect(try StepPlay.make(for: Step(.inspect)) == .inspect)
         #expect(try StepPlay.make(for: Step(nil, hold: 2)) == .pause)
     }
 

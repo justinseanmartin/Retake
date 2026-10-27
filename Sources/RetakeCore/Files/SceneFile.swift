@@ -72,7 +72,6 @@ public struct Step: Equatable, Sendable {
         case activate(ElementTarget)
         case orientation(SceneFile.Orientation)
         case waitFor(ElementTarget, gone: Bool, timeout: Double)
-        case inspect
 
         /// The key a step gives the action under.
         public var key: String {
@@ -83,11 +82,10 @@ public struct Step: Equatable, Sendable {
             case .activate: "activate"
             case .orientation: "orientation"
             case .waitFor: "waitFor"
-            case .inspect: "inspect"
             }
         }
 
-        public static let keys = ["tap", "drag", "type", "activate", "orientation", "waitFor", "inspect"]
+        public static let keys = ["tap", "drag", "type", "activate", "orientation", "waitFor"]
     }
 
     public static let defaultDragDuration = 0.5
@@ -211,14 +209,6 @@ extension SceneFile {
         switch key {
         case "orientation":
             return reader.choice(value, at: path, as: Orientation.self).map(Step.Action.orientation)
-        case "inspect":
-            switch value {
-            case .bool(true): return .inspect
-            case .object(let object) where object.entries.isEmpty: return .inspect
-            default:
-                reader.problem("expected true or {}, found \(value.kind)", at: path)
-                return nil
-            }
         default:
             break
         }

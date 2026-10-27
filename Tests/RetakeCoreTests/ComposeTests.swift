@@ -1,0 +1,174 @@
+import ButtonHeist
+import Foundation
+@testable import RetakeCore
+import Testing
+
+struct ComposeActionTests {
+    func parse(_ line: String) throws(ComposeAction.Problem) -> ComposeAction { try ComposeAction.parse(line) }
+
+    @Test func eachStepActionBecomesTheStepItsOptionsDescribe() throws {
+        #expect(try parse(#"tap --label "New Note" --id new-note --hold 0.8"#) == .step(Step(id: "new-note", .tapElement(ElementTarget(label: "New Note")), hold: 0.8)))
+        #expect(try parse("tap --x 195 --y 410.5") == .step(Step(.tapPoint(Point(x: 195, y: 410.5)))))
+        #expect(try parse("drag --from 120,590 --to 260,500") == .step(Step(.drag(from: Point(x: 120, y: 590), to: Point(x: 260, y: 500), duration: 0.5))))
+        #expect(try parse(#"type --text "Groceries\n" --value Title"#) == .step(Step(.type(text: "Groceries\n", into: ElementTarget(value: "Title")))))
+        #expect(try parse(#"type --text "a \"b\"""#) == .step(Step(.type(text: #"a "b""#, into: nil))))
+        #expect(try parse(#"activate --label Delete --occurrence 2"#) == .step(Step(.activate(ElementTarget(label: "Delete", occurrence: 2)))))
+        #expect(try parse(#"wait --label Done --gone --timeout 4"#) == .step(Step(.waitFor(ElementTarget(label: "Done"), gone: true, timeout: 4))))
+        #expect(try parse("turn --to landscape-left") == .step(Step(.orientation(.landscapeLeft))))
+        #expect(try parse("pause --seconds 2") == .step(Step(nil, hold: 2)))
+    }
+
+    @Test func actionsOnTheSceneAddNoStep() throws {
+        #expect(try parse("inspect") == .inspect)
+        #expect(try parse("hold --seconds 1.5") == .hold(1.5))
+        #expect(try parse("id --name synced") == .id("synced"))
+        #expect(try parse("undo") == .undo && parse("steps") == .steps && parse("quit") == .quit)
+        #expect(try parse("help") == .help(nil) && parse("help wait") == .help("wait"))
+    }
+
+    @Test func whatsMissingIsNamedForATerminalToAskFor() {
+        #expect(throws: ComposeAction.Problem.missing(action: "tap", [.element])) { try parse("tap") }
+        #expect(throws: ComposeAction.Problem.self) { try parse("drag --from 1,2") }
+        do {
+            _ = try parse("type --value Title")
+            Issue.record("type without --text")
+        } catch {
+            #expect(error.message == "type needs --text <text>; `help type` lists its options.")
+        }
+    }
+
+    @Test(arguments: [
+        ("jump", "There's no action \"jump\"; `help` lists them."),
+        ("tap --label", "--label needs <text>."),
+        ("tap --size 3", "tap has no option --size; `help tap` lists its options."),
+        ("tap Share", "\"Share\" isn't an option; give each as --name, such as --label \"Share\"."),
+        ("tap --label a --x 1 --y 2", "tap takes an element or --x and --y, not both."),
+        ("tap --x 1", "tap at a point needs both --x and --y."),
+        ("drag --from 1 --to 2,3", "--from takes a point as <x>,<y>, such as 120,590."),
+        ("wait --label a --timeout 0", "--timeout must be more than 0."),
+        ("tap --label a --hold -1", "--hold can't be less than 0."),
+        ("activate --label a --occurrence 0", "--occurrence counts from 1, not \"0\"."),
+        ("turn --to sideways", "--to is one of portrait, portrait-upside-down, landscape-left, landscape-right."),
+        (#"tap --label "a"#, "A quote isn't closed."),
+        ("tap --label a --label b", "--label is given twice."),
+    ])
+    func mistakesSayWhatsWrong(_ line: String, _ message: String) {
+        #expect(throws: ComposeAction.Problem.wrong(message)) { try parse(line) }
+    }
+
+    @Test func helpSaysWhatsRequiredAndWhatsOptionalWithItsDefault() throws {
+        let drag = try #require(ComposeActionSpec.all.first { $0.name == "drag" }).usage
+        #expect(drag.contains("Required:\n  --from <x>,<y>"))
+        #expect(drag.contains("Optional:\n  --duration <seconds>  how long it takes (0.5 if not given)"))
+        let tap = try #require(ComposeActionSpec.all.first { $0.name == "tap" }).usage
+        #expect(tap.contains("an element (--label, --value or --identifier, one at least), or a point (--x <x> --y <y>)"))
+        #expect(!tap.contains("--x <x>  in screen points"), "x and y are in what's required, not listed again")
+        #expect(ComposeActionSpec.overview.split(separator: "\n").contains { $0.hasPrefix("  inspect ") && $0.hasSuffix("Prints what's on screen. Adds no step.") })
+    }
+}
+
+struct SceneDocumentTests {
+    @Test func aNewSceneNamesItsSetAndSchemaAndWritesAStepALine() {
+        var document = SceneDocument(url: URL(filePath: "/p/scenes/ipad/a.json"), scene: nil, text: nil, newOn: "returning-user")
+        document.steps = [Step(id: "new-note", .tapElement(ElementTarget(label: "New Note")), hold: 0.8), Step(.waitFor(ElementTarget(label: "Synced"), gone: false, timeout: 10))]
+        #expect(document.text == """
+            {
+              "$schema": "\(SchemaReference.current("scene").url)",
+              "set": "returning-user",
+              "steps": [
+                { "tap": { "label": "New Note" }, "hold": 0.8, "id": "new-note" },
+                { "waitFor": { "label": "Synced" } }
+              ]
+            }
+
+            """)
+    }
+
+    @Test func anExistingScenesOtherFieldsAreKept() throws {
+        let text = #"{ "set": "base", "leadIn": 1.5, "steps": [{ "hold": 1 }], "tail": 2 }"#
+        let scene = try #require(SceneFile.read(text, with: JSONReader(file: "a.json")))
+        var document = SceneDocument(url: URL(filePath: "/p/a.json"), scene: scene, text: text, newOn: "ignored")
+        document.steps.append(Step(.orientation(.landscapeLeft)))
+        let written = try JSONParser.parse(document.text)
+        #expect(written[path: "leadIn"] == .number(1.5) && written[path: "tail"] == .number(2) && written[path: "set"] == .string("base"))
+        #expect(written[path: "$schema"] == nil, "only a new file gets one")
+        #expect(SceneFile.read(document.text, with: JSONReader(file: "a.json"))?.steps == [Step(nil, hold: 1), Step(.orientation(.landscapeLeft))])
+    }
+}
+
+/// Lines given one after another, as from a pipe.
+final class ScriptedInput: ComposeInput, @unchecked Sendable {
+    private var lines: [String]
+    let isInteractive: Bool
+    private var answers: [String]
+
+    init(_ lines: [String], answers: [String] = []) {
+        self.lines = lines
+        self.answers = answers
+        isInteractive = !answers.isEmpty
+    }
+
+    func next() async -> String? { lines.isEmpty ? nil : lines.removeFirst() }
+    func ask(_ question: String) async -> String? { answers.isEmpty ? nil : answers.removeFirst() }
+}
+
+/// The replies a session made.
+final class Replies: @unchecked Sendable {
+    var all: [Composer.Reply] = []
+    var failures: [String] { all.compactMap { if case .failed(let message) = $0 { message } else { nil } } }
+}
+
+@ButtonHeistActor
+struct ComposerSessionTests {
+    let url = FileManager.default.temporaryDirectory.appending(path: "retake-compose-\(UUID().uuidString)/a.json")
+
+    func session(_ lines: [String], answers: [String] = [], driver: FakeDriver = FakeDriver(), steps: [Step] = []) async throws -> (Composer.Ending, Composer.State, Replies) {
+        var document = SceneDocument(url: url, scene: nil, text: nil, newOn: "base")
+        document.steps = steps
+        let state = Composer.State(document: document, scene: SceneFile(set: "base", steps: []))
+        let replies = Replies()
+        let ending = try await Composer.session("a", state: state, on: driver, input: ScriptedInput(lines, answers: answers)) { replies.all.append($0) }
+        return (ending, state, replies)
+    }
+
+    @Test func aStepThatRunsIsAddedAndWrittenAndOneThatDoesntIsLeftOut() async throws {
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let driver = FakeDriver()
+        driver.failingRun = 1
+        let (ending, state, replies) = try await session([#"tap --label "New Note""#, #"tap --label Nowhere"#, "hold --seconds 2", "id --name new-note", "quit"], driver: driver)
+        #expect(ending == .quit)
+        #expect(state.document.steps == [Step(id: "new-note", .tapElement(ElementTarget(label: "New Note")), hold: 2)])
+        #expect(replies.failures == [#"step 2 of 2, tap "Nowhere", didn't run: No match for: label="Send""#])
+        let written = try String(contentsOf: url, encoding: .utf8)
+        #expect(written.contains(#"{ "tap": { "label": "New Note" }, "hold": 2, "id": "new-note" }"#))
+    }
+
+    @Test func undoDropsTheLastStepAndEndsTheLaunchForAReplay() async throws {
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let (ending, state, _) = try await session(["undo", "steps"], steps: [Step(nil, hold: 1), Step(.tapElement(ElementTarget(label: "A")))])
+        #expect(ending == .undo && state.document.steps == [Step(nil, hold: 1)])
+    }
+
+    @Test func anIDMustBeOneAStepCanHave() async throws {
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let (_, state, replies) = try await session(["tap --x 1 --y 2 --id start", "tap --x 1 --y 2 --id a", "tap --x 1 --y 2 --id a", "id --name 3"])
+        #expect(state.document.steps.map(\.id) == ["a"])
+        #expect(replies.failures.count == 3)
+    }
+
+    @Test func atATerminalWhatsMissingIsAskedFor() async throws {
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        // No label, then a value, for the element; then the text, with a return in it.
+        let (_, state, replies) = try await session(["type", "quit"], answers: [#"Groceries\n"#])
+        #expect(replies.failures.isEmpty)
+        #expect(state.document.steps == [Step(.type(text: "Groceries\n", into: nil))])
+        let (_, asked, _) = try await session(["tap", "quit"], answers: ["", "Title"])
+        #expect(asked.document.steps == [Step(.tapElement(ElementTarget(value: "Title")))])
+    }
+
+    @Test func fromAPipeWhatsMissingFailsAndNothingIsAsked() async throws {
+        let (_, state, replies) = try await session(["tap"])
+        #expect(state.document.steps.isEmpty)
+        #expect(replies.failures == ["tap needs an element (--label, --value or --identifier); `help tap` lists its options."])
+    }
+}

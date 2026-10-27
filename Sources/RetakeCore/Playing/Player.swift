@@ -23,7 +23,6 @@ public struct Player: Sendable {
     public enum Event: Sendable {
         case started(Played)
         case finished(Played, Timing)
-        case inspected(Played, [ScreenElement])
         /// A scene starting, in a run of several: its name, and the take it'll be, unless it's
         /// only played.
         case scene(String, take: Int?)
@@ -114,7 +113,6 @@ public struct Player: Sendable {
         report(.started(played))
         let sent = Date()
         var evidence = StepEvidence()
-        var inspected: [ScreenElement]?
         do {
             switch try StepPlay.make(for: played.step) {
             case .heist(let plan):
@@ -124,13 +122,13 @@ public struct Player: Sendable {
             case .turn(let target):
                 evidence.elements = try await turn(from: orientation, to: target, on: driver)
                 orientation = target
-            case .inspect:
-                inspected = try await driver.elements()
-                evidence.elements = inspected
             case .pause:
                 break
             }
         } catch {
+            if let ambiguous = Self.ambiguity(error.message) {
+                throw RetakeError(.failed, "\(scene): \(played.name), \(played.step.summary), didn't run: \(ambiguous)")
+            }
             // A wait that ran out says so; The Button Heist's account of it is its predicate's.
             if error.status == .failed, case .waitFor(let element, let gone, let timeout)? = played.step.action {
                 let what = gone ? "\(element) was still on screen" : "\(element) wasn't on screen"
@@ -139,8 +137,20 @@ public struct Player: Sendable {
             throw RetakeError(error.status, "\(scene): \(played.name), \(played.step.summary), didn't run: \(error.message)")
         }
         report(.finished(played, Timing(sent: sent, received: Date(), evidence: evidence)))
-        if let inspected { report(.inspected(played, inspected)) }
         if holding, played.step.hold > 0 { await pause(played.step.hold) }
+    }
+
+    /// The Button Heist's failure for an element that matches several, said in a scene's terms, or
+    /// nil for any other failure. It counts its ordinal from 0, where a step's `occurrence` counts
+    /// from 1, so its own advice would be off by one; its list of the matches is kept.
+    static func ambiguity(_ message: String) -> String? {
+        guard let match = message.firstMatch(of: /(\d+)(\+?) elements match: .*— use ordinal/) else { return nil }
+        let count = String(match.1) + String(match.2)
+        let candidates = message.split(separator: "\n").dropFirst().joined(separator: "\n")
+        let range = match.2.isEmpty ? "1 to \(match.1)" : "from 1"
+        return "\(count) elements match it, so which is meant isn't clear. Name it more closely, with its label, value "
+            + "and identifier together, or give \"occurrence\" (\(range), in the order VoiceOver reads the screen):"
+            + (candidates.isEmpty ? "" : "\n" + candidates)
     }
 
     /// Turns the device and waits for the app to turn with it: for what's on screen to have moved

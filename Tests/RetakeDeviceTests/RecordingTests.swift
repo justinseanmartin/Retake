@@ -46,7 +46,7 @@ extension OnDevice {
             let movie = example.project.output.appending(path: "tests/turns.mov")
             try FileManager.default.createDirectory(at: movie.deletingLastPathComponent(), withIntermediateDirectories: true)
 
-            let set = try Inspection.set("returning-user", in: example.project)
+            let set = try AppSession.set("returning-user", in: example.project, namedBy: "the test")
             nonisolated(unsafe) var summary: TakeWriter.Summary?
             try await AppSession.run("record-test", in: example.project, set: set, scene: SceneFile(steps: []), on: example.device, report: { _ in }) { _, _ throws(RetakeError) in
                 try await recorder.start(writingTo: movie)

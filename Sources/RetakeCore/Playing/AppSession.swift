@@ -1,7 +1,7 @@
 import ButtonHeist
 import Foundation
 
-/// The app launched on a set and driven for one command, `record` or `inspect`, then cleaned up
+/// The app launched on a set and driven for one command, `record` or `compose`, then cleaned up
 /// after: the take's copy of the app's data is deleted from the device at the end, however the
 /// command ended.
 public enum AppSession {

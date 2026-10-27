@@ -14,7 +14,7 @@ public struct Retake: AsyncParsableCommand {
             Devices.self,
             Embed.self,
             Install.self,
-            Inspect.self,
+            Compose.self,
             Record.self,
             Takes.self,
             Discard.self,

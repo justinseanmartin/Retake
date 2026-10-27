@@ -64,7 +64,7 @@ public struct TakeLog: Equatable, Sendable {
         public var number: Int
         public var id: String?
         /// The kind of step: `tap`, `drag`, `type`, `activate`, `orientation`, `waitFor`,
-        /// `inspect`, or `hold` for one that's only a pause.
+        /// or `hold` for one that's only a pause.
         public var action: String
         /// Seconds into the movie: when it began, and when it ended, as the device saw it where it
         /// could, which for a `waitFor` is when its element came or went.
@@ -199,7 +199,8 @@ extension Point {
 }
 
 extension ScreenElement {
-    var json: JSONValue {
+    /// As a step log and `compose --json` give it.
+    public var json: JSONValue {
         TakeLog.object([
             ("label", label.map(JSONValue.string)),
             ("value", value.map(JSONValue.string)),

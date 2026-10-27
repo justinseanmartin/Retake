@@ -10,23 +10,29 @@ public final class LaunchedApp: @unchecked Sendable {
     /// The app's console, for when something goes wrong.
     public let consoleLog: URL
     private let console: Process
+    private let exited: DispatchSemaphore
 
-    init(plan: LaunchPlan, device: Device, report: LaunchReport, tunnelAddress: String, consoleLog: URL, console: Process) {
+    init(plan: LaunchPlan, device: Device, report: LaunchReport, tunnelAddress: String, consoleLog: URL, console: Process, exited: DispatchSemaphore) {
         self.plan = plan
         self.device = device
         self.report = report
         self.tunnelAddress = tunnelAddress
         self.consoleLog = consoleLog
         self.console = console
+        self.exited = exited
     }
+
+    /// How long detaching waits for `devicectl` to end before ending it outright.
+    static let stopTimeout = 5.0
 
     /// The Button Heist's server in the app, as its client takes it: `[address]:port`.
     public var endpoint: String { "[\(tunnelAddress)]:\(plan.port)" }
 
-    /// Detaches from the app's console; the app keeps running until it's launched again.
+    /// Detaches from the app's console; the app keeps running until it's launched again. Waits for
+    /// `devicectl` to end by its termination handler, not `waitUntilExit()`, which was seen to wait
+    /// forever for a process that had already ended; and ends it outright if it doesn't.
     public func stop() {
-        if console.isRunning { console.terminate() }
-        console.waitUntilExit()
+        Launcher.end(console, exited: exited)
     }
 }
 
@@ -51,6 +57,7 @@ public enum Launcher {
 
         let consoleLog = logs.appending(path: "\(plan.take).log")
         let console = Process()
+        let exited = DispatchSemaphore(value: 0)
         do {
             try FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true)
             FileManager.default.createFile(atPath: consoleLog.path, contents: nil)
@@ -60,6 +67,7 @@ public enum Launcher {
             console.standardOutput = handle
             console.standardError = handle
             console.standardInput = FileHandle.nullDevice
+            console.terminationHandler = { _ in exited.signal() }
             try console.run()
         } catch {
             throw RetakeError(.environment, "Couldn't launch the app with devicectl: \(error.localizedDescription)")
@@ -76,7 +84,7 @@ public enum Launcher {
             Thread.sleep(forTimeInterval: 0.5)
         }
         guard let report else {
-            if console.isRunning { console.terminate() }
+            end(console, exited: exited)
             let log = (try? String(contentsOf: consoleLog, encoding: .utf8)) ?? ""
             let detail = log.split(separator: "\n").suffix(6).joined(separator: "\n")
             throw RetakeError(
@@ -88,10 +96,24 @@ public enum Launcher {
         try report.check(take: plan.take)
         let tunnel = (try? Devicectl().devices().first { $0.udid == device.udid }?.tunnelAddress) ?? device.tunnelAddress
         guard let tunnel else {
-            console.terminate()
+            end(console, exited: exited)
             throw RetakeError(.environment, "\(device.name) has no CoreDevice tunnel to reach the app over.")
         }
-        return LaunchedApp(plan: plan, device: device, report: report, tunnelAddress: tunnel, consoleLog: consoleLog, console: console)
+        return LaunchedApp(plan: plan, device: device, report: report, tunnelAddress: tunnel, consoleLog: consoleLog, console: console, exited: exited)
+    }
+
+    /// Ends the attached `devicectl`: asks it to, waits for its termination handler to say it has,
+    /// and ends it outright after `LaunchedApp.stopTimeout`. Waiting is bounded either way.
+    static func end(_ process: Process, exited: DispatchSemaphore) {
+        guard process.processIdentifier > 0 else { return }
+        if process.isRunning { process.terminate() }
+        if exited.wait(timeout: .now() + LaunchedApp.stopTimeout) == .timedOut {
+            guard process.isRunning else { return }
+            kill(process.processIdentifier, SIGKILL)
+            guard exited.wait(timeout: .now() + 1) == .success else { return }
+        }
+        // Left signalled, so ending it again returns at once.
+        exited.signal()
     }
 
     /// Turns the device with no hand on it; the app follows a moment later.

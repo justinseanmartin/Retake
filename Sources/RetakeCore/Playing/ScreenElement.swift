@@ -1,6 +1,6 @@
 import Foundation
 
-/// An element on screen, as `inspect` prints it and an `orientation` step watches it: what
+/// An element on screen, as `compose` prints it and an `orientation` step watches it: what
 /// VoiceOver knows it by, and where it is, in screen points.
 public struct ScreenElement: Equatable, Sendable {
     public var label: String?

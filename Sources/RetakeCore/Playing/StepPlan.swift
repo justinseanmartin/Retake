@@ -11,8 +11,6 @@ public enum StepPlay: Equatable, Sendable {
     case direct(HeistActionCommand)
     /// Turn the device, then wait for the app to turn with it.
     case turn(SceneFile.Orientation)
-    /// Print what's on screen.
-    case inspect
     /// Nothing but the step's hold.
     case pause
 
@@ -42,8 +40,6 @@ public enum StepPlay: Equatable, Sendable {
                 return .heist(try HeistPlan(body: [.wait(WaitStep(predicate: predicate, timeout: try WaitTimeout(validatingSeconds: timeout)))]))
             case .orientation(let orientation):
                 return .turn(orientation)
-            case .inspect:
-                return .inspect
             }
         } catch let error as RetakeError {
             throw error
@@ -89,8 +85,12 @@ extension Step {
         case .activate(let element): return "activate \(element)"
         case .orientation(let orientation): return "turn to \(orientation.rawValue)"
         case .waitFor(let element, let gone, _): return gone ? "wait for \(element) to go" : "wait for \(element)"
-        case .inspect: return "inspect"
         }
+    }
+
+    /// Its summary with its hold, as `compose` lists steps: `tap "New Note", hold 0.8 s`.
+    public var line: String {
+        action != nil && hold > 0 ? "\(summary), hold \(Self.seconds(hold))" : summary
     }
 
     static func seconds(_ value: Double) -> String {

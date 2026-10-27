@@ -34,27 +34,57 @@ extension OnDevice {
 }
 
 extension OnDevice {
-    @Suite struct InspectingTests {
-        @Test func inspectShowsTheSetsScreen() async throws {
+    @Suite struct ComposingTests {
+        /// A new scene written on the device from a pipe, as an agent would: two steps that run,
+        /// one that doesn't, and an undo that relaunches and replays the rest.
+        @Test func aSceneIsComposedStepByStep() async throws {
             let example = try ExampleOnDevice()
+            let name = "composed-\(UUID().uuidString.prefix(6))"
+            let url = ProjectFiles(project: example.project).sceneURL(name, for: example.device.type!)
+            defer { try? FileManager.default.removeItem(at: url) }
+            let input = Lines([
+                #"tap --label "New Note" --id new-note --hold 0.8"#,
+                #"type --text "Shopping\n" --value "Title""#,
+                #"tap --label "Nowhere""#,
+                #"wait --label "Synced""#,
+                "undo",
+                "quit",
+            ])
             let screens = Screens()
-            let inspection = Inspection(show: { screens.add($0) })
-            let set = try Inspection.set("returning-user", in: example.project)
-            try await Inspection.run(set, in: example.project, on: example.device, watch: false, inspection: inspection, report: { _ in })
-            let labels = try #require(screens.all.first).compactMap(\.label)
-            #expect(screens.all.count == 1)
-            #expect(labels.contains("Weekend plans") && labels.contains("Book club") && labels.contains("New Note"), "the set's notes, not the real ones")
+            try await Composer.run(name, set: "returning-user", in: example.project, on: example.device, input: input) { reply in
+                if case .screen(let elements) = reply { screens.add(elements) }
+                if case .failed(let message) = reply { screens.fail(message) }
+            }
+            let scene = try #require(ProjectFiles(project: example.project).readScene(name, for: example.device.type!, into: ProjectFiles.Report()))
+            #expect(scene.steps.map(\.id) == ["new-note", nil], "the wait undone, the failed tap never added")
+            #expect(screens.failures.count == 1 && screens.failures[0].contains("Nowhere"))
+            #expect(screens.all.count == 2, "after launching, and after replaying")
+            #expect(screens.all.last?.contains { $0.value == "Shopping" } == true, "the replay typed the title again")
         }
     }
 }
 
-/// The screens an inspection showed.
+/// Lines given one after another, as from a pipe.
+final class Lines: ComposeInput, @unchecked Sendable {
+    private var lines: [String]
+    let isInteractive = false
+
+    init(_ lines: [String]) { self.lines = lines }
+
+    func next() async -> String? { lines.isEmpty ? nil : lines.removeFirst() }
+    func ask(_ question: String) async -> String? { nil }
+}
+
+/// The screens a session showed, and what failed.
 final class Screens: @unchecked Sendable {
     private let lock = NSLock()
     private var screens: [[ScreenElement]] = []
+    private var failed: [String] = []
 
     func add(_ screen: [ScreenElement]) { lock.withLock { screens.append(screen) } }
+    func fail(_ message: String) { lock.withLock { failed.append(message) } }
     var all: [[ScreenElement]] { lock.withLock { screens } }
+    var failures: [String] { lock.withLock { failed } }
 }
 
 /// The steps a rehearsal reported finished, in order.

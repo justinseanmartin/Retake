@@ -2,10 +2,10 @@
   "$schema": "https://justinseanmartin.github.io/Retake/schemas/0.0.1/scene.schema.json",
   "set": "returning-user",
   "steps": [
-    { "id": "reorder", "drag": { "from": { "x": 417, "y": 258 }, "to": { "x": 417, "y": 180 }, "duration": 0.8 }, "hold": 1 },
-    { "id": "turn", "orientation": "landscape-left", "hold": 1.5 },
-    { "id": "open", "tap": { "label": "Book club" } },
+    { "drag": { "from": { "x": 417, "y": 258 }, "to": { "x": 417, "y": 180 }, "duration": 0.8 }, "hold": 1, "id": "reorder" },
+    { "orientation": "landscape-left", "hold": 1.5, "id": "turn" },
+    { "tap": { "label": "Book club" }, "id": "open" },
     { "waitFor": { "label": "Share" }, "hold": 1 },
-    { "id": "turn-back", "orientation": "portrait", "hold": 1 }
+    { "orientation": "portrait", "hold": 1, "id": "turn-back" }
   ]
 }

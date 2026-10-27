@@ -2,61 +2,142 @@ import ArgumentParser
 import Foundation
 import RetakeCore
 
-struct Inspect: AsyncParsableCommand {
+struct Compose: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        abstract: "Prints what's on screen.",
+        abstract: "Writes a scene a step at a time, on the device.",
         discussion: """
-            Launches the app on a set and prints each element's label, traits, frame and activation \
-            point, in screen points. With --watch, prints again each time the screen changes, until \
-            stopped with Control-C.
+            Launches the app on the scene's set, replays its steps, prints what's on screen, then \
+            takes actions, one a line: a step's action with its options, such as tap --label "New \
+            Note", which runs at once and is added to the scene when it runs, or one that acts on \
+            the scene, such as inspect, undo or quit. `help` lists them. Reads standard input, so a \
+            script or an agent can drive it; --json answers each line with a line of JSON.
             """,
     )
 
-    @Option(help: ArgumentHelp("The set to launch on (default: retake.json's defaultSet).", valueName: "set"))
+    @Argument(help: ArgumentHelp("The scene to write, new or not.", valueName: "scene"))
+    var scene: String
+
+    @Option(help: ArgumentHelp("For a new scene, the set it starts on (default: retake.json's defaultSet).", valueName: "set"))
     var set: String?
 
     @OptionGroup var device: DeviceOptions
 
-    @Flag(help: "Print again whenever the screen changes, until stopped.")
-    var watch = false
+    @Flag(help: "Answer each line with a line of JSON, for a program to read.")
+    var json = false
 
     @OptionGroup var project: ProjectOptions
 
     func run() async throws {
         let located = try project.locate()
-        let set = try Inspection.set(self.set, in: located)
         let directory = try DeviceDirectory.current()
         let target = try directory.resolve(device.choice(
             configuration: located.settings.device.map { ($0, located.configuration) },
             connected: directory.recordable.map(\.udid),
         ))
-        // Control-C ends watching rather than the process, so the device is still cleaned up.
+        let input = LineInput(prompt: json ? nil : "> ")
+        // Control-C ends composing as `quit` does, so the device is still cleaned up.
         let interruption = Interruption()
-        if watch { interruption.start() }
+        interruption.start { input.finish() }
         defer { interruption.stop() }
-        let started = Date()
-        let shown = Counter()
-        let inspection = Inspection(stopped: { interruption.happened }) { elements in
-            let count = shown.next()
-            if count > 1 { Swift.print("") }
-            let when = count == 1 ? "On screen" : String(format: "Changed, %.1f s in", Date().timeIntervalSince(started))
-            Swift.print("\(when), \(elements.count) element\(elements.count == 1 ? "" : "s"):")
-            for element in elements { Swift.print("  \(element.line)") }
-            if count == 1, watch { Swift.print("Watching for changes; press Control-C to stop.") }
-            // Each screen as it comes, through a pipe too, since watching runs until stopped.
+        let json = json, name = target.name
+        try await Composer.run(scene, set: set, in: located, on: target, input: input, reply: { reply in
+            if json { ComposeOutput.json(reply) } else { ComposeOutput.text(reply) }
             fflush(stdout)
-        }
-        let name = target.name
-        try await Inspection.run(set, in: located, on: target, watch: watch, inspection: inspection) { event in
-            if case .scene = event {
-                return
-            } else if case .launching(let set, let state) = event {
-                Swift.print("Launching the app on \(name), from \(set) (\(state.rawValue)).")
-            } else {
-                Record.show(event, scene: "", device: name, dryRun: true)
+        }, report: { event in
+            switch event {
+            case .launching(let set, let state):
+                if !json { Swift.print("Launching on \(name), from \(set) (\(state.rawValue)).") }
+            case .note(let message): Console.note(message)
+            case .warning(let message): Console.warn(message)
+            default: break
             }
+        })
+    }
+}
+
+/// What `compose` prints for each reply: for people, or as a line of JSON each.
+enum ComposeOutput {
+    static func text(_ reply: Composer.Reply) {
+        switch reply {
+        case .screen(let elements):
+            print("On screen, \(elements.count) element\(elements.count == 1 ? "" : "s"):")
+            for element in elements { print("  \(element.line)") }
+        case .added(let step, let number, let elements):
+            print("✓ step \(number)\(step.id.map { " (\($0))" } ?? ""): \(step.line)")
+            print("On screen, \(elements.count) element\(elements.count == 1 ? "" : "s"):")
+            for element in elements { print("  \(element.line)") }
+        case .changed(let step, let number):
+            print("✓ step \(number)\(step.id.map { " (\($0))" } ?? ""): \(step.line)")
+        case .steps(let steps):
+            if steps.isEmpty { print("No steps yet.") }
+            for (index, step) in steps.enumerated() {
+                print("  \(index + 1)\(step.id.map { " (\($0))" } ?? ""): \(step.line)")
+            }
+        case .help(let text):
+            print(text)
+        case .failed(let message):
+            print("✖ \(message)")
         }
-        if interruption.happened { Swift.print("Stopped.") }
+    }
+
+    static func json(_ reply: Composer.Reply) {
+        var fields: [JSONObject.Entry]
+        switch reply {
+        case .screen(let elements):
+            fields = [.init(key: "ok", value: .bool(true)), .init(key: "screen", value: .array(elements.map(\.json)))]
+        case .added(let step, let number, let elements):
+            fields = [
+                .init(key: "ok", value: .bool(true)), .init(key: "number", value: .number(Double(number))),
+                .init(key: "step", value: step.json), .init(key: "screen", value: .array(elements.map(\.json))),
+            ]
+        case .changed(let step, let number):
+            fields = [.init(key: "ok", value: .bool(true)), .init(key: "number", value: .number(Double(number))), .init(key: "step", value: step.json)]
+        case .steps(let steps):
+            fields = [.init(key: "ok", value: .bool(true)), .init(key: "steps", value: .array(steps.map(\.json)))]
+        case .help(let text):
+            fields = [.init(key: "ok", value: .bool(true)), .init(key: "help", value: .string(text))]
+        case .failed(let message):
+            fields = [.init(key: "ok", value: .bool(false)), .init(key: "error", value: .string(message))]
+        }
+        print(JSONWriter.compact(.object(JSONObject(fields))))
+    }
+}
+
+/// Lines from standard input, read on a thread of their own so waiting for the next doesn't hold
+/// up anything else. At a terminal, each is prompted for, and a missing option can be asked for.
+final class LineInput: ComposeInput, @unchecked Sendable {
+    private let lines: AsyncStream<String>
+    private let continuation: AsyncStream<String>.Continuation
+    private let prompt: String?
+    let isInteractive = isatty(STDIN_FILENO) == 1
+
+    init(prompt: String?) {
+        (lines, continuation) = AsyncStream.makeStream(of: String.self)
+        self.prompt = prompt
+        let continuation = continuation
+        Thread.detachNewThread {
+            while let line = readLine() { continuation.yield(line) }
+            continuation.finish()
+        }
+    }
+
+    func next() async -> String? {
+        if isInteractive, let prompt { show(prompt) }
+        var iterator = lines.makeAsyncIterator()
+        return await iterator.next()
+    }
+
+    func ask(_ question: String) async -> String? {
+        guard isInteractive else { return nil }
+        show(question)
+        var iterator = lines.makeAsyncIterator()
+        return await iterator.next()
+    }
+
+    func finish() { continuation.finish() }
+
+    private func show(_ text: String) {
+        FileHandle.standardOutput.write(Data(text.utf8))
     }
 }
 
@@ -66,10 +147,13 @@ final class Interruption: @unchecked Sendable {
     private var fired = false
     private var source: DispatchSourceSignal?
 
-    func start() {
+    func start(then handler: @escaping @Sendable () -> Void = {}) {
         signal(SIGINT, SIG_IGN)
         let source = DispatchSource.makeSignalSource(signal: SIGINT, queue: .global())
-        source.setEventHandler { [self] in lock.withLock { fired = true } }
+        source.setEventHandler { [self] in
+            lock.withLock { fired = true }
+            handler()
+        }
         source.resume()
         self.source = source
     }
@@ -81,14 +165,6 @@ final class Interruption: @unchecked Sendable {
         source.cancel()
         signal(SIGINT, SIG_DFL)
     }
-}
-
-/// Counts up from 1, from any thread.
-final class Counter: @unchecked Sendable {
-    private let lock = NSLock()
-    private var count = 0
-
-    func next() -> Int { lock.withLock { count += 1; return count } }
 }
 
 struct Record: AsyncParsableCommand {
@@ -187,8 +263,7 @@ struct Record: AsyncParsableCommand {
         }
     }
 
-    /// Each scene as it starts, and each step once it's played, with how long it took, and what an
-    /// `inspect` step saw.
+    /// Each scene as it starts, and each step once it's played, with how long it took.
     @Sendable static func show(_ event: Player.Event, scene: String, device: String, dryRun: Bool) {
         switch event {
         case .scene(let name, let take):
@@ -199,8 +274,6 @@ struct Record: AsyncParsableCommand {
             break
         case .finished(let played, let timing):
             Swift.print("  \(played.name): \(played.step.summary)  \(String(format: "%.2f", timing.seconds)) s")
-        case .inspected(_, let elements):
-            for element in elements { Swift.print("      \(element.line)") }
         case .note(let message):
             Console.note(message)
         case .warning(let message):

@@ -10,7 +10,7 @@ public struct ProjectSettings: Equatable, Sendable {
     public var build: Build?
     /// The device commands use when none is named; see docs/cli.md, "Choosing a device".
     public var device: String?
-    /// The set `inspect` launches on when none is named.
+    /// The set a scene starts on when it names none, and `compose` writes a new scene on.
     public var defaultSet: String?
     /// Where output goes, relative to the configuration file's directory; see docs/cli.md, "The
     /// output directory".

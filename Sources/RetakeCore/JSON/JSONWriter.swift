@@ -46,6 +46,19 @@ public enum JSONWriter {
         }
     }
 
+    /// A value on one line, spaced as Retake's files write a short object:
+    /// `{ "id": "new-note", "tap": { "label": "New Note" } }`.
+    public static func compact(_ value: JSONValue) -> String {
+        switch value {
+        case .array(let values):
+            values.isEmpty ? "[]" : "[" + values.map(compact).joined(separator: ", ") + "]"
+        case .object(let object):
+            object.entries.isEmpty ? "{}" : "{ " + object.entries.map { "\(quote($0.key)): \(compact($0.value))" }.joined(separator: ", ") + " }"
+        default:
+            inline(value)
+        }
+    }
+
     private static func inline(_ value: JSONValue) -> String {
         var text = ""
         write(value, indent: 0, into: &text)
