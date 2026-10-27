@@ -74,6 +74,11 @@ retake doctor
 - A physical iPhone or iPad on iOS 17 or later, connected **by USB**. Devices over Wi-Fi can't be
   recorded, and a simulator recording stutters where a preview needs to be smooth.
 
+> [!NOTE]
+> **The iPhone Duo isn't supported yet.** Its folding screen gives it two sizes of screen, which
+> scenes, aspects and edits don't yet tell apart. Support should be straightforward to add, but
+> needs a physical iPhone Duo to test it on.
+
 You don't need any other tools installed to use Retake.
 
 ## Quick start
@@ -290,6 +295,13 @@ placeholder or what's typed in it, as the field has no label of its own), or its
 `accessibilityIdentifier` the app sets), any of them together. When several elements match, the step
 fails, listing them, and saying to name the one meant more closely, by its value or identifier as
 well, or with `occurrence`, which picks one, counted from 1 in the order VoiceOver reads the screen.
+
+**Name elements rather than points wherever you can.** A step that names an element finds it
+wherever the layout puts it, on every device, and after the app's layout changes, where a point
+belongs to one screen's layout. And an element a step can name is one VoiceOver can reach, so
+writing scenes this way checks your app's accessibility as you go: a button a step can't name is one
+a VoiceOver user can't find either, and is worth an accessibility label. Points are for what has no
+element of its own, such as a spot on a canvas or a game board.
 
 A tap or a drag that lands while something is still moving, such as a sheet rising, can miss what it
 was aimed at, so a step that follows one that presents or dismisses something should wait for it: a
