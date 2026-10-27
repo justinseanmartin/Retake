@@ -1,0 +1,847 @@
+{
+  "info": {
+    "jsonVersion": 5,
+    "outcome": "success"
+  },
+  "result": {
+    "devices": [
+      {
+        "_deprecationNotice": {
+          "deprecatedFields": [
+            "hardwareProperties",
+            "deviceProperties",
+            "connectionProperties"
+          ],
+          "message": "The 'hardwareProperties', 'deviceProperties', 'connectionProperties' fields are deprecated and will be removed in a future release. Use the 'properties' dictionary instead.",
+          "replacement": "properties"
+        },
+        "connectionProperties": {
+          "authenticationType": "manualPairing",
+          "isMobileDeviceOnly": false,
+          "pairingState": "paired",
+          "potentialHostnames": [
+            "device.coredevice.local",
+            "device.coredevice.local",
+            "device.coredevice.local"
+          ],
+          "transportType": "localNetwork",
+          "tunnelState": "disconnected",
+          "tunnelTransportProtocol": "tcp"
+        },
+        "deviceProperties": {
+          "bootState": "booted",
+          "ddiServicesAvailable": false,
+          "name": "Sam’s Other iPhone",
+          "osBuildUpdate": "23G90",
+          "osVersionNumber": "26.6.2"
+        },
+        "hardwareProperties": {
+          "cpuType": {
+            "name": "arm64e",
+            "subType": -2147483646,
+            "type": 16777228
+          },
+          "deviceType": "iPhone",
+          "ecid": 1,
+          "hardwareModel": "V159AP",
+          "platform": "iOS",
+          "productType": "iPhone18,5",
+          "supportedCPUTypes": [
+            {
+              "name": "arm64e",
+              "subType": -2147483646,
+              "type": 16777228
+            },
+            {
+              "name": "arm64",
+              "subType": 0,
+              "type": 16777228
+            }
+          ],
+          "supportedDeviceFamilies": [
+            1
+          ],
+          "udid": "00008150-0000000000000001"
+        },
+        "identifier": "00000000-0000-4000-8000-000000000002",
+        "properties": {
+          "connection": {
+            "authenticationType": "manualPairing",
+            "pairingState": "paired",
+            "state": "disconnected",
+            "transportType": "localNetwork",
+            "tunnelTransportProtocol": "tcp"
+          },
+          "hardware": {
+            "cpuType": {
+              "subtype": 18446744071562067970,
+              "type": 16777228
+            },
+            "deviceType": "iPhone",
+            "ecid": 1,
+            "platform": "iOS",
+            "productType": "iPhone18,5",
+            "supportedCPUTypes": [
+              {
+                "subtype": 18446744071562067970,
+                "type": 16777228
+              },
+              {
+                "subtype": 0,
+                "type": 16777228
+              }
+            ],
+            "supportedDeviceFamilies": [
+              1
+            ],
+            "udid": "00008150-0000000000000001"
+          },
+          "software": {
+            "osBuildVersions": {
+              "buildVersion": {
+                "majorLetterComponent": "G",
+                "majorNumberComponent": 23,
+                "name": "23G90",
+                "revisionVersion": {
+                  "components": [
+                    23,
+                    7,
+                    90,
+                    0,
+                    0
+                  ],
+                  "originalComponentsCount": 5,
+                  "stringValue": "23.7.90.0.0"
+                },
+                "trainProgram": "iOS",
+                "updateNumberComponent": 90
+              },
+              "supplementalBuildVersion": {
+                "majorLetterComponent": "G",
+                "majorNumberComponent": 23,
+                "name": "23G90",
+                "revisionVersion": {
+                  "components": [
+                    23,
+                    7,
+                    90,
+                    0,
+                    0
+                  ],
+                  "originalComponentsCount": 5,
+                  "stringValue": "23.7.90.0.0"
+                },
+                "trainProgram": "iOS",
+                "updateNumberComponent": 90
+              }
+            },
+            "osVersionNumber": {
+              "components": [
+                26,
+                6,
+                2,
+                0,
+                0
+              ],
+              "originalComponentsCount": 3,
+              "stringValue": "26.6.2"
+            }
+          },
+          "state": {
+            "bootState": "booted",
+            "name": "Sam’s Other iPhone"
+          }
+        },
+        "propertyDisplayNames": null,
+        "visibilityClass": "default"
+      },
+      {
+        "_deprecationNotice": {
+          "deprecatedFields": [
+            "hardwareProperties",
+            "deviceProperties",
+            "connectionProperties"
+          ],
+          "message": "The 'hardwareProperties', 'deviceProperties', 'connectionProperties' fields are deprecated and will be removed in a future release. Use the 'properties' dictionary instead.",
+          "replacement": "properties"
+        },
+        "connectionProperties": {
+          "authenticationType": "manualPairing",
+          "isMobileDeviceOnly": false,
+          "pairingState": "paired",
+          "potentialHostnames": [
+            "device.coredevice.local",
+            "device.coredevice.local",
+            "device.coredevice.local"
+          ],
+          "tunnelState": "unavailable"
+        },
+        "deviceProperties": {
+          "ddiServicesAvailable": false,
+          "name": "Sam’s Apple Watch"
+        },
+        "hardwareProperties": {
+          "deviceType": "appleWatch",
+          "ecid": 1,
+          "platform": "watchOS",
+          "productType": "Watch7,8",
+          "udid": "00008310-0000000000000003"
+        },
+        "identifier": "00000000-0000-4000-8000-000000000004",
+        "properties": {
+          "connection": {
+            "authenticationType": "manualPairing",
+            "pairingState": "paired",
+            "state": "unavailable"
+          },
+          "hardware": {
+            "deviceType": "appleWatch",
+            "ecid": 1,
+            "platform": "watchOS",
+            "productType": "Watch7,8",
+            "udid": "00008310-0000000000000003"
+          },
+          "state": {
+            "name": "Sam’s Apple Watch"
+          }
+        },
+        "propertyDisplayNames": null,
+        "visibilityClass": "default"
+      },
+      {
+        "_deprecationNotice": {
+          "deprecatedFields": [
+            "hardwareProperties",
+            "deviceProperties",
+            "connectionProperties"
+          ],
+          "message": "The 'hardwareProperties', 'deviceProperties', 'connectionProperties' fields are deprecated and will be removed in a future release. Use the 'properties' dictionary instead.",
+          "replacement": "properties"
+        },
+        "connectionProperties": {
+          "authenticationType": "manualPairing",
+          "isMobileDeviceOnly": false,
+          "pairingState": "paired",
+          "potentialHostnames": [
+            "device.coredevice.local",
+            "device.coredevice.local",
+            "device.coredevice.local"
+          ],
+          "tunnelState": "unavailable"
+        },
+        "deviceProperties": {
+          "ddiServicesAvailable": false,
+          "name": "Sam’s iPad",
+          "osBuildUpdate": "21H423",
+          "osVersionNumber": "17.7.6"
+        },
+        "hardwareProperties": {
+          "cpuType": {
+            "name": "arm64",
+            "subType": 0,
+            "type": 16777228
+          },
+          "deviceType": "iPad",
+          "ecid": 1,
+          "hardwareModel": "J71bAP",
+          "platform": "iOS",
+          "productType": "iPad7,5",
+          "supportedCPUTypes": [
+            {
+              "name": "arm64",
+              "subType": 0,
+              "type": 16777228
+            }
+          ],
+          "supportedDeviceFamilies": [
+            1,
+            2
+          ],
+          "udid": "0000000000000000000000000000000000000005"
+        },
+        "identifier": "00000000-0000-4000-8000-000000000006",
+        "properties": {
+          "connection": {
+            "authenticationType": "manualPairing",
+            "pairingState": "paired",
+            "state": "unavailable"
+          },
+          "hardware": {
+            "cpuType": {
+              "subtype": 0,
+              "type": 16777228
+            },
+            "deviceType": "iPad",
+            "ecid": 1,
+            "platform": "iOS",
+            "productType": "iPad7,5",
+            "supportedCPUTypes": [
+              {
+                "subtype": 0,
+                "type": 16777228
+              }
+            ],
+            "supportedDeviceFamilies": [
+              1,
+              2
+            ],
+            "udid": "0000000000000000000000000000000000000005"
+          },
+          "software": {
+            "osBuildVersions": {
+              "buildVersion": {
+                "majorLetterComponent": "H",
+                "majorNumberComponent": 21,
+                "name": "21H423",
+                "revisionVersion": {
+                  "components": [
+                    21,
+                    8,
+                    423,
+                    0,
+                    0
+                  ],
+                  "originalComponentsCount": 5,
+                  "stringValue": "21.8.423.0.0"
+                },
+                "trainProgram": "iOS",
+                "updateNumberComponent": 423
+              }
+            },
+            "osVersionNumber": {
+              "components": [
+                17,
+                7,
+                6,
+                0,
+                0
+              ],
+              "originalComponentsCount": 3,
+              "stringValue": "17.7.6"
+            }
+          },
+          "state": {
+            "name": "Sam’s iPad"
+          }
+        },
+        "propertyDisplayNames": null,
+        "visibilityClass": "default"
+      },
+      {
+        "_deprecationNotice": {
+          "deprecatedFields": [
+            "hardwareProperties",
+            "deviceProperties",
+            "connectionProperties"
+          ],
+          "message": "The 'hardwareProperties', 'deviceProperties', 'connectionProperties' fields are deprecated and will be removed in a future release. Use the 'properties' dictionary instead.",
+          "replacement": "properties"
+        },
+        "connectionProperties": {
+          "authenticationType": "manualPairing",
+          "isMobileDeviceOnly": false,
+          "lastConnectionDate": "2026-10-27T06:14:00.000Z",
+          "localHostnames": [
+            "device.coredevice.local",
+            "device.coredevice.local",
+            "device.coredevice.local"
+          ],
+          "pairingState": "paired",
+          "potentialHostnames": [
+            "device.coredevice.local",
+            "device.coredevice.local",
+            "device.coredevice.local"
+          ],
+          "transportType": "wired",
+          "tunnelIPAddress": "fdd3:52a8:444e::1",
+          "tunnelState": "connected",
+          "tunnelTransportProtocol": "tcp"
+        },
+        "deviceProperties": {
+          "bootState": "booted",
+          "bootedFromSnapshot": true,
+          "bootedSnapshotName": "com.apple.os.update-97272D500B8AC4487B8386D7B0D6496262A0412A869DB0667F0FB4063F423536",
+          "ddiServicesAvailable": true,
+          "developerModeStatus": "enabled",
+          "hasInternalOSBuild": false,
+          "name": "Sam’s iPad (2)",
+          "osBuildUpdate": "23G90",
+          "osVersionNumber": "26.6.2",
+          "rootFileSystemIsWritable": false,
+          "screenViewingURL": "devices://device/open?id=00000000-0000-4000-8000-000000000000",
+          "supportsCheckedAllocations": false
+        },
+        "hardwareProperties": {
+          "cpuType": {
+            "name": "arm64e",
+            "subType": -2147483646,
+            "type": 16777228
+          },
+          "deviceType": "iPad",
+          "ecid": 1,
+          "hardwareModel": "J517AP",
+          "internalStorageCapacity": 128000000000,
+          "isProductionFused": true,
+          "marketingName": "iPad Pro (11-inch) (3rd generation)",
+          "platform": "iOS",
+          "productType": "iPad13,4",
+          "reality": "physical",
+          "serialNumber": "SERIAL0009",
+          "supportedCPUTypes": [
+            {
+              "name": "arm64e",
+              "subType": -2147483646,
+              "type": 16777228
+            },
+            {
+              "name": "arm64",
+              "subType": 0,
+              "type": 16777228
+            }
+          ],
+          "supportedDeviceFamilies": [
+            1,
+            2
+          ],
+          "thinningProductType": "iPad13,4",
+          "udid": "00008103-0000000000000007"
+        },
+        "identifier": "00000000-0000-4000-8000-000000000008",
+        "properties": {
+          "connection": {
+            "authenticationType": "manualPairing",
+            "lastConnectionDate": 814774440,
+            "pairingState": "paired",
+            "screenViewingURL": {
+              "relative": "devices://device/open?id=00000000-0000-4000-8000-000000000000"
+            },
+            "state": "connected",
+            "transportType": "wired",
+            "tunnelIPAddressString": "fdd3:52a8:444e::1",
+            "tunnelTransportProtocol": "tcp"
+          },
+          "hardware": {
+            "cpuCount": {
+              "logicalCores": 8,
+              "packages": 1,
+              "physicalCores": 8
+            },
+            "cpuType": {
+              "subtype": 18446744071562067970,
+              "type": 16777228
+            },
+            "deviceType": "iPad",
+            "ecid": 1,
+            "hasActionButton": false,
+            "internalStorageCapacity": 128000000000,
+            "marketingName": "iPad Pro (11-inch) (3rd generation)",
+            "platform": "iOS",
+            "productType": "iPad13,4",
+            "reality": "physical",
+            "serialNumber": "SERIAL0009",
+            "supportedBiometrics": [
+              "faceID"
+            ],
+            "supportedCPUTypes": [
+              {
+                "subtype": 18446744071562067970,
+                "type": 16777228
+              },
+              {
+                "subtype": 0,
+                "type": 16777228
+              }
+            ],
+            "supportedDeviceFamilies": [
+              1,
+              2
+            ],
+            "supportsSiri": true,
+            "thinningProductType": "iPad13,4",
+            "udid": "00008103-0000000000000007"
+          },
+          "software": {
+            "osBuildVersions": {
+              "buildVersion": {
+                "majorLetterComponent": "G",
+                "majorNumberComponent": 23,
+                "name": "23G90",
+                "revisionVersion": {
+                  "components": [
+                    23,
+                    7,
+                    90,
+                    0,
+                    0
+                  ],
+                  "originalComponentsCount": 5,
+                  "stringValue": "23.7.90.0.0"
+                },
+                "trainProgram": "iOS",
+                "updateNumberComponent": 90
+              },
+              "supplementalBuildVersion": {
+                "majorLetterComponent": "G",
+                "majorNumberComponent": 23,
+                "name": "23G90",
+                "revisionVersion": {
+                  "components": [
+                    23,
+                    7,
+                    90,
+                    0,
+                    0
+                  ],
+                  "originalComponentsCount": 5,
+                  "stringValue": "23.7.90.0.0"
+                },
+                "trainProgram": "iOS",
+                "updateNumberComponent": 90
+              }
+            },
+            "osVersionNumber": {
+              "components": [
+                26,
+                6,
+                2,
+                0,
+                0
+              ],
+              "originalComponentsCount": 3,
+              "stringValue": "26.6.2"
+            },
+            "supportsCheckedAllocations": false
+          },
+          "state": {
+            "bootState": "booted",
+            "developerModeStatus": {
+              "enabled": {
+                "mode": 1
+              }
+            },
+            "name": "Sam’s iPad (2)",
+            "preparednessState": 7
+          }
+        },
+        "propertyDisplayNames": null,
+        "visibilityClass": "default"
+      },
+      {
+        "_deprecationNotice": {
+          "deprecatedFields": [
+            "hardwareProperties",
+            "deviceProperties",
+            "connectionProperties"
+          ],
+          "message": "The 'hardwareProperties', 'deviceProperties', 'connectionProperties' fields are deprecated and will be removed in a future release. Use the 'properties' dictionary instead.",
+          "replacement": "properties"
+        },
+        "connectionProperties": {
+          "authenticationType": "manualPairing",
+          "isMobileDeviceOnly": false,
+          "lastConnectionDate": "2026-10-24T15:23:00.000Z",
+          "pairingState": "paired",
+          "potentialHostnames": [
+            "device.coredevice.local",
+            "device.coredevice.local",
+            "device.coredevice.local"
+          ],
+          "transportType": "localNetwork",
+          "tunnelState": "disconnected",
+          "tunnelTransportProtocol": "tcp"
+        },
+        "deviceProperties": {
+          "bootState": "booted",
+          "bootedFromSnapshot": true,
+          "bootedSnapshotName": "com.apple.os.update-66CA5084FEA83B2F96F3034CAA58EDC2C08E8D966E25100207154D06526A8E64",
+          "ddiServicesAvailable": false,
+          "developerModeStatus": "enabled",
+          "hasInternalOSBuild": false,
+          "name": "Sam’s iPhone",
+          "osBuildUpdate": "24B115",
+          "osVersionNumber": "27.2",
+          "releaseType": "Beta",
+          "rootFileSystemIsWritable": false,
+          "supportsCheckedAllocations": true
+        },
+        "hardwareProperties": {
+          "cpuType": {
+            "name": "arm64e",
+            "subType": -2147483646,
+            "type": 16777228
+          },
+          "deviceType": "iPhone",
+          "ecid": 1,
+          "hardwareModel": "V159AP",
+          "internalStorageCapacity": 256000000000,
+          "isProductionFused": true,
+          "marketingName": "iPhone 17e",
+          "platform": "iOS",
+          "productType": "iPhone18,5",
+          "reality": "physical",
+          "serialNumber": "SERIAL0012",
+          "supportedCPUTypes": [
+            {
+              "name": "arm64e",
+              "subType": -2147483646,
+              "type": 16777228
+            },
+            {
+              "name": "arm64",
+              "subType": 0,
+              "type": 16777228
+            }
+          ],
+          "supportedDeviceFamilies": [
+            1
+          ],
+          "thinningProductType": "iPhone18,5",
+          "udid": "00008150-000000000000000A"
+        },
+        "identifier": "00000000-0000-4000-8000-000000000011",
+        "properties": {
+          "connection": {
+            "authenticationType": "manualPairing",
+            "lastConnectionDate": 814548180,
+            "pairingState": "paired",
+            "state": "disconnected",
+            "transportType": "localNetwork",
+            "tunnelTransportProtocol": "tcp"
+          },
+          "hardware": {
+            "cpuCount": {
+              "logicalCores": 6,
+              "packages": 1,
+              "physicalCores": 6
+            },
+            "cpuType": {
+              "subtype": 18446744071562067970,
+              "type": 16777228
+            },
+            "deviceType": "iPhone",
+            "ecid": 1,
+            "hasActionButton": true,
+            "internalStorageCapacity": 256000000000,
+            "marketingName": "iPhone 17e",
+            "platform": "iOS",
+            "productType": "iPhone18,5",
+            "reality": "physical",
+            "serialNumber": "SERIAL0012",
+            "supportedBiometrics": [
+              "faceID"
+            ],
+            "supportedCPUTypes": [
+              {
+                "subtype": 18446744071562067970,
+                "type": 16777228
+              },
+              {
+                "subtype": 0,
+                "type": 16777228
+              }
+            ],
+            "supportedDeviceFamilies": [
+              1
+            ],
+            "supportsSiri": true,
+            "thinningProductType": "iPhone18,5",
+            "udid": "00008150-000000000000000A"
+          },
+          "software": {
+            "osBuildVersions": {
+              "buildVersion": {
+                "majorLetterComponent": "B",
+                "majorNumberComponent": 24,
+                "name": "24B115",
+                "revisionVersion": {
+                  "components": [
+                    24,
+                    2,
+                    115,
+                    0,
+                    0
+                  ],
+                  "originalComponentsCount": 5,
+                  "stringValue": "24.2.115.0.0"
+                },
+                "trainProgram": "iOS",
+                "updateNumberComponent": 115
+              },
+              "supplementalBuildVersion": {
+                "majorLetterComponent": "B",
+                "majorNumberComponent": 24,
+                "name": "24B115",
+                "revisionVersion": {
+                  "components": [
+                    24,
+                    2,
+                    115,
+                    0,
+                    0
+                  ],
+                  "originalComponentsCount": 5,
+                  "stringValue": "24.2.115.0.0"
+                },
+                "trainProgram": "iOS",
+                "updateNumberComponent": 115
+              }
+            },
+            "osVersionNumber": {
+              "components": [
+                27,
+                2,
+                0,
+                0,
+                0
+              ],
+              "originalComponentsCount": 2,
+              "stringValue": "27.2"
+            },
+            "supportsCheckedAllocations": true
+          },
+          "state": {
+            "bootState": "booted",
+            "developerModeStatus": {
+              "enabled": {
+                "mode": 1
+              }
+            },
+            "name": "Sam’s iPhone"
+          }
+        },
+        "propertyDisplayNames": null,
+        "visibilityClass": "default"
+      },
+      {
+        "_deprecationNotice": {
+          "deprecatedFields": [
+            "hardwareProperties",
+            "deviceProperties",
+            "connectionProperties"
+          ],
+          "message": "The 'hardwareProperties', 'deviceProperties', 'connectionProperties' fields are deprecated and will be removed in a future release. Use the 'properties' dictionary instead.",
+          "replacement": "properties"
+        },
+        "connectionProperties": {
+          "authenticationType": "implicit",
+          "isMobileDeviceOnly": false,
+          "pairingState": "paired",
+          "potentialHostnames": [],
+          "transportType": "sameMachine",
+          "tunnelState": "disconnected"
+        },
+        "deviceProperties": {
+          "bootState": "shutdown",
+          "ddiServicesAvailable": false,
+          "hasInternalOSBuild": false,
+          "name": "iPad Pro 13-inch (M5)",
+          "osBuildUpdate": "21F79",
+          "osVersionNumber": "17.5",
+          "provider": "com.apple.CoreSimulator.SimulatorCoreDevicePlugin"
+        },
+        "hardwareProperties": {
+          "cpuType": {
+            "name": "arm64",
+            "subType": 0,
+            "type": 16777228
+          },
+          "deviceType": "iPad",
+          "hardwareModel": "J271",
+          "marketingName": "Workshop iPhone",
+          "platform": "iOS",
+          "productType": "iPad13,18",
+          "reality": "simulated",
+          "supportedCPUTypes": [
+            {
+              "name": "arm64",
+              "subType": 0,
+              "type": 16777228
+            },
+            {
+              "name": "x86_64",
+              "subType": 3,
+              "type": 16777223
+            }
+          ],
+          "udid": "000000000000000000000000000000000000000d"
+        },
+        "identifier": "000000000000000000000000000000000000000d",
+        "properties": {
+          "connection": {
+            "authenticationType": "implicit",
+            "pairingState": "paired",
+            "state": "disconnected",
+            "transportType": "sameMachine"
+          },
+          "hardware": {
+            "cpuType": {
+              "subtype": 0,
+              "type": 16777228
+            },
+            "deviceType": "iPad",
+            "hasActionButton": false,
+            "marketingName": "Workshop iPhone",
+            "platform": "iOS",
+            "productType": "iPad13,18",
+            "reality": "simulated",
+            "supportedBiometrics": [
+              "touchID"
+            ],
+            "supportedCPUTypes": [
+              {
+                "subtype": 0,
+                "type": 16777228
+              },
+              {
+                "subtype": 3,
+                "type": 16777223
+              }
+            ],
+            "supportsSiri": true,
+            "udid": "000000000000000000000000000000000000000d"
+          },
+          "software": {
+            "osBuildVersions": {
+              "buildVersion": {
+                "majorLetterComponent": "F",
+                "majorNumberComponent": 21,
+                "name": "21F79",
+                "revisionVersion": {
+                  "components": [
+                    21,
+                    6,
+                    79,
+                    0,
+                    0
+                  ],
+                  "originalComponentsCount": 5,
+                  "stringValue": "21.6.79.0.0"
+                },
+                "updateNumberComponent": 79
+              }
+            },
+            "osVersionNumber": {
+              "components": [
+                17,
+                5,
+                0,
+                0,
+                0
+              ],
+              "originalComponentsCount": 2,
+              "stringValue": "17.5"
+            }
+          },
+          "state": {
+            "bootState": "shutdown",
+            "name": "iPad Pro 13-inch (M5)",
+            "preparednessState": 0,
+            "visibilityClass": "simulators"
+          }
+        },
+        "propertyDisplayNames": null,
+        "visibilityClass": "simulators"
+      }
+    ]
+  }
+}
