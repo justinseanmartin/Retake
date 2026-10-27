@@ -118,6 +118,8 @@ public enum TakeRecording {
             log.duration = summary.duration
             log.width = summary.width
             log.height = summary.height
+            log.frames = summary.frames
+            log.dropped = summary.dropped
             log.shapes = summary.shapes
         }
         log.failure = failure?.message

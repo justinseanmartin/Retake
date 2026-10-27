@@ -17,7 +17,6 @@ public struct Retake: AsyncParsableCommand {
             Compose.self,
             Record.self,
             Takes.self,
-            Discard.self,
             Clean.self,
             Conform.self,
             Cut.self,
@@ -57,7 +56,7 @@ public struct Retake: AsyncParsableCommand {
 
     static func run(_ arguments: [String]?) async -> Outcome {
         do {
-            var command = try parseAsRoot(arguments)
+            var command = try parseAsRoot(arguments.map(optionalValuesGiven) ?? optionalValuesGiven(Array(CommandLine.arguments.dropFirst())))
             if var command = command as? AsyncParsableCommand {
                 try await command.run()
             } else {
@@ -66,6 +65,17 @@ public struct Retake: AsyncParsableCommand {
             return Outcome(status: ExitStatus.done.rawValue)
         } catch {
             return outcome(of: error)
+        }
+    }
+
+    /// `clean`'s `--takes` and `--cuts` may be given without a value, meaning every one, which
+    /// ArgumentParser can't parse; each given bare is passed on as `*`, every one, instead.
+    static func optionalValuesGiven(_ arguments: [String]) -> [String] {
+        guard arguments.first == "clean" else { return arguments }
+        return arguments.enumerated().map { index, argument in
+            guard Clean.optionalValues.contains(argument) else { return argument }
+            let next = index + 1 < arguments.count ? arguments[index + 1] : nil
+            return next == nil || next!.hasPrefix("-") ? "\(argument)=*" : argument
         }
     }
 

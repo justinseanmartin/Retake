@@ -26,12 +26,14 @@ struct CommandLineTests {
         ["record", "--for", "video1", "--force", "--stop-on-failure"],
         ["record", "create-note", "share-note", "--device", "iphone"],
         ["takes", "create-note", "--type", "ipad", "--json"],
-        ["discard", "create-note", "2", "3", "--type", "iphone"],
         ["clean", "--takes", "--type", "ipad", "--yes"],
+        ["clean", "--takes", "create-note,share-note@2", "--cuts"],
+        ["clean", "--cuts", "video1,video2", "--yes"],
+        ["clean", "--yes", "--takes"],
         ["clean", "--on-device"],
         ["clean", "--on-device", "--device", "ipad"],
-        ["conform", "video1", "--to", "latest", "--dry-run"],
-        ["conform", "video1", "--type", "ipad", "--to", "create-note=3", "--to", "share-note=1"],
+        ["conform", "video1", "--dry-run"],
+        ["conform", "video1", "--type", "ipad"],
         ["cut", "video1", "video2", "--type", "iphone", "--draft", "--open"],
         ["cut", "--all", "--draft"],
         ["status", "--json"],
@@ -45,7 +47,7 @@ struct CommandLineTests {
         ["cut", "video1", "--config", "Previews/retake.json", "--output-dir", "/tmp/retake"],
     ])
     func parsesTheDocumentedForms(_ arguments: [String]) throws {
-        _ = try Retake.parseAsRoot(arguments)
+        _ = try Retake.parseAsRoot(Retake.optionalValuesGiven(arguments))
     }
 
     @Test(arguments: [
@@ -58,16 +60,12 @@ struct CommandLineTests {
         ["record", "create-note", "share-note", "--dry-run", "--from", "3"],
         ["record", "create-note", "--for", "video1"],
         ["takes", "--device", "ipad", "--type", "ipad"],
-        ["discard", "create-note"],
-        ["discard", "create-note", "0"],
-        ["clean", "--takes", "--videos"],
+        ["discard", "create-note", "2"],
+        ["clean", "--videos"],
         ["clean", "--on-device", "--takes"],
         ["clean", "--on-device", "--yes"],
         ["clean", "--device", "ipad"],
-        ["conform", "video1", "--to", "latest", "--to", "create-note=3"],
-        ["conform", "video1", "--to", "create-note=3", "--to", "create-note=4"],
-        ["conform", "video1", "--to", "create-note"],
-        ["conform", "video1", "--to", "create-note=0"],
+        ["conform", "video1", "--to", "latest"],
         ["cut"],
         ["cut", "video1", "--all"],
         ["cut", "--all", "--open"],
@@ -88,11 +86,11 @@ struct CommandLineTests {
         #expect(!outcome.error.isEmpty)
     }
 
-    @Test func conformTargetsParse() {
-        #expect(Conform.Target(argument: "latest") == .latest)
-        #expect(Conform.Target(argument: "create-note=3") == .take(scene: "create-note", take: 3))
-        #expect(Conform.Target(argument: "a=b=1") == nil)
-        #expect(Conform.Target(argument: "=1") == nil)
+    @Test func cleansBareTakesAndCutsMeanEveryOne() throws {
+        #expect(Retake.optionalValuesGiven(["clean", "--takes", "--cuts", "video1", "--yes"]) == ["clean", "--takes=*", "--cuts", "video1", "--yes"])
+        #expect(Retake.optionalValuesGiven(["clean", "--cuts"]) == ["clean", "--cuts=*"])
+        #expect(Retake.optionalValuesGiven(["record", "--takes"]) == ["record", "--takes"], "only clean's")
+        #expect(Clean.list("*") == [] && Clean.list(nil) == nil && Clean.list("a, b@2,") == ["a", "b@2"])
     }
 
     @Test func helpExitsWith0OnStandardOutput() async {

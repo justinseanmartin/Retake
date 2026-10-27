@@ -295,7 +295,11 @@ struct Record: AsyncParsableCommand {
 struct Takes: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Lists takes.",
-        discussion: "Without --device or --type, lists takes of both device types.",
+        discussion: """
+            Lists each take's number, when it was recorded, the app's version and build, the device, its \
+            duration, frames dropped, whether it failed, and the edits that pin it. Without --device or \
+            --type, lists takes of both device types.
+            """,
     )
 
     @Argument(help: ArgumentHelp("Only this scene's takes.", valueName: "scene"))
@@ -316,59 +320,103 @@ struct Takes: AsyncParsableCommand {
     }
 
     func run() async throws {
-        _ = try project.locate()
-        throw RetakeError.notImplemented("takes")
+        let located = try project.locate()
+        var types = type.map { [$0] } ?? DeviceType.allCases
+        if device.named() != nil {
+            let directory = try DeviceDirectory.current(located)
+            let target = try directory.resolve(device.choice(configuration: nil, connected: directory.recordable.map(\.udid)))
+            guard let deviceType = target.type else {
+                throw RetakeError(.environment, "Retake can't tell whether \(target.name) is an iPhone or an iPad.")
+            }
+            types = [deviceType]
+        }
+        let takes = TakeStore.takes(of: scene, for: types, in: located)
+        if let scene, takes.isEmpty {
+            let files = ProjectFiles(project: located)
+            guard types.contains(where: { FileManager.default.fileExists(atPath: files.sceneURL(scene, for: $0).path) }) else {
+                throw RetakeError(.usage, "There's no scene \"\(scene)\" for \(types.map(\.rawValue).joined(separator: " or ")).")
+            }
+        }
+        if output.json {
+            print(JSONWriter.write(.array(takes.map(TakesOutput.json))), terminator: "")
+        } else {
+            TakesOutput.text(takes)
+        }
     }
 }
 
-struct Discard: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(
-        abstract: "Deletes a take.",
-        discussion: "Fails (1), deleting nothing, if an edit pins one of them.",
-    )
-
-    @Argument(help: ArgumentHelp("The scene the takes are of.", valueName: "scene"))
-    var scene: String
-
-    @Argument(help: ArgumentHelp("The takes' numbers.", valueName: "take"))
-    var takes: [Int]
-
-    @Option(help: ArgumentHelp("The device type the takes are of.", valueName: "type"))
-    var type: DeviceType?
-
-    @OptionGroup var project: ProjectOptions
-
-    func validate() throws {
-        if takes.isEmpty {
-            throw ValidationError("Name at least one take.")
-        }
-        if let take = takes.first(where: { $0 < 1 }) {
-            throw ValidationError("Takes are numbered from 1, not \(take).")
+/// What `takes` prints: for people, or as JSON.
+enum TakesOutput {
+    static func text(_ takes: [TakeStore.Take]) {
+        guard !takes.isEmpty else { return print("No takes.") }
+        var heading: (DeviceType, String)?
+        for take in takes {
+            if heading?.0 != take.type || heading?.1 != take.scene {
+                print("\(take.scene) (\(take.type.rawValue)):")
+                heading = (take.type, take.scene)
+            }
+            guard let log = take.recorded else {
+                print("  \(take.number)  can't be read: \(take.problem ?? "")")
+                continue
+            }
+            let recorded = log.recordedAt.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits).hour().minute())
+            let app = [log.app.version, log.app.build.map { "(\($0))" }].compactMap(\.self).joined(separator: " ")
+            var parts = [
+                recorded, app.isEmpty ? nil : app, "\(log.device.marketingName ?? log.device.model), iOS \(log.device.os)",
+                String(format: "%.1f s", log.duration), log.dropped.map { "\($0) dropped" },
+            ].compactMap(\.self)
+            if let failure = log.failure { parts.append("failed: \(failure)") }
+            if let problem = take.problem { parts.append(problem) }
+            if !take.pinnedBy.isEmpty { parts.append("pinned by \(take.pinnedBy.joined(separator: ", "))") }
+            print("  \(take.number)  \(parts.joined(separator: "  "))")
         }
     }
 
-    func run() async throws {
-        _ = try project.locate()
-        throw RetakeError.notImplemented("discard")
+    static func json(_ take: TakeStore.Take) -> JSONValue {
+        var fields: [JSONObject.Entry] = [
+            .init(key: "type", value: .string(take.type.rawValue)),
+            .init(key: "scene", value: .string(take.scene)),
+            .init(key: "take", value: .number(Double(take.number))),
+        ]
+        if let log = take.recorded {
+            fields += [
+                .init(key: "recordedAt", value: .string(ISO8601DateFormatter().string(from: log.recordedAt))),
+                .init(key: "app", value: TakeLog.object([("version", log.app.version.map(JSONValue.string)), ("build", log.app.build.map(JSONValue.string))])),
+                .init(key: "device", value: TakeLog.object([
+                    ("model", .string(log.device.model)), ("marketingName", log.device.marketingName.map(JSONValue.string)), ("os", .string(log.device.os)),
+                ])),
+                .init(key: "duration", value: .number(log.duration)),
+            ]
+            if let frames = log.frames { fields.append(.init(key: "frames", value: .number(Double(frames)))) }
+            if let dropped = log.dropped { fields.append(.init(key: "dropped", value: .number(Double(dropped)))) }
+        }
+        fields.append(.init(key: "failed", value: .bool(take.failed)))
+        if let failure = take.recorded?.failure { fields.append(.init(key: "failure", value: .string(failure))) }
+        if let problem = take.problem { fields.append(.init(key: "problem", value: .string(problem))) }
+        fields.append(.init(key: "pinnedBy", value: .array(take.pinnedBy.map(JSONValue.string))))
+        return .object(JSONObject(fields))
     }
 }
 
 struct Clean: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        abstract: "Deletes takes and videos, or take data left on the device.",
+        abstract: "Deletes takes and cuts, or take data left on the device.",
         discussion: """
-            Deletes every take and every rendered video, of both device types unless --type names one. \
-            Edits' pins are left as they are. With --on-device, deletes instead what Retake leaves in the \
-            app's container on the device (takes' copies of its data, and staged set files), which \
-            record does at the end of a run.
+            With neither --takes nor --cuts, deletes every take and every cut, of both device types \
+            unless --type names one. --takes alone deletes every take, and given scenes, or a scene's \
+            take as <scene>@<take>, only those; --cuts alone every cut, and given edits, only theirs. \
+            Lists what it will delete, naming takes an edit pins, and asks first unless --yes. With \
+            --on-device, deletes instead what Retake leaves in the app's container on the device \
+            (takes' copies of its data, and staged set files), which record does at the end of a run.
             """,
     )
 
-    @Flag(help: "Delete only takes.")
-    var takes = false
+    // Each may be given bare, `--takes`, meaning all; `Retake.run` passes that on as `*`.
+    @Option(help: ArgumentHelp("Delete takes: every one, or the scenes and takes given, as create-note,share-note@2.", valueName: "takes"))
+    var takes: String?
 
-    @Flag(help: "Delete only videos.")
-    var videos = false
+    @Option(help: ArgumentHelp("Delete cuts: every one, or the edits' given, as video1,video2.", valueName: "edits"))
+    var cuts: String?
 
     @Option(help: ArgumentHelp("Only this device type's.", valueName: "type"))
     var type: DeviceType?
@@ -382,13 +430,13 @@ struct Clean: AsyncParsableCommand {
     @OptionGroup var device: DeviceOptions
     @OptionGroup var project: ProjectOptions
 
+    /// The options whose value may be left out.
+    static let optionalValues = ["--takes", "--cuts"]
+
     func validate() throws {
-        if takes, videos {
-            throw ValidationError("Give --takes or --videos, not both; with neither, both are deleted.")
-        }
-        if onDevice, takes || videos || type != nil || yes {
+        if onDevice, takes != nil || cuts != nil || type != nil || yes {
             throw ValidationError(
-                "--on-device deletes only what's on the device; it takes no --takes, --videos, --type or --yes.",
+                "--on-device deletes only what's on the device; it takes no --takes, --cuts, --type or --yes.",
             )
         }
         if !onDevice, device.device != nil {
@@ -396,9 +444,31 @@ struct Clean: AsyncParsableCommand {
         }
     }
 
+    /// A comma-separated list, where `*` stands for every one, as an empty list.
+    static func list(_ value: String?) -> [String]? {
+        value.map { $0.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty && $0 != "*" } }
+    }
+
     func run() async throws {
         let located = try project.locate()
-        guard onDevice else { throw RetakeError.notImplemented("clean") }
+        guard onDevice else {
+            let choices = try Self.list(takes).map { names throws(RetakeError) in try names.map { name throws(RetakeError) in try TakeStore.TakeChoice.parse(name) } }
+            let cleaning = try TakeStore.cleaning(takes: choices, cuts: Self.list(cuts), for: type.map { [$0] } ?? DeviceType.allCases, in: located)
+            guard !cleaning.takes.isEmpty || !cleaning.cuts.isEmpty else { return print("Nothing to delete.") }
+            Self.describe(cleaning, in: located)
+            if !yes {
+                guard Prompt.isInteractive else {
+                    throw RetakeError(.usage, "Give --yes to delete without being asked; there's no terminal to ask at.")
+                }
+                FileHandle.standardError.write(Data("Delete \(cleaning.takes.count + cleaning.cuts.count == 1 ? "it" : "them")? [y/N] ".utf8))
+                guard ["y", "yes"].contains(readLine()?.trimmingCharacters(in: .whitespaces).lowercased() ?? "") else {
+                    return print("Nothing deleted.")
+                }
+            }
+            try TakeStore.delete(cleaning, in: located)
+            print("Deleted.")
+            return
+        }
         let directory = try DeviceDirectory.current(located)
         let target = try directory.resolve(device.choice(
             configuration: located.settings.device.map { ($0, located.configuration) },
@@ -407,5 +477,26 @@ struct Clean: AsyncParsableCommand {
         let bundleID = try Installer.bundleID(for: located)
         try Launcher.cleanUp(bundleID: bundleID, on: target)
         print("Deleted takes' copies of \(bundleID)'s data, and staged set files, from \(target.name).")
+    }
+
+    /// What will be deleted: takes by scene, each edit's cuts, and the pins left pointing nowhere.
+    static func describe(_ cleaning: TakeStore.Cleaning, in project: Project) {
+        if !cleaning.takes.isEmpty {
+            print("Takes:")
+            for type in DeviceType.allCases {
+                let ofType = cleaning.takes.filter { $0.type == type }
+                for scene in ofType.map(\.scene).reduce(into: [String](), { if !$0.contains($1) { $0.append($1) } }) {
+                    let numbers = ofType.filter { $0.scene == scene }.map { String($0.number) }
+                    print("  \(scene) (\(type.rawValue)): \(numbers.joined(separator: ", "))")
+                }
+            }
+        }
+        if !cleaning.cuts.isEmpty {
+            print("Cuts:")
+            for folder in cleaning.cuts { print("  \(project.displayPath(folder))") }
+        }
+        for take in cleaning.pinned {
+            Console.warn("\(take.name) (\(take.type.rawValue)) is pinned by \(take.pinnedBy.joined(separator: ", ")), which can't be cut until conformed onto another take.")
+        }
     }
 }

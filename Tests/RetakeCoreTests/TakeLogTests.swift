@@ -81,3 +81,40 @@ struct TakeLogTests {
         #expect(labels.contains("Add one"))
     }
 }
+
+struct TakeLogReadingTests {
+    static func log(scene: String = "create-note", take: Int = 3, failure: String? = nil) -> TakeLog {
+        TakeLog(
+            scene: scene, take: take, set: "returning-user", state: .cloned, deviceType: .ipad,
+            device: .init(model: "iPad13,4", marketingName: "iPad Pro (11-inch) (3rd generation)", os: "26.6.2 (23G90)"),
+            app: .init(bundleID: "com.example.notes", version: "1.0", build: "7"),
+            retake: "0.0.1", buttonHeist: .init(version: "0.7.1"), recordedAt: Date(timeIntervalSince1970: 1_800_000_000),
+            failure: failure, duration: 12.346, width: 1200, height: 1718, frames: 700, dropped: 2,
+            launch: .init(launched: 0.58, reported: 2.02, connected: 2.11), clock: .init(deviceAhead: 0.039),
+            steps: [TakeLog.Entry(
+                number: 1, id: "new-note", action: "drag", start: 1.018, end: 1.34, timedByDevice: true, touch: Point(x: 195.12, y: 410),
+                touchEnd: Point(x: 20, y: 30), elements: [ScreenElement(label: "New Note", traits: ["button"], frame: .init(x: 780, y: 32, width: 44, height: 44.33), activationPoint: Point(x: 802, y: 54))],
+            )],
+            shapes: [.init(at: 0, width: 1200, height: 1718, turn: 0), .init(at: 4.5, width: 1718, height: 1200, turn: 90)],
+        )
+    }
+
+    @Test func whatsWrittenReadsBackTheSame() {
+        let log = Self.log(failure: "step 2 didn't run")
+        let reader = JSONReader(file: "3.json")
+        #expect(TakeLog.read(JSONWriter.write(log.json), with: reader) == log)
+        #expect(reader.problems.isEmpty)
+    }
+
+    @Test func aLogThatIsntOneIsNamedWhereItsWrong() {
+        let reader = JSONReader(file: "3.json")
+        var text = JSONWriter.write(Self.log().json)
+        text = text.replacingOccurrences(of: #""timedBy": "device""#, with: #""timedBy": "phone""#)
+        text = text.replacingOccurrences(of: #""dropped": 2"#, with: #""droped": 2"#)
+        #expect(TakeLog.read(text, with: reader) == nil)
+        #expect(reader.problems.map(\.description).sorted() == [
+            #"3.json: steps[0].timedBy: "phone" isn't one of "device" or "mac""#,
+            #"3.json: unknown key "droped"; did you mean "dropped"?"#,
+        ])
+    }
+}

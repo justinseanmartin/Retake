@@ -3,31 +3,13 @@ import RetakeCore
 
 struct Conform: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        abstract: "Pins an edit to newer takes of its scenes.",
+        abstract: "Pins an edit to the latest takes of its scenes.",
         discussion: """
-            By default, pins the latest successful take of each scene the edit uses. Checks every \
-            anchor resolves in the new takes, and rewrites the edit in place; fails (1), writing \
-            nothing, if one doesn't.
+            Pins the latest successful take of each scene the edit uses; to cut from an earlier take, \
+            delete the takes after it with clean --takes. Checks every anchor resolves in the new \
+            takes, and rewrites the edit in place; fails (1), writing nothing, if one doesn't.
             """,
     )
-
-    /// What `--to` pins: the latest take of every scene, or one scene's take.
-    enum Target: ExpressibleByArgument, Equatable {
-        case latest
-        case take(scene: String, take: Int)
-
-        init?(argument: String) {
-            if argument == "latest" {
-                self = .latest
-                return
-            }
-            let parts = argument.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
-            guard parts.count == 2, !parts[0].isEmpty, let take = Int(parts[1]), take >= 1 else {
-                return nil
-            }
-            self = .take(scene: String(parts[0]), take: take)
-        }
-    }
 
     @Argument(help: ArgumentHelp("The edit to conform.", valueName: "edit"))
     var edit: String
@@ -35,28 +17,10 @@ struct Conform: AsyncParsableCommand {
     @Option(help: ArgumentHelp("Only this device type's pins.", valueName: "type"))
     var type: DeviceType?
 
-    @Option(
-        help: ArgumentHelp(
-            "`latest` (the default), or a scene's take as <scene>=<take>, repeated for each scene.",
-            valueName: "target",
-        ),
-    )
-    var to: [Target] = []
-
     @Flag(help: "Print the changes without writing them.")
     var dryRun = false
 
     @OptionGroup var project: ProjectOptions
-
-    func validate() throws {
-        if to.count > 1, to.contains(.latest) {
-            throw ValidationError("Give --to latest alone, or --to <scene>=<take> for each scene.")
-        }
-        var seen = Set<String>()
-        for case let .take(scene, _) in to where !seen.insert(scene).inserted {
-            throw ValidationError("--to names \(scene) more than once.")
-        }
-    }
 
     func run() async throws {
         _ = try project.locate()

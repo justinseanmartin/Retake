@@ -22,6 +22,10 @@ public struct TakeLog: Equatable, Sendable {
     public var duration: Double
     public var width: Int
     public var height: Int
+    /// Frames written, and frames the encoder wasn't ready for, which a hitch in the take shows;
+    /// nil in a log written before they were recorded.
+    public var frames: Int? = nil
+    public var dropped: Int? = nil
     /// For a take recorded from before the app launched: when it was launched, when Retake's
     /// support library reported in, and when The Button Heist connected, for an edit to cut in on.
     public var launch: Launch?
@@ -151,6 +155,8 @@ extension TakeLog {
             .init(key: "duration", value: Self.number(duration)),
             .init(key: "size", value: .array([.number(Double(width)), .number(Double(height))])),
         ]
+        if let frames { object.append(.init(key: "frames", value: .number(Double(frames)))) }
+        if let dropped { object.append(.init(key: "dropped", value: .number(Double(dropped)))) }
         if let launch {
             object.append(.init(key: "launch", value: Self.object([
                 ("launched", Self.number(launch.launched)), ("reported", Self.number(launch.reported)), ("connected", Self.number(launch.connected)),
@@ -168,7 +174,7 @@ extension TakeLog {
     }
 
     /// An object of the fields given, leaving out those that are nil.
-    static func object(_ fields: [(String, JSONValue?)]) -> JSONValue {
+    public static func object(_ fields: [(String, JSONValue?)]) -> JSONValue {
         .object(JSONObject(fields.compactMap { key, value in value.map { JSONObject.Entry(key: key, value: $0) } }))
     }
 
@@ -209,5 +215,154 @@ extension ScreenElement {
             ("frame", frame.map { .array([$0.x, $0.y, $0.width, $0.height].map { TakeLog.number($0, places: 100) }) }),
             ("activationPoint", activationPoint.map(\.json)),
         ])
+    }
+}
+
+extension TakeLog {
+    /// A step log as Retake wrote it, read strictly, as every file Retake reads is; nil, with the
+    /// reader's problems saying why, when it isn't one.
+    public static func read(_ text: String, with reader: JSONReader) -> TakeLog? {
+        guard let value = reader.parse(text), var root = reader.object(value, at: .root) else { return nil }
+        defer { root.finish() }
+        func object<Value>(_ key: String, _ read: (inout ObjectReader) -> Value?) -> Value? {
+            root.required(key) { value, path in
+                guard var object = reader.object(value, at: path) else { return nil }
+                defer { object.finish() }
+                return read(&object)
+            }
+        }
+        func point(_ value: JSONValue, _ path: JSONPath) -> Point? {
+            guard let numbers = reader.array(value, at: path, element: { reader.number($0, at: $1) }), numbers.count == 2 else {
+                reader.problem("expected [x, y]", at: path)
+                return nil
+            }
+            return Point(x: numbers[0], y: numbers[1])
+        }
+        func size(_ value: JSONValue, _ path: JSONPath) -> (Int, Int)? {
+            guard let numbers = reader.array(value, at: path, element: { reader.integer($0, at: $1, atLeast: 0) }), numbers.count == 2 else {
+                reader.problem("expected [width, height]", at: path)
+                return nil
+            }
+            return (numbers[0], numbers[1])
+        }
+        let scene = root.required("scene", reader.nonEmptyString)
+        let take = root.required("take") { reader.integer($0, at: $1, atLeast: 1) }
+        let set = root.required("set", reader.nonEmptyString)
+        let state = root.required("state") { reader.choice($0, at: $1, as: SetFile.State.self) }
+        let deviceType = root.required("deviceType") { reader.choice($0, at: $1, as: DeviceType.self) }
+        let device = object("device") { object -> DeviceInfo? in
+            let model = object.required("model", reader.string)
+            let marketingName = object.optional("marketingName", reader.string)
+            let os = object.required("os", reader.string)
+            guard let model, let os else { return nil }
+            return DeviceInfo(model: model, marketingName: marketingName, os: os)
+        }
+        let app = object("app") { object -> AppInfo? in
+            let bundleID = object.required("bundleID", reader.nonEmptyString)
+            let version = object.optional("version", reader.string)
+            let build = object.optional("build", reader.string)
+            return bundleID.map { AppInfo(bundleID: $0, version: version, build: build) }
+        }
+        let retake = root.required("retake", reader.nonEmptyString)
+        let buttonHeist = object("buttonHeist") { object -> RetakeVersion.ButtonHeist? in
+            let version = object.required("version", reader.nonEmptyString)
+            let commit = object.optional("commit", reader.string)
+            return version.map { RetakeVersion.ButtonHeist(version: $0, commit: commit) }
+        }
+        let recordedAt = root.required("recordedAt") { value, path -> Date? in
+            guard let text = reader.string(value, at: path) else { return nil }
+            guard let date = ISO8601DateFormatter().date(from: text) else {
+                reader.problem("\"\(text)\" isn't a date and time in ISO 8601", at: path)
+                return nil
+            }
+            return date
+        }
+        let failure = root.optional("failure", reader.string)
+        let duration = root.required("duration") { reader.number($0, at: $1, .atLeast(0)) }
+        let dimensions = root.required("size", size)
+        let frames = root.optional("frames") { reader.integer($0, at: $1, atLeast: 0) }
+        let dropped = root.optional("dropped") { reader.integer($0, at: $1, atLeast: 0) }
+        let launch = root.optional("launch") { value, path -> Launch? in
+            guard var object = reader.object(value, at: path) else { return nil }
+            defer { object.finish() }
+            let launched = object.required("launched") { reader.number($0, at: $1) }
+            let reported = object.required("reported") { reader.number($0, at: $1) }
+            let connected = object.required("connected") { reader.number($0, at: $1) }
+            guard let launched, let reported, let connected else { return nil }
+            return Launch(launched: launched, reported: reported, connected: connected)
+        }
+        let clock = object("clock") { object in Clock(deviceAhead: object.optional("deviceAhead") { reader.number($0, at: $1) }) }
+        let steps = root.required("steps") { value, path in
+            reader.array(value, at: path) { value, path -> Entry? in
+                guard var object = reader.object(value, at: path) else { return nil }
+                defer { object.finish() }
+                let number = object.required("number") { reader.integer($0, at: $1, atLeast: 1) }
+                let id = object.optional("id", reader.nonEmptyString)
+                let action = object.required("action", reader.nonEmptyString)
+                let start = object.required("start") { reader.number($0, at: $1) }
+                let end = object.required("end") { reader.number($0, at: $1) }
+                let timedBy = object.required("timedBy") { value, path -> Bool? in
+                    guard let text = reader.string(value, at: path) else { return nil }
+                    guard text == "device" || text == "mac" else {
+                        reader.problem("\"\(text)\" isn't one of \"device\" or \"mac\"", at: path)
+                        return nil
+                    }
+                    return text == "device"
+                }
+                let touch = object.optional("touch", point)
+                let touchEnd = object.optional("touchEnd", point)
+                let elements = object.optional("elements") { value, path in
+                    reader.array(value, at: path) { value, path in ScreenElement.read(value, at: path, with: reader) }
+                }
+                guard let number, let action, let start, let end, let timedBy else { return nil }
+                return Entry(number: number, id: id, action: action, start: start, end: end, timedByDevice: timedBy, touch: touch, touchEnd: touchEnd, elements: elements)
+            }
+        }
+        let shapes = root.required("shapes") { value, path in
+            reader.array(value, at: path) { value, path -> TakeWriter.ShapeChange? in
+                guard var object = reader.object(value, at: path) else { return nil }
+                defer { object.finish() }
+                let at = object.required("at") { reader.number($0, at: $1, .atLeast(0)) }
+                let dimensions = object.required("size", size)
+                let turn = object.required("turn") { reader.integer($0, at: $1) }
+                guard let at, let dimensions, let turn else { return nil }
+                return TakeWriter.ShapeChange(at: at, width: dimensions.0, height: dimensions.1, turn: turn)
+            }
+        }
+        guard reader.problems.isEmpty, let scene, let take, let set, let state, let deviceType, let device, let app, let retake,
+              let buttonHeist, let recordedAt, let duration, let dimensions, let clock, let steps, let shapes
+        else { return nil }
+        return TakeLog(
+            scene: scene, take: take, set: set, state: state, deviceType: deviceType, device: device, app: app, retake: retake,
+            buttonHeist: buttonHeist, recordedAt: recordedAt, failure: failure, duration: duration, width: dimensions.0,
+            height: dimensions.1, frames: frames, dropped: dropped, launch: launch, clock: clock, steps: steps, shapes: shapes,
+        )
+    }
+}
+
+extension ScreenElement {
+    /// An element as a step log gives it.
+    static func read(_ value: JSONValue, at path: JSONPath, with reader: JSONReader) -> ScreenElement? {
+        guard var object = reader.object(value, at: path) else { return nil }
+        defer { object.finish() }
+        let label = object.optional("label", reader.string)
+        let value = object.optional("value", reader.string)
+        let identifier = object.optional("identifier", reader.string)
+        let traits = object.optional("traits") { reader.array($0, at: $1, element: reader.string) } ?? []
+        let frame = object.optional("frame") { value, path -> Rect? in
+            guard let numbers = reader.array(value, at: path, element: { reader.number($0, at: $1) }), numbers.count == 4 else {
+                reader.problem("expected [x, y, width, height]", at: path)
+                return nil
+            }
+            return Rect(x: numbers[0], y: numbers[1], width: numbers[2], height: numbers[3])
+        }
+        let activationPoint = object.optional("activationPoint") { value, path -> Point? in
+            guard let numbers = reader.array(value, at: path, element: { reader.number($0, at: $1) }), numbers.count == 2 else {
+                reader.problem("expected [x, y]", at: path)
+                return nil
+            }
+            return Point(x: numbers[0], y: numbers[1])
+        }
+        return ScreenElement(label: label, value: value, identifier: identifier, traits: traits, frame: frame, activationPoint: activationPoint)
     }
 }
