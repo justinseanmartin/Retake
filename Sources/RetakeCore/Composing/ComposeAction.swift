@@ -128,7 +128,7 @@ public struct ComposeOption: Equatable, Sendable {
     /// How a missing option is named in a message: `--text <text>`, or for an element's options,
     /// "an element (--label, --value or --identifier)".
     public var need: String {
-        name == "element" ? "an element (--label, --value or --identifier)" : "--\(name) \(value)"
+        name == "element" ? "an element (--label, --value, --identifier, --hint or --traits)" : "--\(name) \(value)"
     }
 
     static func option(_ name: String, _ value: String, _ help: String, default defaultValue: String? = nil) -> ComposeOption {
@@ -180,7 +180,7 @@ public struct ComposeActionSpec: Sendable {
         }
         var lines = ["\(name): \(summary)"]
         let needs = needsNote.map { ["  \($0)"] } ?? required.map { name in
-            name == "element" ? "  an element: --label, --value or --identifier, one at least" : line(options.first { $0.name == name }!)
+            name == "element" ? "  an element: --label, --value, --identifier, --hint or --traits, one at least" : line(options.first { $0.name == name }!)
         }
         if !needs.isEmpty { lines += ["Required:"] + needs }
         let elementRequired = required.contains("element") || needsNote != nil
@@ -207,18 +207,24 @@ public struct ComposeActionSpec: Sendable {
 
 /// An element's options, which several actions take.
 enum ElementOptions {
-    static let names = ["label", "value", "identifier"]
+    static let names = ["label", "value", "identifier", "hint", "traits"]
+    /// What a terminal asks for when an element is missing, in turn: the ways most elements are named.
+    static let asked = ["label", "value", "identifier"]
     static let options: [ComposeOption] = [
         .option("label", "<text>", "its accessibility label"),
         .option("value", "<text>", "its value, such as a text field's placeholder"),
         .option("identifier", "<text>", "its accessibility identifier"),
+        .option("hint", "<text>", "its accessibility hint"),
+        .option("traits", "<trait>,<trait>", "traits it has, every one, such as header or button,selected"),
         .option("occurrence", "<n>", "which of several that match, from 1", default: "the first"),
     ]
+    /// The options that name an element, without `--occurrence`.
+    static var naming: [ComposeOption] { options.filter { $0.name != "occurrence" } }
 
     /// The element given, or nil when none was.
     static func target(_ given: [String: String]) throws(ComposeAction.Problem) -> ElementTarget? {
         guard names.contains(where: { given[$0] != nil }) else {
-            if given["occurrence"] != nil { throw .wrong("--occurrence picks one of the elements --label, --value or --identifier match, so give one.") }
+            if given["occurrence"] != nil { throw .wrong("--occurrence picks one of the elements an element's options match, so give one, such as --label.") }
             return nil
         }
         var occurrence: Int?
@@ -228,7 +234,17 @@ enum ElementOptions {
         }
         if let label = given["label"], label.isEmpty { throw .wrong("--label can't be empty.") }
         if let identifier = given["identifier"], identifier.isEmpty { throw .wrong("--identifier can't be empty.") }
-        return ElementTarget(label: given["label"], value: given["value"], identifier: given["identifier"], occurrence: occurrence)
+        if let hint = given["hint"], hint.isEmpty { throw .wrong("--hint can't be empty.") }
+        var traits: [String]?
+        if let text = given["traits"] {
+            let names = text.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+            guard !names.isEmpty else { throw .wrong("--traits names at least one trait, such as header.") }
+            if let unknown = names.first(where: { !ElementTarget.knownTraits.contains($0) }) {
+                throw .wrong("\"\(unknown)\" isn't a trait The Button Heist knows; `inspect` shows each element's.")
+            }
+            traits = names.reduce(into: []) { if !$0.contains($1) { $0.append($1) } }
+        }
+        return ElementTarget(label: given["label"], value: given["value"], identifier: given["identifier"], hint: given["hint"], traits: traits, occurrence: occurrence)
     }
 }
 
@@ -244,7 +260,7 @@ extension ComposeActionSpec {
             name: "tap", summary: "Taps an element, or a point.",
             options: ElementOptions.options + [.option("x", "<x>", "in screen points"), .option("y", "<y>", "in screen points")] + stepOptions,
             required: [], isStep: true,
-            needsNote: "an element (--label, --value or --identifier, one at least), or a point (--x <x> --y <y>)",
+            needsNote: "an element (--label, --value, --identifier, --hint or --traits, one at least), or a point (--x <x> --y <y>)",
         ) { given throws(ComposeAction.Problem) in
             if given["x"] != nil || given["y"] != nil {
                 guard ElementOptions.names.allSatisfy({ given[$0] == nil }) else { throw .wrong("tap takes an element or --x and --y, not both.") }
@@ -312,7 +328,7 @@ extension ComposeActionSpec {
         },
         ComposeActionSpec(
             name: "inspect", summary: "Prints what's on screen, or only the elements that match, numbered as --occurrence counts them.",
-            options: Array(ElementOptions.options.prefix(3)), required: [], isStep: false,
+            options: ElementOptions.naming, required: [], isStep: false,
         ) { given throws(ComposeAction.Problem) in
             .inspect(try ElementOptions.target(given))
         },

@@ -49,6 +49,8 @@ extension ElementTarget {
         if let label { entries.append(.init(key: "label", value: .string(label))) }
         if let value { entries.append(.init(key: "value", value: .string(value))) }
         if let identifier { entries.append(.init(key: "identifier", value: .string(identifier))) }
+        if let hint { entries.append(.init(key: "hint", value: .string(hint))) }
+        if let traits { entries.append(.init(key: "traits", value: .array(traits.map(JSONValue.string)))) }
         if let occurrence { entries.append(.init(key: "occurrence", value: .number(Double(occurrence)))) }
         return .object(JSONObject(entries))
     }

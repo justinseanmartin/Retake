@@ -103,22 +103,27 @@ public struct Point: Equatable, Sendable {
     }
 }
 
-/// An element on screen, as VoiceOver knows it: by any of its label, value and identifier, with
-/// `occurrence` (from 1) picking one when several match.
+/// An element on screen, as VoiceOver knows it: by any of its label, value, identifier, hint and
+/// traits, with `occurrence` (from 1) picking one when several match.
 public struct ElementTarget: Equatable, Sendable {
     public var label: String?
     public var value: String?
     public var identifier: String?
+    public var hint: String?
+    /// Traits it must have, every one, by The Button Heist's names: `header`, `button`.
+    public var traits: [String]?
     public var occurrence: Int?
 
-    public init(label: String? = nil, value: String? = nil, identifier: String? = nil, occurrence: Int? = nil) {
+    public init(label: String? = nil, value: String? = nil, identifier: String? = nil, hint: String? = nil, traits: [String]? = nil, occurrence: Int? = nil) {
         self.label = label
         self.value = value
         self.identifier = identifier
+        self.hint = hint
+        self.traits = traits
         self.occurrence = occurrence
     }
 
-    public static let keys = ["label", "value", "identifier"]
+    public static let keys = ["label", "value", "identifier", "hint", "traits"]
 }
 
 extension SceneFile {
@@ -263,20 +268,50 @@ extension SceneFile {
         return Point(x: x, y: y)
     }
 
-    /// An element named by any of `label`, `value` and `identifier`, at least one of them.
+    /// An element named by any of `label`, `value`, `identifier`, `hint` and `traits`, at least one.
     static func readElement(_ object: inout ObjectReader, _ reader: JSONReader) -> ElementTarget? {
         let target = ElementTarget(
             label: object.optional("label", reader.nonEmptyString),
             value: object.optional("value", reader.string),
             identifier: object.optional("identifier", reader.nonEmptyString),
+            hint: object.optional("hint", reader.nonEmptyString),
+            traits: object.optional("traits") { readTraits($0, $1, reader) },
             occurrence: object.optional("occurrence") { reader.integer($0, at: $1, atLeast: 1) },
         )
-        guard ElementTarget.keys.contains(where: { object.object[$0] != nil }) else {
-            reader.problem("needs an element to name: its \"label\", \"value\" or \"identifier\"", at: object.path)
+        let given = ElementTarget.keys.filter { object.object[$0] != nil }
+        guard !given.isEmpty else {
+            reader.problem("needs an element to name: its \"label\", \"value\", \"identifier\", \"hint\" or \"traits\"", at: object.path)
             return nil
         }
-        guard target.label != nil || target.value != nil || target.identifier != nil else { return nil }
+        // A field given but wrong has its problem already.
+        let read: [String: Bool] = [
+            "label": target.label != nil, "value": target.value != nil, "identifier": target.identifier != nil,
+            "hint": target.hint != nil, "traits": target.traits != nil,
+        ]
+        guard given.allSatisfy({ read[$0] == true }) else { return nil }
         if object.has("occurrence"), target.occurrence == nil { return nil }
         return target
+    }
+
+    /// Traits by The Button Heist's names, at least one, each named once.
+    static func readTraits(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> [String]? {
+        let problems = reader.problems.count
+        guard let names = reader.array(value, at: path, element: { value, path -> String? in
+            guard let name = reader.string(value, at: path) else { return nil }
+            guard ElementTarget.knownTraits.contains(name) else {
+                reader.problem("\"\(name)\" isn't a trait The Button Heist knows; `retake compose` shows each element's", at: path)
+                return nil
+            }
+            return name
+        }), reader.problems.count == problems else { return nil }
+        guard !names.isEmpty else {
+            reader.problem("needs at least one trait", at: path)
+            return nil
+        }
+        if let repeated = names.first(where: { name in names.filter { $0 == name }.count > 1 }) {
+            reader.problem("names \"\(repeated)\" more than once", at: path)
+            return nil
+        }
+        return names
     }
 }

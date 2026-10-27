@@ -211,6 +211,7 @@ extension ScreenElement {
             ("label", label.map(JSONValue.string)),
             ("value", value.map(JSONValue.string)),
             ("identifier", identifier.map(JSONValue.string)),
+            ("hint", hint.map(JSONValue.string)),
             ("traits", traits.isEmpty ? nil : .array(traits.map(JSONValue.string))),
             ("frame", frame.map { .array([$0.x, $0.y, $0.width, $0.height].map { TakeLog.number($0, places: 100) }) }),
             ("activationPoint", activationPoint.map(\.json)),
@@ -348,6 +349,7 @@ extension ScreenElement {
         let label = object.optional("label", reader.string)
         let value = object.optional("value", reader.string)
         let identifier = object.optional("identifier", reader.string)
+        let hint = object.optional("hint", reader.string)
         let traits = object.optional("traits") { reader.array($0, at: $1, element: reader.string) } ?? []
         let frame = object.optional("frame") { value, path -> Rect? in
             guard let numbers = reader.array(value, at: path, element: { reader.number($0, at: $1) }), numbers.count == 4 else {
@@ -363,6 +365,6 @@ extension ScreenElement {
             }
             return Point(x: numbers[0], y: numbers[1])
         }
-        return ScreenElement(label: label, value: value, identifier: identifier, traits: traits, frame: frame, activationPoint: activationPoint)
+        return ScreenElement(label: label, value: value, identifier: identifier, hint: hint, traits: traits, frame: frame, activationPoint: activationPoint)
     }
 }

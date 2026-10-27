@@ -6,6 +6,7 @@ public struct ScreenElement: Equatable, Sendable {
     public var label: String?
     public var value: String?
     public var identifier: String?
+    public var hint: String?
     public var traits: [String]
     /// Nil for an element off screen.
     public var frame: Rect?
@@ -25,7 +26,11 @@ public struct ScreenElement: Equatable, Sendable {
         }
     }
 
-    public init(label: String? = nil, value: String? = nil, identifier: String? = nil, traits: [String] = [], frame: Rect? = nil, activationPoint: Point? = nil) {
+    public init(
+        label: String? = nil, value: String? = nil, identifier: String? = nil, hint: String? = nil, traits: [String] = [],
+        frame: Rect? = nil, activationPoint: Point? = nil,
+    ) {
+        self.hint = hint
         self.label = label
         self.value = value
         self.identifier = identifier
@@ -34,13 +39,14 @@ public struct ScreenElement: Equatable, Sendable {
         self.activationPoint = activationPoint
     }
 
-    /// One line: `"New Note"  button  frame (20, 96, 160×44)  at (100, 118)`, with a value and an
-    /// identifier when it has them, since a step can name it by either.
+    /// One line: `"New Note"  button  frame (20, 96, 160×44)  at (100, 118)`, with a value, an
+    /// identifier and a hint when it has them, since a step can name it by any of them.
     public var line: String {
         var parts: [String] = []
         parts.append(label.map(JSONWriter.quote) ?? "(no label)")
         if let value { parts.append("value \(JSONWriter.quote(value))") }
         if let identifier { parts.append("identifier \(JSONWriter.quote(identifier))") }
+        if let hint { parts.append("hint \(JSONWriter.quote(hint))") }
         if !traits.isEmpty { parts.append(traits.joined(separator: ", ")) }
         if let frame {
             parts.append("frame (\(Point.number(frame.x)), \(Point.number(frame.y)), \(Point.number(frame.width))×\(Point.number(frame.height)))")
@@ -59,5 +65,7 @@ extension ElementTarget {
         (label == nil || label == element.label)
             && (value == nil || value == element.value)
             && (identifier == nil || identifier == element.identifier)
+            && (hint == nil || hint == element.hint)
+            && (traits ?? []).allSatisfy(element.traits.contains)
     }
 }

@@ -213,7 +213,7 @@ public enum Composer {
     /// empty. An element is asked for as its label, then its value, then its identifier, until one
     /// is given.
     static func ask(for option: ComposeOption, action: String, input: some ComposeInput) async -> String? {
-        let names = option.name == "element" ? ElementOptions.names : [option.name]
+        let names = option.name == "element" ? ElementOptions.asked : [option.name]
         for name in names {
             let question = option.name == "element"
                 ? "\(action) needs an element. --\(name) (empty to \(name == names.last ? "give up" : "skip"))? "

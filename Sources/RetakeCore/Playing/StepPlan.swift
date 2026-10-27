@@ -66,6 +66,8 @@ public enum StepPlay: Equatable, Sendable {
             label: element.label.map(StringMatch.exact),
             identifier: element.identifier.map(StringMatch.exact),
             value: element.value.map { $0.isEmpty ? .isEmpty : .exact($0) },
+            traits: (element.traits ?? []).compactMap(HeistTrait.init(rawValue:)),
+            hint: element.hint.map(StringMatch.exact),
         )
         return .predicate(predicate, ordinal: element.occurrence.map { $0 - 1 })
     }
@@ -117,6 +119,8 @@ extension ElementTarget: CustomStringConvertible {
         if let label { parts.append(JSONWriter.quote(label)) }
         if let value { parts.append("value \(JSONWriter.quote(value))") }
         if let identifier { parts.append("identifier \(JSONWriter.quote(identifier))") }
+        if let hint { parts.append("hint \(JSONWriter.quote(hint))") }
+        if let traits { parts.append(traits.joined(separator: " ")) }
         let named = parts.joined(separator: " ")
         guard let occurrence else { return named }
         return "\(named) (\(Self.ordinal(occurrence)))"
@@ -132,4 +136,9 @@ extension ElementTarget: CustomStringConvertible {
         }
         return "\(number)\(suffix)"
     }
+}
+
+extension ElementTarget {
+    /// The trait names The Button Heist knows, which a scene's `traits` may give.
+    static let knownTraits = Set(HeistTrait.allCases.map(\.rawValue))
 }

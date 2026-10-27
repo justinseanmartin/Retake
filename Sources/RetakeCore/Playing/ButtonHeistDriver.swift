@@ -199,7 +199,7 @@ public final class ButtonHeistDriver: AppDriver {
             }
         }
         return ScreenElement(
-            label: assertable.label, value: assertable.value, identifier: assertable.identifier,
+            label: assertable.label, value: assertable.value, identifier: assertable.identifier, hint: assertable.hint,
             traits: assertable.traits.map(\.rawValue).sorted(), frame: frame, activationPoint: activationPoint,
         )
     }

@@ -93,7 +93,7 @@ struct TakeLogReadingTests {
             launch: .init(launched: 0.58, reported: 2.02, connected: 2.11), clock: .init(deviceAhead: 0.039),
             steps: [TakeLog.Entry(
                 number: 1, id: "new-note", action: "drag", start: 1.018, end: 1.34, timedByDevice: true, touch: Point(x: 195.12, y: 410),
-                touchEnd: Point(x: 20, y: 30), elements: [ScreenElement(label: "New Note", traits: ["button"], frame: .init(x: 780, y: 32, width: 44, height: 44.33), activationPoint: Point(x: 802, y: 54))],
+                touchEnd: Point(x: 20, y: 30), elements: [ScreenElement(label: "New Note", hint: "Starts a note", traits: ["button"], frame: .init(x: 780, y: 32, width: 44, height: 44.33), activationPoint: Point(x: 802, y: 54))],
             )],
             shapes: [.init(at: 0, width: 1200, height: 1718, turn: 0), .init(at: 4.5, width: 1718, height: 1200, turn: 90)],
         )

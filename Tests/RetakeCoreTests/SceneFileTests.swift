@@ -67,6 +67,21 @@ struct SceneFileTests {
             .type(text: "a", into: nil),
             .orientation(.landscapeLeft),
         ])
+        let named = steps(#"{"tap": {"label": "Notes", "traits": ["header"]}}, {"activate": {"hint": "Opens the note"}}"#).scene
+        #expect(named?.steps.map(\.action) == [
+            .tapElement(ElementTarget(label: "Notes", traits: ["header"])),
+            .activate(ElementTarget(hint: "Opens the note")),
+        ])
+    }
+
+    @Test(arguments: [
+        (#"{"tap": {"traits": ["heading"]}}"#, #"scenes/ipad/create-note.json: steps[0].tap.traits[0]: "heading" isn't a trait The Button Heist knows; `retake compose` shows each element's"#),
+        (#"{"tap": {"traits": []}}"#, "scenes/ipad/create-note.json: steps[0].tap.traits: needs at least one trait"),
+        (#"{"tap": {"traits": ["button", "button"]}}"#, #"scenes/ipad/create-note.json: steps[0].tap.traits: names "button" more than once"#),
+        (#"{"tap": {"label": "a", "hint": ""}}"#, "scenes/ipad/create-note.json: steps[0].tap.hint: can't be empty"),
+    ])
+    func traitsAndHintsMistakesAreNamed(_ step: String, _ expected: String) {
+        #expect(steps(step).problems == [expected])
     }
 
     @Test(arguments: [
@@ -75,11 +90,11 @@ struct SceneFileTests {
         (#"{"id": "pause"}"#, "scenes/ipad/create-note.json: steps[0]: has nothing to do: give an action (tap, drag, type, activate, orientation, waitFor) or a hold"),
         (#"{"tap": {"x": 10, "y": 10, "label": "a"}}"#, #"scenes/ipad/create-note.json: steps[0].tap: taps a point ("x" and "y") or an element, not both"#),
         (#"{"tap": {"x": 10}}"#, #"scenes/ipad/create-note.json: steps[0].tap: is missing "y""#),
-        (#"{"tap": {"occurrence": 2}}"#, #"scenes/ipad/create-note.json: steps[0].tap: needs an element to name: its "label", "value" or "identifier""#),
+        (#"{"tap": {"occurrence": 2}}"#, #"scenes/ipad/create-note.json: steps[0].tap: needs an element to name: its "label", "value", "identifier", "hint" or "traits""#),
         (#"{"tap": {"label": "a", "occurrence": 0}}"#, "scenes/ipad/create-note.json: steps[0].tap.occurrence: 0 must be at least 1"),
         (#"{"waitFor": {"label": "a", "timeout": 0}}"#, "scenes/ipad/create-note.json: steps[0].waitFor.timeout: 0 must be more than 0"),
         (#"{"type": {"text": ""}}"#, "scenes/ipad/create-note.json: steps[0].type.text: can't be empty"),
-        (#"{"type": {"text": "a", "into": {}}}"#, #"scenes/ipad/create-note.json: steps[0].type.into: needs an element to name: its "label", "value" or "identifier""#),
+        (#"{"type": {"text": "a", "into": {}}}"#, #"scenes/ipad/create-note.json: steps[0].type.into: needs an element to name: its "label", "value", "identifier", "hint" or "traits""#),
         (#"{"orientation": "sideways"}"#, #"scenes/ipad/create-note.json: steps[0].orientation: "sideways" isn't one of portrait, portrait-upside-down, landscape-left or landscape-right"#),
         (#"{"inspect": true}"#, "scenes/ipad/create-note.json: steps[0]: unknown key \"inspect\""),
         (#"{"hold": -1}"#, "scenes/ipad/create-note.json: steps[0].hold: -1 must be at least 0"),

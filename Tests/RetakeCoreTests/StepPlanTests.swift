@@ -13,6 +13,9 @@ struct StepPlanTests {
         let target = StepPlay.target(ElementTarget(label: "Delete", identifier: "row.delete", occurrence: 2))
         #expect(target == .predicate(ElementPredicate(label: .exact("Delete"), identifier: .exact("row.delete")), ordinal: 1))
         #expect(StepPlay.target(ElementTarget(value: "")) == .predicate(ElementPredicate(value: .isEmpty)), "an empty field")
+        #expect(StepPlay.target(ElementTarget(label: "Notes", hint: "Opens it", traits: ["header", "selected"])) == .predicate(ElementPredicate(
+            label: .exact("Notes"), traits: [.header, .selected], hint: .exact("Opens it"),
+        )))
         #expect(StepPlay.target(ElementTarget(value: "Title")) == .predicate(ElementPredicate(value: .exact("Title"))))
     }
 

@@ -21,6 +21,9 @@ struct ComposeActionTests {
     @Test func actionsOnTheSceneAddNoStep() throws {
         #expect(try parse("inspect") == .inspect(nil))
         #expect(try parse(#"inspect --label "Delete""#) == .inspect(ElementTarget(label: "Delete")))
+        #expect(try parse(#"tap --label Notes --traits header,selected,header --hint "Opens it""#)
+            == .step(Step(.tapElement(ElementTarget(label: "Notes", hint: "Opens it", traits: ["header", "selected"])))))
+        #expect(throws: ComposeAction.Problem.self) { try parse("tap --traits heading") }
         #expect(try parse("set --hold 1.5") == .set(hold: 1.5, id: nil))
         #expect(try parse("set --id synced --hold 0") == .set(hold: 0, id: "synced"))
         #expect(throws: ComposeAction.Problem.wrong("set needs --hold <seconds> or --id <name>, or both.")) { try parse("set") }
@@ -66,7 +69,7 @@ struct ComposeActionTests {
         #expect(drag.contains("Required:\n  --from <x>,<y>"))
         #expect(drag.contains("Optional:\n  --duration <seconds>  how long it takes (0.5 if not given)"))
         let tap = try #require(ComposeActionSpec.all.first { $0.name == "tap" }).usage
-        #expect(tap.contains("an element (--label, --value or --identifier, one at least), or a point (--x <x> --y <y>)"))
+        #expect(tap.contains("an element (--label, --value, --identifier, --hint or --traits, one at least), or a point (--x <x> --y <y>)"))
         #expect(!tap.contains("--x <x>  in screen points"), "x and y are in what's required, not listed again")
         #expect(ComposeActionSpec.overview.split(separator: "\n").contains { $0.hasPrefix("  inspect ") && $0.hasSuffix("numbered as --occurrence counts them.") })
     }
@@ -178,9 +181,9 @@ struct ComposerSessionTests {
 
     @Test func inspectWithAnElementListsOnlyItsMatchesInOrder() async throws {
         let driver = FakeDriver()
-        let delete = { (row: String) in ScreenElement(label: "Delete", value: row) }
-        driver.screens = [[delete("Groceries"), ScreenElement(label: "New Note"), delete("Book club")]]
-        let (_, _, replies) = try await session([#"inspect --label "Delete""#, #"inspect --label "Delete" --value "Book club""#, "inspect"], driver: driver)
+        let delete = { (row: String) in ScreenElement(label: "Delete", value: row, traits: ["button"]) }
+        driver.screens = [[delete("Groceries"), ScreenElement(label: "Delete", traits: ["header"]), delete("Book club")]]
+        let (_, _, replies) = try await session([#"inspect --label "Delete" --traits button"#, #"inspect --label "Delete" --value "Book club""#, "inspect"], driver: driver)
         let matches = replies.all.compactMap { reply -> [ScreenElement]? in
             if case .matches(let elements) = reply { elements } else { nil }
         }
@@ -207,6 +210,6 @@ struct ComposerSessionTests {
     @Test func fromAPipeWhatsMissingFailsAndNothingIsAsked() async throws {
         let (_, state, replies) = try await session(["tap"])
         #expect(state.document.steps.isEmpty)
-        #expect(replies.failures == ["tap needs an element (--label, --value or --identifier); `help tap` lists its options."])
+        #expect(replies.failures == ["tap needs an element (--label, --value, --identifier, --hint or --traits); `help tap` lists its options."])
     }
 }
