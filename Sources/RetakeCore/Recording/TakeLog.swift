@@ -26,6 +26,9 @@ public struct TakeLog: Equatable, Sendable {
     /// nil in a log written before they were recorded.
     public var frames: Int? = nil
     public var dropped: Int? = nil
+    /// The shape the set's `aspect` gave the app's window, portrait and landscape, at the top (or in
+    /// landscape, the left) of the screen; nil when the window filled it. The editor crops to it.
+    public var aspect: SetFile.AspectChoice? = nil
     /// For a take recorded from before the app launched: when it was launched, when Retake's
     /// support library reported in, and when The Button Heist connected, for an edit to cut in on.
     public var launch: Launch?
@@ -155,6 +158,11 @@ extension TakeLog {
             .init(key: "duration", value: Self.number(duration)),
             .init(key: "size", value: .array([.number(Double(width)), .number(Double(height))])),
         ]
+        if let aspect {
+            object.append(.init(key: "aspect", value: Self.object([
+                ("portrait", aspect.portrait.map { .string($0.description) }), ("landscape", aspect.landscape.map { .string($0.description) }),
+            ])))
+        }
         if let frames { object.append(.init(key: "frames", value: .number(Double(frames)))) }
         if let dropped { object.append(.init(key: "dropped", value: .number(Double(dropped)))) }
         if let launch {
@@ -283,6 +291,7 @@ extension TakeLog {
         let dimensions = root.required("size", size)
         let frames = root.optional("frames") { reader.integer($0, at: $1, atLeast: 0) }
         let dropped = root.optional("dropped") { reader.integer($0, at: $1, atLeast: 0) }
+        let aspect = root.optional("aspect") { SetFile.readAspectChoice($0, $1, reader) }
         let launch = root.optional("launch") { value, path -> Launch? in
             guard var object = reader.object(value, at: path) else { return nil }
             defer { object.finish() }
@@ -336,7 +345,7 @@ extension TakeLog {
         return TakeLog(
             scene: scene, take: take, set: set, state: state, deviceType: deviceType, device: device, app: app, retake: retake,
             buttonHeist: buttonHeist, recordedAt: recordedAt, failure: failure, duration: duration, width: dimensions.0,
-            height: dimensions.1, frames: frames, dropped: dropped, launch: launch, clock: clock, steps: steps, shapes: shapes,
+            height: dimensions.1, frames: frames, dropped: dropped, aspect: aspect, launch: launch, clock: clock, steps: steps, shapes: shapes,
         )
     }
 }

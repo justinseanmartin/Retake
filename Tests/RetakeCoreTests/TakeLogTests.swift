@@ -90,6 +90,7 @@ struct TakeLogReadingTests {
             app: .init(bundleID: "com.example.notes", version: "1.0", build: "7"),
             retake: "0.0.1", buttonHeist: .init(version: "0.7.1"), recordedAt: Date(timeIntervalSince1970: 1_800_000_000),
             failure: failure, duration: 12.346, width: 1200, height: 1718, frames: 700, dropped: 2,
+            aspect: .init(portrait: .init(width: 3, height: 4), landscape: .init(width: 4, height: 3)),
             launch: .init(launched: 0.58, reported: 2.02, connected: 2.11), clock: .init(deviceAhead: 0.039),
             steps: [TakeLog.Entry(
                 number: 1, id: "new-note", action: "drag", start: 1.018, end: 1.34, timedByDevice: true, touch: Point(x: 195.12, y: 410),
