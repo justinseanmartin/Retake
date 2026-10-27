@@ -200,7 +200,26 @@ struct Embed: AsyncParsableCommand {
     @OptionGroup var outputFormat: OutputOptions
 
     func run() async throws {
-        throw RetakeError.notImplemented("embed")
+        let current = URL(filePath: FileManager.default.currentDirectoryPath, directoryHint: .isDirectory)
+        let result = try Embedder.embed(
+            URL(filePath: app, directoryHint: .isDirectory, relativeTo: current),
+            output: output.map { URL(filePath: $0, directoryHint: .isDirectory, relativeTo: current) },
+            signing: signing.overrides(),
+            framework: try InsideJobFramework.locate(),
+            support: try SupportLibrary.locate(),
+        )
+        if outputFormat.json {
+            print(JSONWriter.write(.object(JSONObject([
+                .init(key: "app", value: .string(result.app.path)),
+                .init(key: "retake", value: .string(result.record.retakeVersion)),
+                .init(key: "supportContract", value: .number(Double(result.record.supportContract))),
+                .init(key: "buttonHeist", value: .string(result.record.buttonHeistVersion)),
+                .init(key: "identity", value: .string(result.identity)),
+                .init(key: "added", value: .array(result.record.added.map(JSONValue.string))),
+            ]))), terminator: "")
+        } else {
+            print(result.app.path)
+        }
     }
 }
 
