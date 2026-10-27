@@ -97,7 +97,7 @@ public final class ButtonHeistDriver: AppDriver {
         }
     }
 
-    public func run(_ plan: HeistPlan) async throws(RetakeError) {
+    public func run(_ plan: HeistPlan) async throws(RetakeError) -> StepEvidence {
         let result: HeistResult
         do {
             result = try await heist.run(plan, timeout: Self.timeout(for: plan))
@@ -109,11 +109,12 @@ public final class ButtonHeistDriver: AppDriver {
         if case .failed = result.outcome {
             throw RetakeError(.failed, Self.failureMessage(result.steps))
         }
+        return StepEvidence.from(encoded: result)
     }
 
     /// Through the tooling SPI's direct commands: a drag with a duration, which 0.7.1 refuses in a
     /// plan as not durable.
-    public func perform(_ command: HeistActionCommand) async throws(RetakeError) {
+    public func perform(_ command: HeistActionCommand) async throws(RetakeError) -> StepEvidence {
         let response: FenceResponse
         do {
             let action = try JSONDecoder().decode(HeistValue.self, from: JSONEncoder().encode(command))
@@ -128,6 +129,29 @@ public final class ButtonHeistDriver: AppDriver {
             if case .error(let failure) = response { throw RetakeError(.failed, failure.message) }
             throw RetakeError(.failed, response.humanFormatted())
         }
+        guard case .action(let result, _) = response else { return StepEvidence() }
+        return StepEvidence.from(encoded: result)
+    }
+
+    /// How far the device's clock is ahead of the Mac's, in seconds: from when it stamped a reading
+    /// of the screen against the middle of the round trip that asked for it, the quickest of three,
+    /// so it's off by at most half that round trip.
+    public func clockOffset() async throws(RetakeError) -> Double {
+        var best: (roundTrip: Double, offset: Double)?
+        for _ in 0..<3 {
+            let sent = Date()
+            let stamped: Date
+            do {
+                stamped = try await heist.captureInterface().timestamp
+            } catch {
+                throw RetakeError(.failed, "Couldn't read the screen: \(error)")
+            }
+            let received = Date()
+            let roundTrip = received.timeIntervalSince(sent)
+            let offset = stamped.timeIntervalSince(sent.addingTimeInterval(roundTrip / 2))
+            if best.map({ roundTrip < $0.roundTrip }) ?? true { best = (roundTrip, offset) }
+        }
+        return best!.offset
     }
 
     /// Long enough for a wait's own timeout to be what ends it, with room for the round trip.
@@ -162,7 +186,7 @@ public final class ButtonHeistDriver: AppDriver {
         }
     }
 
-    static func element(_ element: HeistElement) -> ScreenElement {
+    nonisolated static func element(_ element: HeistElement) -> ScreenElement {
         let assertable = element.semantics.assertable
         var frame: ScreenElement.Rect?
         var activationPoint: Point?

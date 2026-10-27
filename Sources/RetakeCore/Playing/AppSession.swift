@@ -27,6 +27,14 @@ public enum AppSession {
     /// failure is final. Then, unless the set is `live`, launches the app once more to delete the
     /// take's copy of its data; if that fails after `body` failed, it's only a warning.
     /// The app's console goes to a temporary folder, since neither command writes in the project.
+    /// When the app was launched, when Retake's support library reported in, and when The Button
+    /// Heist connected, on the Mac's clock.
+    public struct Launched: Sendable {
+        public var launched: Date
+        public var reported: Date
+        public var connected: Date
+    }
+
     public static func run(
         _ purpose: String,
         in project: Project,
@@ -34,7 +42,8 @@ public enum AppSession {
         scene: SceneFile,
         on device: Device,
         report: @escaping @Sendable (Player.Event) -> Void,
-        _ body: @ButtonHeistActor (ButtonHeistDriver) async throws(RetakeError) -> Void,
+        beforeLaunch: () async throws(RetakeError) -> Void = {},
+        _ body: @ButtonHeistActor (ButtonHeistDriver, Launched) async throws(RetakeError) -> Void,
     ) async throws(RetakeError) {
         guard let type = device.type else {
             throw RetakeError(.environment, "Retake can't tell whether \(device.name) is an iPhone or an iPad.")
@@ -49,11 +58,14 @@ public enum AppSession {
             let plan = LaunchPlan.make(project: project, set: set, scene: scene, type: type, bundleID: bundleID, take: take)
             let started = Started()
             do throws(RetakeError) {
+                try await beforeLaunch()
+                let launched = Date()
                 let app = try Launcher.launch(plan, on: device, logs: logs)
+                let reported = Date()
                 defer { app.stop() }
                 try await ButtonHeistDriver.withApp(app) { driver throws(RetakeError) in
                     started.value = true
-                    try await body(driver)
+                    try await body(driver, Launched(launched: launched, reported: reported, connected: Date()))
                 }
                 outcome = nil
             } catch {

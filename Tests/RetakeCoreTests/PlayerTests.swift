@@ -14,14 +14,16 @@ final class FakeDriver: AppDriver {
     /// What `elements()` returns, one after another; the last stays.
     var screens: [[ScreenElement]] = [[]]
 
-    func run(_ plan: HeistPlan) async throws(RetakeError) {
+    func run(_ plan: HeistPlan) async throws(RetakeError) -> StepEvidence {
         defer { runs += 1 }
         done.append("run")
         if runs == failingRun { throw RetakeError(.failed, "No match for: label=\"Send\"") }
+        return StepEvidence()
     }
 
-    func perform(_ command: HeistActionCommand) async throws(RetakeError) {
+    func perform(_ command: HeistActionCommand) async throws(RetakeError) -> StepEvidence {
         done.append("direct")
+        return StepEvidence()
     }
 
     func elements() async throws(RetakeError) -> [ScreenElement] {

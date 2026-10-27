@@ -38,7 +38,7 @@ public enum Rehearsal {
         guard from <= scene.steps.count else {
             throw RetakeError(.usage, "--from \(from) is past \(name)'s last step, \(scene.steps.count).")
         }
-        try await AppSession.run("rehearse-\(name)", in: project, set: set, scene: scene, on: device, report: player.report) { driver throws(RetakeError) in
+        try await AppSession.run("rehearse-\(name)", in: project, set: set, scene: scene, on: device, report: player.report) { driver, _ throws(RetakeError) in
             try await player.play(scene, named: name, from: from, on: driver)
         }
     }

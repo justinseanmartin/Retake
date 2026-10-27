@@ -87,8 +87,12 @@ public final class TakeWriter: @unchecked Sendable {
     /// for, as a capture's must be; false waits, for frames made up in tests.
     private let live: Bool
 
-    public init(writingTo url: URL, live: Bool = true) {
+    /// What the movie says about how it was made, written with it.
+    private let metadata: [AVMetadataItem]
+
+    public init(writingTo url: URL, metadata: [AVMetadataItem] = [], live: Bool = true) {
         self.url = url
+        self.metadata = metadata
         self.live = live
     }
 
@@ -213,6 +217,7 @@ public final class TakeWriter: @unchecked Sendable {
             kCVPixelBufferHeightKey as String: height,
         ])
         warmUpTurning(width: width, height: height)
+        writer.metadata = metadata
         writer.startWriting()
         writer.startSession(atSourceTime: time)
         self.writer = writer

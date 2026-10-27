@@ -7,9 +7,9 @@ import ThePlans
 @ButtonHeistActor
 public protocol AppDriver: AnyObject {
     /// Runs one step's plan in the app, failing (1) with what went wrong when it doesn't run.
-    func run(_ plan: HeistPlan) async throws(RetakeError)
+    func run(_ plan: HeistPlan) async throws(RetakeError) -> StepEvidence
     /// Sends one direct command, for what a plan can't hold, failing (1) like `run`.
-    func perform(_ command: HeistActionCommand) async throws(RetakeError)
+    func perform(_ command: HeistActionCommand) async throws(RetakeError) -> StepEvidence
     /// What's on screen now.
     func elements() async throws(RetakeError) -> [ScreenElement]
     /// Turns the device, returning once it's asked to, not once the app has turned.
@@ -22,7 +22,7 @@ public struct Player: Sendable {
     /// What playing a step is reported as, for printing.
     public enum Event: Sendable {
         case started(Played)
-        case finished(Played, seconds: Double)
+        case finished(Played, Timing)
         case inspected(Played, [ScreenElement])
         /// The app being launched on a set, in its state, once the scene is known to be playable.
         case launching(set: String, state: SetFile.State)
@@ -46,11 +46,24 @@ public struct Player: Sendable {
         }
     }
 
+    /// When a step ran, as the Mac saw it, and what the device saw of it.
+    public struct Timing: Sendable {
+        /// When it was sent, and when its reply came, on the Mac's clock.
+        public var sent: Date
+        public var received: Date
+        public var evidence: StepEvidence
+
+        public var seconds: Double { received.timeIntervalSince(sent) }
+    }
+
     /// Waits a number of seconds: a step's hold, or between looks at the screen.
     public var pause: @Sendable (Double) async -> Void
     /// Seconds on a clock that only goes forward.
     public var now: @Sendable () -> Double
     public var report: @Sendable (Event) -> Void
+    /// Told which way an `orientation` step is about to turn the device, before it does: for the
+    /// recorder, to store frames of the new shape facing the right way.
+    public var turning: @Sendable (SceneFile.Orientation) -> Void = { _ in }
 
     /// How long an `orientation` step waits for the app to turn.
     public static let turnTimeout = 5.0
@@ -67,10 +80,17 @@ public struct Player: Sendable {
         self.report = report
     }
 
-    /// Plays `scene`'s setup, then its steps from `from` (numbered from 1), the steps before it
-    /// without their holds. Fails at the first step that doesn't run, naming it.
+    /// Plays `scene`'s setup, then `beforeSteps`, such as starting the recording, then its steps
+    /// from `from` (numbered from 1), the steps before it without their holds. Fails at the first
+    /// step that doesn't run, naming it.
     @ButtonHeistActor
-    public func play(_ scene: SceneFile, named name: String, from: Int = 1, on driver: some AppDriver) async throws(RetakeError) {
+    public func play(
+        _ scene: SceneFile,
+        named name: String,
+        from: Int = 1,
+        on driver: some AppDriver,
+        beforeSteps: @ButtonHeistActor () async throws(RetakeError) -> Void = {},
+    ) async throws(RetakeError) {
         guard (1...scene.steps.count).contains(from) else {
             throw RetakeError(.usage, "--from \(from) is past \(name)'s last step, \(scene.steps.count).")
         }
@@ -79,6 +99,7 @@ public struct Player: Sendable {
             let played = Played(isSetup: true, number: index + 1, count: scene.setup.count, step: step)
             try await play(played, in: name, orientation: &orientation, holding: true, on: driver)
         }
+        try await beforeSteps()
         for (index, step) in scene.steps.enumerated() {
             let played = Played(isSetup: false, number: index + 1, count: scene.steps.count, step: step)
             try await play(played, in: name, orientation: &orientation, holding: index + 1 >= from, on: driver)
@@ -88,19 +109,21 @@ public struct Player: Sendable {
     @ButtonHeistActor
     func play(_ played: Played, in scene: String, orientation: inout SceneFile.Orientation, holding: Bool, on driver: some AppDriver) async throws(RetakeError) {
         report(.started(played))
-        let started = now()
+        let sent = Date()
+        var evidence = StepEvidence()
         var inspected: [ScreenElement]?
         do {
             switch try StepPlay.make(for: played.step) {
             case .heist(let plan):
-                try await driver.run(plan)
+                evidence = try await driver.run(plan)
             case .direct(let command):
-                try await driver.perform(command)
+                evidence = try await driver.perform(command)
             case .turn(let target):
-                try await turn(from: orientation, to: target, on: driver)
+                evidence.elements = try await turn(from: orientation, to: target, on: driver)
                 orientation = target
             case .inspect:
                 inspected = try await driver.elements()
+                evidence.elements = inspected
             case .pause:
                 break
             }
@@ -112,7 +135,7 @@ public struct Player: Sendable {
             }
             throw RetakeError(error.status, "\(scene): \(played.name), \(played.step.summary), didn't run: \(error.message)")
         }
-        report(.finished(played, seconds: now() - started))
+        report(.finished(played, Timing(sent: sent, received: Date(), evidence: evidence)))
         if let inspected { report(.inspected(played, inspected)) }
         if holding, played.step.hold > 0 { await pause(played.step.hold) }
     }
@@ -120,17 +143,20 @@ public struct Player: Sendable {
     /// Turns the device and waits for the app to turn with it: for what's on screen to have moved
     /// from where it was, and then to look the same twice running, so the app has finished laying
     /// itself out. The Button Heist doesn't report a turn as a change of screen, and doesn't say
-    /// the screen's size. A turn to the way the device already faces needs no wait.
+    /// the screen's size. A turn to the way the device already faces needs no wait. Returns what's
+    /// on screen once it has turned.
     @ButtonHeistActor
-    func turn(from current: SceneFile.Orientation, to target: SceneFile.Orientation, on driver: some AppDriver) async throws(RetakeError) {
-        let before = Self.frames(try await driver.elements())
+    func turn(from current: SceneFile.Orientation, to target: SceneFile.Orientation, on driver: some AppDriver) async throws(RetakeError) -> [ScreenElement] {
+        let before = try await driver.elements()
+        turning(target)
         try await driver.turn(to: target)
-        guard target != current else { return }
+        guard target != current else { return before }
         let deadline = now() + Self.turnTimeout
         var last: [ScreenElement.Rect?]?
         while now() < deadline {
-            let frames = Self.frames(try await driver.elements())
-            if frames != before, frames == last { return }
+            let elements = try await driver.elements()
+            let frames = Self.frames(elements)
+            if frames != Self.frames(before), frames == last { return elements }
             last = frames
             await pause(Self.turnPollInterval)
         }

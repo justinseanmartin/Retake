@@ -85,6 +85,41 @@ struct TakeWriterTests {
         #expect(summary.frames == 2 && summary.outOfOrder == 1)
     }
 
+    @Test func theMovieSaysHowItWasMade() async throws {
+        defer { try? FileManager.default.removeItem(at: movie) }
+        let log = TakeLog(
+            scene: "create-note", take: 3, set: "returning-user", state: .cloned, deviceType: .ipad,
+            device: .init(model: "iPad13,4", marketingName: "iPad Pro (11-inch) (3rd generation)", os: "26.6.2 (23G90)"),
+            app: .init(bundleID: "com.example.notes", version: "1.9.0", build: "412"),
+            retake: "0.0.1", buttonHeist: .init(version: "0.7.1-d53fb59edbf3", commit: "5d05a318-dirty"),
+            recordedAt: Date(timeIntervalSince1970: 1_800_000_000), failure: nil, duration: 0, width: 0, height: 0, launch: nil,
+            clock: .init(deviceAhead: nil), steps: [], shapes: [],
+        )
+        let writer = TakeWriter(writingTo: movie, metadata: MovieMetadata.take(log), live: false)
+        for index in 0..<3 { writer.appendVideo(try frame(width: 64, height: 96, at: index)) }
+        _ = try await writer.finish()
+        let fields = try await MovieMetadata.read(movie)
+        #expect(fields == [
+            "com.apple.quicktime.software": "Retake 0.0.1",
+            "com.apple.quicktime.make": "Apple",
+            "com.apple.quicktime.model": "iPad Pro (11-inch) (3rd generation)",
+            "com.apple.quicktime.creationdate": "2027-01-15T08:00:00Z",
+            "retake.version": "0.0.1",
+            "retake.scene": "create-note",
+            "retake.take": "3",
+            "retake.set": "returning-user",
+            "retake.state": "cloned",
+            "retake.app.bundle-id": "com.example.notes",
+            "retake.app.version": "1.9.0",
+            "retake.app.build": "412",
+            "retake.buttonheist.version": "0.7.1-d53fb59edbf3",
+            "retake.buttonheist.commit": "5d05a318-dirty",
+            "retake.device.model": "iPad13,4",
+            "retake.device.type": "ipad",
+            "retake.device.os": "26.6.2 (23G90)",
+        ])
+    }
+
     @Test func aTakeThatStartedTurnedTurnsItsUprightFramesBack() {
         #expect(TakeWriter.turn(for: .portrait, startedFacing: .landscapeLeft) == -90)
         #expect(TakeWriter.turn(for: .portrait, startedFacing: .landscapeRight) == 90)

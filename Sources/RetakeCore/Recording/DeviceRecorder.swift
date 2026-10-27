@@ -43,11 +43,12 @@ public final class DeviceRecorder: NSObject, AVCaptureVideoDataOutputSampleBuffe
     }
 
     /// Starts recording to `url`, returning once it has truly started; a writer that fails just
-    /// after starting is started over, up to three times.
-    public func start(writingTo url: URL) async throws(RetakeError) {
+    /// after starting is started over, up to three times. With `take`, the movie says how it was
+    /// made, from the take's log as it stands before recording.
+    public func start(writingTo url: URL, describing take: TakeLog? = nil) async throws(RetakeError) {
         session.startRunning()
         for attempt in 1...3 {
-            let writer = TakeWriter(writingTo: url)
+            let writer = TakeWriter(writingTo: url, metadata: take.map(MovieMetadata.take) ?? [])
             queue.sync {
                 writer.facing = facing
                 self.writer = writer
@@ -70,6 +71,10 @@ public final class DeviceRecorder: NSObject, AVCaptureVideoDataOutputSampleBuffe
             }
         }
     }
+
+    /// When the movie's first frame was, on the Mac's clock: now, less how long ago that was on the
+    /// capture clock its frames are stamped with.
+    public var startedAt: Date { Date().addingTimeInterval(-elapsed) }
 
     /// Seconds since the movie's first frame, on the capture clock its frames are stamped with.
     public var elapsed: Double {

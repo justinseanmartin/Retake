@@ -136,8 +136,8 @@ struct Rehearse: AsyncParsableCommand {
             Swift.print("Rehearsing \(scene) on \(device), from \(set) (\(state.rawValue)).")
         case .started:
             break
-        case .finished(let played, let seconds):
-            Swift.print("  \(played.name): \(played.step.summary)  \(String(format: "%.2f", seconds)) s")
+        case .finished(let played, let timing):
+            Swift.print("  \(played.name): \(played.step.summary)  \(String(format: "%.2f", timing.seconds)) s")
         case .inspected(_, let elements):
             for element in elements { Swift.print("      \(element.line)") }
         case .note(let message):

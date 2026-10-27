@@ -147,6 +147,15 @@ public enum Launcher {
         return LaunchReport.parse(data)
     }
 
+    /// The installed app's version and build (`CFBundleShortVersionString`, `CFBundleVersion`), as
+    /// the device reports them; nil when it can't say.
+    public static func installedVersion(bundleID: String, on device: Device) -> (version: String?, build: String?)? {
+        guard let output = try? Devicectl().run(["device", "info", "apps", "--device", device.udid, "--bundle-id", bundleID]),
+              let value = try? JSONParser.parse(String(decoding: output, as: UTF8.self)),
+              case .array(let apps)? = value[path: "result", "apps"], let app = apps.first else { return nil }
+        return (app[path: "version"]?.stringValue, app[path: "bundleVersion"]?.stringValue)
+    }
+
     /// Ends the app's processes on the device, found by where it's installed, returning how many.
     @discardableResult
     static func terminate(bundleID: String, on device: Device) -> Int {

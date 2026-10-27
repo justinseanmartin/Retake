@@ -37,7 +37,7 @@ public struct Inspection: Sendable {
     /// otherwise; it can be turned by hand while watching.
     public static func run(_ set: ResolvedSet, in project: Project, on device: Device, watch: Bool, inspection: Inspection, report: @escaping @Sendable (Player.Event) -> Void) async throws(RetakeError) {
         let scene = SceneFile(steps: [])
-        try await AppSession.run("inspect", in: project, set: set, scene: scene, on: device, report: report) { driver throws(RetakeError) in
+        try await AppSession.run("inspect", in: project, set: set, scene: scene, on: device, report: report) { driver, _ throws(RetakeError) in
             try await inspection.look(on: driver, watching: watch)
         }
     }
