@@ -1,8 +1,9 @@
 # Proofs of concept behind Retake's design
 
 Status: **done** (2026-10-23 to 2026-10-26). What was tried on devices before Retake's code was
-written, and what it showed. The [README](../../README.md) and [docs/cli.md](../cli.md) are designed on these results, and [the
-v0.0.1 plan](2026-10-26-v0.0.1-implementation-plan.md) builds on them. The code behind them is in `spikes/`, kept locally and not checked in.
+written, and what it showed. The [README](../../README.md) and [docs/cli.md](../cli.md) are designed on these results, and
+[the v0.0.1 plan](2026-10-26-v0.0.1-implementation-plan.md) builds on them. The code behind them is in `spikes/`, kept locally and not checked
+in.
 
 ## Why they came first
 
@@ -23,8 +24,8 @@ Four questions could each have changed Retake's shape, so they were answered bef
    recording across the turn. If turning hadn't worked, an `aspect` step faking a landscape band
    inside a portrait screen would have stood in for it.
 
-All four came back yes, and The Button Heist's 0.7.0 and 0.7.1 releases then answered most of [the
-asks for The Button Heist](2026-10-26-button-heist-asks.md), so the first was run again on 0.7.1.
+All four came back yes, and The Button Heist's 0.7.0 and 0.7.1 releases then answered most of
+[the asks for The Button Heist](2026-10-26-button-heist-asks.md), so the first was run again on 0.7.1.
 
 ## Before the proofs of concept (2026-10-23)
 

@@ -310,10 +310,10 @@ A tap or a drag that lands while something is still moving, such as a sheet risi
 was aimed at, so a step that follows one that presents or dismisses something should wait for it: a
 `waitFor` on what arrives, or on what leaves with `"gone": true`.
 
-The step log records when an `orientation` step's frames changed shape, for the edit to [show the
-turn](#turns), and when a `waitFor`'s element appeared, so an edit can cut on what the app did, such as a
-sheet arriving, not just on what the scene did. Every step, its options and their defaults are in
-the [scene reference](docs/reference/scene.md).
+The step log records when an `orientation` step's frames changed shape, for the edit to
+[show the turn](#turns), and when a `waitFor`'s element appeared, so an edit can cut on what the app did,
+such as a sheet arriving, not just on what the scene did. Every step, its options and their defaults
+are in the [scene reference](docs/reference/scene.md).
 
 A step's `id` names it for edits to anchor to; see [anchors](#anchors-times-that-follow-the-app). Ids are unique within a scene, can't
 look like a number, and can't be `start` or `end`, which name the take's own edges.
