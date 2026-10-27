@@ -46,7 +46,7 @@ extension OnDevice {
                 #"tap --label "New Note" --id new-note --hold 0.8"#,
                 #"type --text "Shopping\n" --value "Title""#,
                 #"tap --label "Nowhere""#,
-                #"wait --label "Synced""#,
+                #"waitFor --label "Synced""#,
                 "undo",
                 "quit",
             ])

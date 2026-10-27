@@ -13,16 +13,17 @@ struct ComposeActionTests {
         #expect(try parse(#"type --text "Groceries\n" --value Title"#) == .step(Step(.type(text: "Groceries\n", into: ElementTarget(value: "Title")))))
         #expect(try parse(#"type --text "a \"b\"""#) == .step(Step(.type(text: #"a "b""#, into: nil))))
         #expect(try parse(#"activate --label Delete --occurrence 2"#) == .step(Step(.activate(ElementTarget(label: "Delete", occurrence: 2)))))
-        #expect(try parse(#"wait --label Done --gone --timeout 4"#) == .step(Step(.waitFor(ElementTarget(label: "Done"), gone: true, timeout: 4))))
-        #expect(try parse("turn --to landscape-left") == .step(Step(.orientation(.landscapeLeft))))
-        #expect(try parse("pause --seconds 2") == .step(Step(nil, hold: 2)))
+        #expect(try parse(#"waitFor --label Done --gone --timeout 4"#) == .step(Step(.waitFor(ElementTarget(label: "Done"), gone: true, timeout: 4))))
+        #expect(try parse("orientation --to landscape-left") == .step(Step(.orientation(.landscapeLeft))))
+        #expect(try parse("hold --seconds 2 --id rest") == .step(Step(id: "rest", nil, hold: 2)))
     }
 
     @Test func actionsOnTheSceneAddNoStep() throws {
         #expect(try parse("inspect") == .inspect(nil))
         #expect(try parse(#"inspect --label "Delete""#) == .inspect(ElementTarget(label: "Delete")))
-        #expect(try parse("hold --seconds 1.5") == .hold(1.5))
-        #expect(try parse("id --name synced") == .id("synced"))
+        #expect(try parse("set --hold 1.5") == .set(hold: 1.5, id: nil))
+        #expect(try parse("set --id synced --hold 0") == .set(hold: 0, id: "synced"))
+        #expect(throws: ComposeAction.Problem.wrong("set needs --hold <seconds> or --id <name>, or both.")) { try parse("set") }
         #expect(try parse("undo") == .undo(1) && parse("undo 3") == .undo(3) && parse("replay") == .replay)
         #expect(try parse("steps") == .steps && parse("quit") == .quit)
         #expect(throws: ComposeAction.Problem.self) { try parse("undo 0") }
@@ -49,10 +50,10 @@ struct ComposeActionTests {
         ("tap --label a --x 1 --y 2", "tap takes an element or --x and --y, not both."),
         ("tap --x 1", "tap at a point needs both --x and --y."),
         ("drag --from 1 --to 2,3", "--from takes a point as <x>,<y>, such as 120,590."),
-        ("wait --label a --timeout 0", "--timeout must be more than 0."),
+        ("waitFor --label a --timeout 0", "--timeout must be more than 0."),
         ("tap --label a --hold -1", "--hold can't be less than 0."),
         ("activate --label a --occurrence 0", "--occurrence counts from 1, not \"0\"."),
-        ("turn --to sideways", "--to is one of portrait, portrait-upside-down, landscape-left, landscape-right."),
+        ("orientation --to sideways", "--to is one of portrait, portrait-upside-down, landscape-left, landscape-right."),
         (#"tap --label "a"#, "A quote isn't closed."),
         ("tap --label a --label b", "--label is given twice."),
     ])
@@ -143,7 +144,7 @@ struct ComposerSessionTests {
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         let driver = FakeDriver()
         driver.failingRun = 1
-        let (ending, state, replies) = try await session([#"tap --label "New Note""#, #"tap --label Nowhere"#, "hold --seconds 2", "id --name new-note", "quit"], driver: driver)
+        let (ending, state, replies) = try await session([#"tap --label "New Note""#, #"tap --label Nowhere"#, "set --hold 2", "set --id new-note", "quit"], driver: driver)
         #expect(ending == .quit)
         #expect(state.document.steps == [Step(id: "new-note", .tapElement(ElementTarget(label: "New Note")), hold: 2)])
         #expect(replies.failures == [#"step 2 of 2, tap "Nowhere", didn't run: No match for: label="Send""#])
@@ -188,7 +189,7 @@ struct ComposerSessionTests {
 
     @Test func anIDMustBeOneAStepCanHave() async throws {
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
-        let (_, state, replies) = try await session(["tap --x 1 --y 2 --id start", "tap --x 1 --y 2 --id a", "tap --x 1 --y 2 --id a", "id --name 3"])
+        let (_, state, replies) = try await session(["tap --x 1 --y 2 --id start", "tap --x 1 --y 2 --id a", "tap --x 1 --y 2 --id a", "set --id 3"])
         #expect(state.document.steps.map(\.id) == ["a"])
         #expect(replies.failures.count == 3)
     }

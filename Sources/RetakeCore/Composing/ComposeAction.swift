@@ -7,9 +7,8 @@ public enum ComposeAction: Equatable, Sendable {
     case step(Step)
     /// Print what's on screen, or only the elements that match.
     case inspect(ElementTarget?)
-    /// Set the last step's hold, or its id.
-    case hold(Double)
-    case id(String)
+    /// Change the last step's hold, its id, or both.
+    case set(hold: Double?, id: String?)
     /// Drop the last steps, as many as given, then launch again and replay the rest.
     case undo(Int)
     /// Launch again and replay every step.
@@ -284,7 +283,7 @@ extension ComposeActionSpec {
             .step(Step(.activate(try ElementOptions.target(given)!)))
         },
         ComposeActionSpec(
-            name: "wait", summary: "Waits for an element to be on screen, or with --gone, not to be.",
+            name: "waitFor", summary: "Waits for an element to be on screen, or with --gone, not to be.",
             options: ElementOptions.options + [
                 .flag("gone", "waits for it to go instead"),
                 .option("timeout", "<seconds>", "how long to wait before failing", default: "10"),
@@ -295,7 +294,7 @@ extension ComposeActionSpec {
             return .step(Step(.waitFor(try ElementOptions.target(given)!, gone: given["gone"] != nil, timeout: timeout)))
         },
         ComposeActionSpec(
-            name: "turn", summary: "Turns the device, and waits for the app to turn with it.",
+            name: "orientation", summary: "Turns the device, and waits for the app to turn with it.",
             options: [.option("to", "<orientation>", "portrait, portrait-upside-down, landscape-left or landscape-right")] + stepOptions,
             required: ["to"], isStep: true,
         ) { given throws(ComposeAction.Problem) in
@@ -305,7 +304,7 @@ extension ComposeActionSpec {
             return .step(Step(.orientation(orientation)))
         },
         ComposeActionSpec(
-            name: "pause", summary: "A step that's only a pause.",
+            name: "hold", summary: "A step that's only a pause.",
             options: [.option("seconds", "<seconds>", "how long"), .option("id", "<name>", "names the step", default: "none")],
             required: ["seconds"], isStep: true,
         ) { given throws(ComposeAction.Problem) in
@@ -318,16 +317,12 @@ extension ComposeActionSpec {
             .inspect(try ElementOptions.target(given))
         },
         ComposeActionSpec(
-            name: "hold", summary: "Sets the last step's hold, the pause after it.",
-            options: [.option("seconds", "<seconds>", "how long")], required: ["seconds"], isStep: false,
+            name: "set", summary: "Changes the last step's hold, the pause after it, or its id, for edits to anchor to.",
+            options: [.option("hold", "<seconds>", "the pause after it"), .option("id", "<name>", "its id")], required: [], isStep: false,
+            needsNote: "--hold <seconds> or --id <name>, or both",
         ) { given throws(ComposeAction.Problem) in
-            .hold(try number(given["seconds"]!, "--seconds", atLeast: 0))
-        },
-        ComposeActionSpec(
-            name: "id", summary: "Names the last step, for edits to anchor to.",
-            options: [.option("name", "<name>", "its id")], required: ["name"], isStep: false,
-        ) { given throws(ComposeAction.Problem) in
-            .id(given["name"]!)
+            guard given["hold"] != nil || given["id"] != nil else { throw .wrong("set needs --hold <seconds> or --id <name>, or both.") }
+            return .set(hold: try given["hold"].map { text throws(ComposeAction.Problem) in try number(text, "--hold", atLeast: 0) }, id: given["id"])
         },
         ComposeActionSpec(
             name: "undo", summary: "Drops the last step, or with a number, `undo 3`, that many; then launches the app again and replays the rest.",

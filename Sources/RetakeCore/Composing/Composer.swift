@@ -22,7 +22,7 @@ public enum Composer {
         case matches([ScreenElement])
         /// A step that ran and was added, its number, and the screen after it.
         case added(Step, number: Int, [ScreenElement])
-        /// The last step, changed by `hold` or `id`.
+        /// The last step, changed by `set`.
         case changed(Step, number: Int)
         /// The scene's steps, for `steps`, or replayed after `undo` or `replay`.
         case steps([Step])
@@ -155,17 +155,14 @@ public enum Composer {
             case .inspect(let target):
                 let elements = try await driver.elements()
                 reply(target.map { target in .matches(elements.filter(target.matches)) } ?? .screen(elements))
-            case .hold(let seconds):
-                guard var last = state.document.steps.last else { reply(.failed("There's no step yet to hold after.")); continue }
-                last.hold = seconds
-                try replaceLast(with: last, in: state, reply: reply)
-            case .id(let id):
-                guard var last = state.document.steps.last else { reply(.failed("There's no step yet to name.")); continue }
+            case .set(let hold, let id):
+                guard var last = state.document.steps.last else { reply(.failed("There's no step yet to change.")); continue }
                 if let problem = problem(withID: id, in: state.document.steps.dropLast()) {
                     reply(.failed(problem))
                     continue
                 }
-                last.id = id
+                if let hold { last.hold = hold }
+                if let id { last.id = id }
                 try replaceLast(with: last, in: state, reply: reply)
             case .undo(let count):
                 let steps = state.document.steps.count
