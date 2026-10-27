@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// RetakeNotes, Retake's example app: a small notes app with everything a scene can drive, and
+/// Notes, Retake's example app: a small notes app with everything a scene can drive, and
 /// nothing that changes between takes. Its notes live in `Documents/notes.json` and its settings
 /// in `UserDefaults`, so a set's `files` and `defaults` decide what it starts on.
 @main
-struct RetakeNotesApp: App {
+struct NotesApp: App {
     @State private var library = NoteLibrary()
 
     var body: some Scene {

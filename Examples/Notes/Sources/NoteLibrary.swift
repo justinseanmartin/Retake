@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// The keys RetakeNotes keeps in `UserDefaults.standard`, which a set's `defaults` can give.
+/// The keys Notes keeps in `UserDefaults.standard`, which a set's `defaults` can give.
 enum Settings {
     /// Whether the welcome screen has been dismissed.
     static let hasSeenWelcome = "hasSeenWelcome"

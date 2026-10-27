@@ -69,7 +69,7 @@ struct ProjectSettingsTests {
     }
 
     @Test func theExamplesConfigurationReadsCleanly() throws {
-        let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/RetakeNotes/Retake/retake.json")
+        let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/Notes/Retake/retake.json")
         let text = try String(contentsOf: example, encoding: .utf8)
         let result = read(text)
         #expect(result.problems.isEmpty)
@@ -78,8 +78,8 @@ struct ProjectSettingsTests {
             Issue.record("the example builds with a scheme")
             return
         }
-        #expect(build.scheme == "RetakeNotes")
-        #expect(build.container == .project("../RetakeNotes.xcodeproj"), "xcodebuild runs in Retake/, beside no Xcode project")
+        #expect(build.scheme == "Notes")
+        #expect(build.container == .project("../Notes.xcodeproj"), "xcodebuild runs in Retake/, beside no Xcode project")
     }
 }
 
