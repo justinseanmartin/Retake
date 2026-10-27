@@ -48,10 +48,12 @@ struct Inspect: AsyncParsableCommand {
         }
         let name = target.name
         try await Inspection.run(set, in: located, on: target, watch: watch, inspection: inspection) { event in
-            if case .launching(let set, let state) = event {
+            if case .scene = event {
+                return
+            } else if case .launching(let set, let state) = event {
                 Swift.print("Launching the app on \(name), from \(set) (\(state.rawValue)).")
             } else {
-                Rehearse.show(event, scene: "", device: name)
+                Record.show(event, scene: "", device: name, dryRun: true)
             }
         }
         if interruption.happened { Swift.print("Stopped.") }
@@ -89,72 +91,14 @@ final class Counter: @unchecked Sendable {
     func next() -> Int { lock.withLock { count += 1; return count } }
 }
 
-struct Rehearse: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(
-        abstract: "Plays a scene without recording it.",
-        discussion: "Writes nothing. Fails (1) at the first step that doesn't run, naming it.",
-    )
-
-    @Argument(help: ArgumentHelp("The scene to play.", valueName: "scene"))
-    var scene: String
-
-    @OptionGroup var device: DeviceOptions
-
-    @Option(
-        name: .customLong("from"),
-        help: ArgumentHelp(
-            "Skip to this step, numbered from 1, playing the steps before it without their holds.",
-            valueName: "step",
-        ),
-    )
-    var fromStep: Int?
-
-    @OptionGroup var project: ProjectOptions
-
-    func validate() throws {
-        if let fromStep, fromStep < 1 {
-            throw ValidationError("--from numbers steps from 1.")
-        }
-    }
-
-    func run() async throws {
-        let located = try project.locate()
-        let directory = try DeviceDirectory.current()
-        let target = try directory.resolve(device.choice(
-            configuration: located.settings.device.map { ($0, located.configuration) },
-            connected: directory.recordable.map(\.udid),
-        ))
-        let player = Player(report: { event in Self.show(event, scene: scene, device: target.name) })
-        try await Rehearsal.run(scene, in: located, on: target, from: fromStep ?? 1, player: player)
-        print("Played every step of \(scene).")
-    }
-
-    /// Each step once it's played, with how long it took, and what an `inspect` step saw.
-    @Sendable static func show(_ event: Player.Event, scene: String, device: String) {
-        switch event {
-        case .launching(let set, let state):
-            Swift.print("Rehearsing \(scene) on \(device), from \(set) (\(state.rawValue)).")
-        case .started:
-            break
-        case .finished(let played, let timing):
-            Swift.print("  \(played.name): \(played.step.summary)  \(String(format: "%.2f", timing.seconds)) s")
-        case .inspected(_, let elements):
-            for element in elements { Swift.print("      \(element.line)") }
-        case .note(let message):
-            Console.note(message)
-        case .warning(let message):
-            Console.warn(message)
-        }
-    }
-}
-
 struct Record: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        abstract: "Records takes.",
+        abstract: "Records takes, or with --dry-run, plays scenes without recording them.",
         discussion: """
             With no scenes named, records every scene in scenes/<type>/ with no take yet, or every one \
             with --force. With --for, the scenes an edit uses. Scenes named are recorded whether or not \
-            they have takes. A new take never replaces one.
+            they have takes. A new take never replaces one. With --dry-run, plays the scenes chosen \
+            the same way, and writes nothing.
             """,
     )
 
@@ -172,17 +116,96 @@ struct Record: AsyncParsableCommand {
     @Flag(help: "Stop at the first scene that fails, rather than carrying on with the next.")
     var stopOnFailure = false
 
+    @Flag(help: "Play the scenes without recording them, writing nothing.")
+    var dryRun = false
+
+    @Option(
+        name: .customLong("from"),
+        help: ArgumentHelp(
+            "With --dry-run and one scene, skip to this step, numbered from 1, playing the steps before it without their holds.",
+            valueName: "step",
+        ),
+    )
+    var fromStep: Int?
+
     @OptionGroup var project: ProjectOptions
 
     func validate() throws {
         if !scenes.isEmpty, edit != nil {
             throw ValidationError("Name scenes or give --for, not both.")
         }
+        if let fromStep {
+            guard dryRun, scenes.count == 1 else {
+                throw ValidationError("--from goes with --dry-run and one scene named.")
+            }
+            if fromStep < 1 { throw ValidationError("--from numbers steps from 1.") }
+        }
     }
 
     func run() async throws {
-        _ = try project.locate()
-        throw RetakeError.notImplemented("record")
+        let located = try project.locate()
+        let directory = try DeviceDirectory.current()
+        let target = try directory.resolve(device.choice(
+            configuration: located.settings.device.map { ($0, located.configuration) },
+            connected: directory.recordable.map(\.udid),
+        ))
+        guard let type = target.type else {
+            throw RetakeError(.environment, "Retake can't tell whether \(target.name) is an iPhone or an iPad.")
+        }
+        let (chosen, taken) = try RecordRun.scenes(named: scenes, edit: edit, force: force, for: type, in: located)
+        guard !chosen.isEmpty else {
+            print(taken.isEmpty
+                ? "There are no \(type.rawValue) scenes in \(located.displayPath(located.scenes(for: type)))."
+                : "Every scene chosen already has a take: \(taken.joined(separator: ", ")). Give --force to record another.")
+            return
+        }
+        let capture = dryRun ? nil : try directory.captureDevice(for: target)
+        let name = target.name, dryRun = dryRun
+        let player = Player(report: { event in Self.show(event, scene: "", device: name, dryRun: dryRun) })
+        let outcomes = await RecordRun.run(
+            chosen, in: located, on: target, capture: capture, dryRun: dryRun, from: fromStep ?? 1,
+            stopOnFailure: stopOnFailure, player: player,
+        )
+        // What became of each scene, and the worst status among them.
+        print("")
+        for outcome in outcomes {
+            if let failure = outcome.failure {
+                let take = outcome.take.map { ", take \($0) kept, marked failed" } ?? ""
+                // A step's failure names its scene already; a launch's doesn't.
+                let message = failure.message.hasPrefix("\(outcome.scene): ") ? String(failure.message.dropFirst(outcome.scene.count + 2)) : failure.message
+                print("✖ \(outcome.scene)\(take): \(message)")
+            } else if let take = outcome.take {
+                print("✓ \(outcome.scene): take \(take), \(String(format: "%.1f", outcome.duration ?? 0)) s, in \(located.displayPath(located.takes(for: type).appending(path: "\(outcome.scene)/\(take).mov")))")
+            } else {
+                print("✓ \(outcome.scene): played every step")
+            }
+        }
+        let skipped = chosen.dropFirst(outcomes.count)
+        if !skipped.isEmpty { print("Not \(dryRun ? "played" : "recorded"): \(skipped.joined(separator: ", ")).") }
+        if let worst = outcomes.compactMap(\.failure?.status).max() {
+            throw ExitCode(worst.rawValue)
+        }
+    }
+
+    /// Each scene as it starts, and each step once it's played, with how long it took, and what an
+    /// `inspect` step saw.
+    @Sendable static func show(_ event: Player.Event, scene: String, device: String, dryRun: Bool) {
+        switch event {
+        case .scene(let name, let take):
+            Swift.print(take.map { "Recording \(name), take \($0), on \(device)." } ?? "Playing \(name) on \(device).")
+        case .launching(let set, let state):
+            Swift.print("  From \(set) (\(state.rawValue)).")
+        case .started:
+            break
+        case .finished(let played, let timing):
+            Swift.print("  \(played.name): \(played.step.summary)  \(String(format: "%.2f", timing.seconds)) s")
+        case .inspected(_, let elements):
+            for element in elements { Swift.print("      \(element.line)") }
+        case .note(let message):
+            Console.note(message)
+        case .warning(let message):
+            Console.warn(message)
+        }
     }
 }
 
@@ -254,7 +277,7 @@ struct Clean: AsyncParsableCommand {
             Deletes every take and every rendered video, of both device types unless --type names one. \
             Edits' pins are left as they are. With --on-device, deletes instead what Retake leaves in the \
             app's container on the device (takes' copies of its data, and staged set files), which \
-            record and rehearse do at the end of a run.
+            record does at the end of a run.
             """,
     )
 

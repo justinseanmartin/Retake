@@ -1,7 +1,7 @@
 import ButtonHeist
 import Foundation
 
-/// The app launched on a set and driven for one command, `rehearse` or `inspect`, then cleaned up
+/// The app launched on a set and driven for one command, `record` or `inspect`, then cleaned up
 /// after: the take's copy of the app's data is deleted from the device at the end, however the
 /// command ended.
 public enum AppSession {
@@ -20,6 +20,31 @@ public enum AppSession {
         let report = ProjectFiles.Report()
         guard let set = files.resolveSet(name, into: report) else { throw report.error }
         return set
+    }
+
+    /// The scene `name` for the device's type, and the set it starts on: a misuse (2) when either
+    /// doesn't exist, and a failure (1) when either file is wrong.
+    public static func scene(_ name: String, in project: Project, for type: DeviceType) throws(RetakeError) -> (scene: SceneFile, set: ResolvedSet) {
+        let files = ProjectFiles(project: project)
+        let url = files.sceneURL(name, for: type)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            let others = files.names(in: project.scenes(for: type))
+            throw RetakeError(
+                .usage,
+                "There's no \(type.rawValue) scene \"\(name)\" (\(project.displayPath(url)))"
+                    + (others.isEmpty ? "." : "; there's \(others.joined(separator: ", ")).")
+            )
+        }
+        let report = ProjectFiles.Report()
+        guard let scene = files.readScene(name, for: type, into: report) else { throw report.error }
+        guard let setName = scene.set ?? project.settings.defaultSet else {
+            throw RetakeError(
+                .usage,
+                "\(project.displayPath(url)) names no set, and \(project.configuration.lastPathComponent) has no defaultSet.",
+            )
+        }
+        let set = try AppSession.set(setName, in: project, namedBy: project.displayPath(url))
+        return (scene, set)
     }
 
     /// Launches the app on `set` for `scene`'s take, connects to it, and runs `body` with a driver
@@ -42,6 +67,7 @@ public enum AppSession {
         scene: SceneFile,
         on device: Device,
         report: @escaping @Sendable (Player.Event) -> Void,
+        cleanUp: Bool = true,
         beforeLaunch: () async throws(RetakeError) -> Void = {},
         _ body: @ButtonHeistActor (ButtonHeistDriver, Launched) async throws(RetakeError) -> Void,
     ) async throws(RetakeError) {
@@ -76,7 +102,7 @@ public enum AppSession {
             report(.note("\(failure.message) Launching the app again."))
         }
 
-        if set.state != .live {
+        if cleanUp, set.state != .live {
             do {
                 try Launcher.cleanUp(bundleID: bundleID, on: device)
             } catch where outcome == nil {

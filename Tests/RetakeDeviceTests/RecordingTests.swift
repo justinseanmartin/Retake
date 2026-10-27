@@ -12,7 +12,7 @@ extension OnDevice {
         func aTakeHasItsStepLogAndMetadata(_ name: String) async throws {
             let example = try ExampleOnDevice()
             let capture = try #require(ScreenCaptureDevices().captureDevices(waitingFor: example.device.name, timeout: 10).first { $0.name == example.device.name })
-            let (scene, set) = try Rehearsal.scene(name, in: example.project, for: example.device.type!)
+            let (scene, set) = try AppSession.scene(name, in: example.project, for: example.device.type!)
             let target = TakeRecording.Target(scene: name, take: 1, movie: example.project.output.appending(path: "tests/\(name).mov"))
             let log = try await TakeRecording.record(target, scene: scene, set: set, in: example.project, on: example.device, capture: capture, player: Player())
 

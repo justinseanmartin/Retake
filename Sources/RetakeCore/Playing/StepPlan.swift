@@ -76,7 +76,7 @@ public enum StepPlay: Equatable, Sendable {
 }
 
 extension Step {
-    /// How the step reads in what `rehearse` and `record` print: `tap "New Note"`.
+    /// How the step reads in what `record` prints: `tap "New Note"`.
     public var summary: String {
         guard let action else { return "hold \(Self.seconds(hold))" }
         switch action {

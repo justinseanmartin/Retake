@@ -17,13 +17,16 @@ public protocol AppDriver: AnyObject {
 }
 
 /// Plays a scene's setup and steps, one plan per step, with each step's hold after it. See
-/// docs/cli.md, "retake rehearse" and "retake record".
+/// docs/cli.md, "retake record".
 public struct Player: Sendable {
     /// What playing a step is reported as, for printing.
     public enum Event: Sendable {
         case started(Played)
         case finished(Played, Timing)
         case inspected(Played, [ScreenElement])
+        /// A scene starting, in a run of several: its name, and the take it'll be, unless it's
+        /// only played.
+        case scene(String, take: Int?)
         /// The app being launched on a set, in its state, once the scene is known to be playable.
         case launching(set: String, state: SetFile.State)
         /// Something said in passing, such as a launch tried again.

@@ -34,6 +34,7 @@ public enum TakeRecording {
         on device: Device,
         capture: CaptureDevice,
         player: Player,
+        cleanUp: Bool = true,
     ) async throws(RetakeError) -> TakeLog {
         guard let type = device.type else {
             throw RetakeError(.environment, "Retake can't tell whether \(device.name) is an iPhone or an iPad.")
@@ -71,7 +72,7 @@ public enum TakeRecording {
 
         var failure: RetakeError?
         do throws(RetakeError) {
-            try await AppSession.run("\(target.scene)-\(target.take)", in: project, set: set, scene: scene, on: device, report: report) { () throws(RetakeError) in
+            try await AppSession.run("\(target.scene)-\(target.take)", in: project, set: set, scene: scene, on: device, report: report, cleanUp: cleanUp) { () throws(RetakeError) in
                 // Recording from before launch catches the launch screen, and everything up to the
                 // first step, which the launch marks place.
                 if scene.recordsLaunch, !collected.recording {
