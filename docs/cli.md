@@ -52,6 +52,22 @@ directory, suits runs whose takes don't need to outlive it: a take recorded ther
 directory is cleared, and an edit pinned to it fails to `cut` until it's recorded and conformed
 again.
 
+### Finding the app
+
+Commands that launch the app, or put a set's files in its container, need its bundle ID, which
+comes from the first of these that's given:
+
+1. the configuration file's `bundleID`;
+2. the app `install` last built and embedded, in the output directory's `build/`, from its
+   `Info.plist`.
+
+So a project that installs with `retake install` needn't name its bundle ID at all, which suits an
+app whose bundle ID differs from one developer to the next, each signing it with a prefix of their
+own. A project that installs the app itself, with `retake embed` in its own script, gives
+`bundleID`. Without either, the command fails (2), asking for one, as it does when the output
+directory is somewhere `install` hasn't been run, such as a new `--output-dir`. `embed` and
+`install` read the bundle ID from the app they're given or build.
+
 ### Choosing a device
 
 Commands that use a device take `--device <device>`, where `<device>` is:
@@ -159,8 +175,10 @@ retake init [--bundle-id <id>] [--scheme <name>]
 
 Creates `retake.json` and the folders `sets/`, `scenes/iphone/`, `scenes/ipad/` and `edits/` in the
 current directory, and adds `RetakeOutput/` to `.gitignore`. `retake.json` names its schema's URL in
-`"$schema"`, which editors fetch to complete and check it. Asks for the bundle ID and scheme when
-they aren't given and can't be found in an Xcode project in the directory.
+`"$schema"`, which editors fetch to complete and check it. Asks for the scheme when it isn't given
+and can't be found in an Xcode project in the directory. Writes `bundleID` only when `--bundle-id`
+gives one; otherwise the bundle ID comes from the app `install` builds (see [Finding the
+app](#finding-the-app)).
 
 Fails (2) if `retake.json` already exists.
 
