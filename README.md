@@ -604,8 +604,8 @@ UDID.
 
 ## Devices
 
-Devices are named by aliases you choose, kept in the project's `devices.json`, which `retake init`
-gitignores, since devices belong to people:
+Devices are named by aliases you choose, kept for every project in
+`~/Library/Caches/retake/devices.json`, never in a repository, since devices belong to people:
 
 ```sh
 retake devices                 # connected devices, their type, and whether they're wired
@@ -656,9 +656,11 @@ Retake/
   scenes/iphone/*.json
   scenes/ipad/*.json
   edits/*.json
-  devices.json       # your device aliases; gitignored
   output/            # takes and videos; gitignored, and movable with --output-dir
 ```
+
+Builds and your device aliases are kept outside the repository, in `~/Library/Caches/retake/`, for
+every project: a build rewrites thousands of files each time, and aliases name your own devices.
 
 A project can live anywhere, under any folder's name: `retake init --config Previews/retake.json`
 makes one in `Previews/`, and commands then need `--config` or `RETAKE_CONFIG` to find it, which the

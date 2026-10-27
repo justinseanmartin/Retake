@@ -12,8 +12,9 @@ Retake is in design, so this describes the command as it will be.
 
 A project is a folder: its configuration file, `retake.json`, and beside it the project's own
 folders, `sets/`, `scenes/` and `edits/`, and its output, `output/`. [`init`](#retake-init) makes it in `Retake/`,
-at the root of the repository, so everything of Retake's is in one place, apart from the app's own
-files.
+at the root of the repository, so the project's files are in one place, apart from the app's own.
+What each person's Retake keeps for itself, their builds and device aliases, is outside any project,
+in `~/Library/Caches/retake/`.
 
 Every command except `init`, `version` and `devices` runs in a project, named by its configuration
 file, under any name. (`devices` reads one when there is one, for its aliases and `device`.) The
@@ -56,8 +57,8 @@ RETAKE_CONFIG = "{{config_root}}/Previews/retake.json"
 
 ### The output directory
 
-What Retake writes — takes, cuts, and the builds `install` makes — goes in the project's output
-directory, the first of these that's given:
+What Retake makes that's worth keeping — takes and cuts — goes in the project's output directory,
+the first of these that's given:
 
 1. `--output-dir <dir>`, relative to the current directory;
 2. the `RETAKE_OUTPUT_DIR` environment variable, relative to the current directory;
@@ -79,8 +80,7 @@ Commands that launch the app, or put a set's files in its container, need its bu
 from the first of these that's given:
 
 1. the configuration file's `bundleID`;
-2. the app `install` last built and embedded, in the output directory's `build/`, from its
-   `Info.plist`.
+2. the app `install` last embedded, which it records in the output directory's `installed.json`.
 
 So a project that installs with `retake install` needn't name its bundle ID at all, which suits an
 app whose bundle ID differs from one developer to the next, each signing it with a prefix of their
@@ -200,10 +200,9 @@ Creates a project: `retake.json`, and beside it the folders `sets/`, `scenes/iph
 file, and writes it into `retake.json` as `output`, so every command uses it without being told.
 `RETAKE_OUTPUT_DIR` isn't read here: it's for one shell's commands, not the project's.
 
-What doesn't belong in the repository goes in a `.gitignore` in the project's folder: the output
-directory, and `devices.json`, where [`devices add`](#retake-devices) keeps aliases. An output directory outside the
-project's folder goes in the current directory's `.gitignore` instead, when it's below the current
-directory, and in neither when it isn't.
+The output directory is gitignored: in a `.gitignore` in the project's folder, or when it's outside
+that folder, in the current directory's `.gitignore`, when it's below the current directory, and in
+neither when it isn't.
 
 `retake.json` names its schema's URL in `"$schema"`, which editors fetch to complete and check it.
 Asks for the scheme when it isn't given and can't be found in an Xcode project in the current
@@ -260,16 +259,16 @@ what [chose it](#choosing-a-device), so a take never lands on a device by surpri
 ```
 
 or `(from retake.json)`, `(the only one connected)`, or that several are connected and none is
-chosen. It needs no project, but reads one's aliases and `device` when there is one, found as
+chosen. It needs no project, but reads one's `device` when there is one, found as
 [Finding the project](#finding-the-project) says.
 
 `add` names a device: the one `<device>` gives, by its UDID or its name as `devicectl` reports it,
 or with none given, the one connected; with several connected and none given, it asks which. It
-records the device's UDID and its screen-capture identity, which differ, in the project's
-`devices.json`, beside `retake.json`. Fails (2) if the alias is taken, or there's no project.
-`<device>` is an argument, not `--device`, since it says which device to name rather than which to
-use, and `RETAKE_DEVICE` plays no part. When `RETAKE_DEVICE` names a different device, `add` notes
-that the shell's commands will still use that one:
+records the device's UDID and its screen-capture identity, which differ, in
+`~/Library/Caches/retake/devices.json`. Fails (2) if the alias is taken. `<device>` is an argument,
+not `--device`, since it says which device to name rather than which to use, and `RETAKE_DEVICE`
+plays no part. When `RETAKE_DEVICE` names a different device, `add` notes that the shell's commands
+will still use that one:
 
 ```
 Commands in this shell still use "ipad" (RETAKE_DEVICE); pass --device phone to use this one.
@@ -277,11 +276,11 @@ Commands in this shell still use "ipad" (RETAKE_DEVICE); pass --device phone to 
 
 `remove` forgets an alias.
 
-Aliases are kept in the project, so nothing Retake keeps lives outside it, but not in the
-repository: `init` gitignores `devices.json`. A device's UDID and name are its owner's, and the name
-is often theirs too ("Anna's iPad"); and one person's `ipad` isn't another's. A project's
-`retake.json` can name a default `device` for everyone, which each person's own alias of that name
-then stands for.
+Aliases are each person's, for every project, and are kept with everything else of Retake's outside
+the project, never in the repository: a device's UDID and name are its owner's, and the name is
+often theirs too ("Anna's iPad"); and one person's `ipad` isn't another's. A project's `retake.json`
+can name a default `device` for everyone, which each person's own alias of that name then stands
+for. Clearing `~/Library/Caches` forgets them, and `devices add` names each device again.
 
 ### `retake install`
 
@@ -296,9 +295,15 @@ Builds the app if asked to, runs [`embed`](#retake-embed) on a copy of it, and i
 It's the usual way to get the app onto a device for Retake; `embed` alone is for a build script or
 tool that installs the app itself. It's needed once per build of the app, not before each recording.
 
-The build itself isn't changed: the copy is in `output/build/installed/`, replaced each time. On
+The build itself isn't changed: the copy is in the project's build folder, below, replaced each
+time, and the output directory's `installed.json` records its bundle ID, for [finding the app](#finding-the-app). On
 APFS, the copy is a clone of the build, so it takes no time and no space until embedding changes it,
-when the build is on the same volume as the output directory, as one `install` builds always is.
+when the build is on the same volume as the build folder, as one `install` builds always is.
+
+Builds are kept out of the project, since a build rewrites thousands of files each time: in
+`~/Library/Caches/retake/builds/<project>/`, one folder per project, named for the project's folder
+and its path. They can all be made again, so clearing the cache only makes the next `install` build
+from scratch.
 
 Where the app comes from, the first that applies:
 
@@ -323,10 +328,10 @@ Where the app comes from, the first that applies:
 With none of these, fails (2).
 
 **Building with `xcodebuild`.** Retake builds the scheme for iOS devices in `configuration` (`Debug`
-unless given), with its build products under `output/build/`, so it doesn't disturb your own builds,
-and finds the `.app` from the build's settings. Signing is the project's own. Any configuration
-works, so long as it's development-signed for the device; `Debug` is the default because it usually
-is.
+unless given), with its build products in the project's build folder, so it doesn't disturb your own
+builds, and finds the `.app` from the build's settings. Signing is the project's own. Any
+configuration works, so long as it's development-signed for the device; `Debug` is the default
+because it usually is.
 
 It builds with the compiler's optimisation on, whatever the configuration says (Swift at `-O`, C and
 Objective-C at `-Os`), since a preview should show the app running as fast as it does for its users,
@@ -726,7 +731,6 @@ Paths in the project are relative to its folder, `Retake/` unless [`init`](#reta
 | `retake.json`, `sets/`, `scenes/iphone/`, `scenes/ipad/`, `edits/`, `.gitignore` | Created by `init`. |
 | `scenes/<type>/*.json` | Written by `compose`. |
 | `edits/*.json` | Rewritten by `conform`. |
-| `devices.json` | Device aliases, from `devices add` and `remove`. Gitignored. |
 
 **In the output directory**, `output/` unless [moved](#the-output-directory), and gitignored:
 
@@ -735,7 +739,7 @@ Paths in the project are relative to its folder, `Retake/` unless [`init`](#reta
 | `takes/<type>/<scene>/<n>.mov` | A take's footage. |
 | `takes/<type>/<scene>/<n>.json` | A take's step log, and what it was recorded with: device, app version and build, set and state, Retake and Button Heist versions. |
 | `cuts/<type>/<edit>/` | Rendered videos, from `cut`. |
-| `build/` | The app as `install` builds it, and the copy it embeds Retake in. |
+| `installed.json` | The bundle ID of the app `install` last embedded, for [finding the app](#finding-the-app). |
 
 **On the device**, in the app's container:
 
@@ -748,7 +752,9 @@ Paths in the project are relative to its folder, `Retake/` unless [`init`](#reta
 | Path | What |
 | --- | --- |
 | The `.app` given to `embed` | Changed in place, unless `--output` says otherwise. |
-| `~/Library/Caches/retake/` | Anything Retake can make again: TheInsideJob and the support library it embeds, and when it last used a device's screen. |
+| `~/Library/Caches/retake/builds/<project>/` | The app as `install` builds it, and the copy it embeds Retake in. |
+| `~/Library/Caches/retake/devices.json` | Device aliases, from `devices add` and `remove`, and `init`. |
+| `~/Library/Caches/retake/` | The rest Retake can make again: TheInsideJob and the support library it embeds, and when it last used a device's screen. |
 
 ## Movie metadata
 
