@@ -11,8 +11,8 @@ drives, and nothing that changes between takes.
   sheet whose **Send to Alex** shows **Sent**.
 - In landscape, the library and the open note side by side.
 
-What it starts on is a set's to decide: its notes are in `Documents/notes.json`, and its settings
-in `UserDefaults` (`hasSeenWelcome`, and `sortOrder`, `manual` or `title`).
+What it starts on is a set's to decide: its notes are in `Documents/notes.json`, and its settings in
+`UserDefaults` (`hasSeenWelcome`, and `sortOrder`, `manual` or `title`).
 
 To build it for a device, copy `Notes/Config/Signing.example.xcconfig` to
 `Notes/Config/Signing.local.xcconfig`, which isn't checked in, and fill in your team and a bundle ID
