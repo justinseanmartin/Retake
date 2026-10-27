@@ -679,8 +679,9 @@ Checks the project's files, or the files named, against the schemas, then what a
 - that step ids are unique in a scene, aren't numbers, and aren't `start` or `end`;
 - that a scene of the same name on each device type an edit names has the same step ids;
 - with takes recorded, that every anchor resolves in the takes the edit pins, and every element a
-  spotlight or blur names is in the step log at that moment, as `cut` will check. `--offline` skips
-  this.
+  spotlight or blur names is in the step log at that moment, as `cut` will check. A take the edit
+  doesn't pin, or that isn't recorded here, as in a fresh clone or on CI, is warned about rather
+  than failed, and what's cut from it isn't checked. `--offline` skips this.
 
 Needs no device and changes nothing. Prints every problem, not just the first, and fails (1) if
 there's any. Made for CI and pre-commit hooks, and for an agent checking an edit it changed;
