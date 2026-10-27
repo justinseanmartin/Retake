@@ -133,6 +133,25 @@ public struct ResolvedSet: Equatable, Sendable {
     public var arguments: [String]
     public var aspect: [DeviceType: SetFile.AspectChoice]
 
+    public init(
+        name: String,
+        state: SetFile.State = .clean,
+        files: [SetFile.FileCopy] = [],
+        defaults: [Named<JSONValue>] = [],
+        environment: [Named<String>] = [],
+        arguments: [String] = [],
+        aspect: [DeviceType: SetFile.AspectChoice] = [:],
+    ) {
+        self.name = name
+        names = [name]
+        self.state = state
+        self.files = files
+        self.defaults = defaults
+        self.environment = environment
+        self.arguments = arguments
+        self.aspect = aspect
+    }
+
     /// Lays each set over the one before, from the base: a field a set gives replaces the base's,
     /// key by key for `files`, `defaults`, `environment` and `aspect`; `arguments` add up, the
     /// base's first.
