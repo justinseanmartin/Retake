@@ -6,8 +6,8 @@ proofs of concept and shared with its maintainer, who answered all but the seven
 doesn't need it. Each says what would help, why, and what we found. Retake relies on what they
 changed (a version that names the contract, refusing a mismatch at the handshake, injection as a
 supported way to use TheInsideJob, and a public Swift client), so this record is where to start if
-any of it changes. Retake now pins the 0.7.1 release; what that showed is in [the proofs of
-concept](2026-10-26-proofs-of-concept.md), under "Proof of concept 1 again".
+any of it changes. Retake now pins the 0.7.1 release; what that showed is in
+[the proofs of concept](2026-10-26-proofs-of-concept.md), under "Proof of concept 1 again".
 
 Building on 0.7.1 then turned up three more, in [Asks for after 0.7.1](#asks-for-after-071): what Retake does through The
 Button Heist's tooling SPI, or works around, because the public client doesn't offer it yet. None is
