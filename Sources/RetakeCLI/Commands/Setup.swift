@@ -66,8 +66,53 @@ struct Devices: AsyncParsableCommand {
     @OptionGroup var config: ConfigOption
 
     func run() async throws {
-        _ = try config.locateIfPresent()
-        throw RetakeError.notImplemented("devices")
+        let project = try config.locateIfPresent()
+        let directory = try DeviceDirectory.current()
+        let choice = DeviceChoice.choose(
+            named: flagOrEnvironment(nil, DeviceOptions.environmentVariable, in: ProcessInfo.processInfo.environment)
+                .map { ($0.value, $0.variable) },
+            configuration: project.flatMap { project in project.settings.device.map { ($0, project.configuration) } },
+            connected: directory.recordable.map(\.udid),
+        )
+        let shown = directory.devices.filter { $0.state == .connected }
+        if output.json {
+            print(JSONWriter.write(DevicesReport(directory: directory, shown: shown, choice: choice).json), terminator: "")
+            return
+        }
+        if shown.isEmpty {
+            print("No devices connected.")
+        } else {
+            print("Connected:")
+            for device in shown {
+                let details = [
+                    device.type?.rawValue ?? "not an iPhone or iPad",
+                    device.marketingName ?? device.model,
+                    device.osVersion.map { "iOS \($0)" },
+                    device.transport == .wired ? "USB" : "network, so it can't be recorded",
+                ].compactMap(\.self)
+                print("  \(device.name)  \(device.udid)\n    \(details.joined(separator: ", "))")
+            }
+        }
+        if !directory.aliases.aliases.isEmpty {
+            print("Aliases:")
+            for alias in directory.aliases.aliases {
+                let connected = directory.devices.first { $0.udid == alias.udid }
+                let state = connected?.isConnectedByUSB == true ? "connected by USB" : connected?.state == .connected ? "on the network" : "not connected"
+                print("  \(alias.name) → \(alias.deviceName), \(state)")
+            }
+        }
+        if let choice {
+            let shownAs = switch directory.match(choice.device) {
+            case .alias(let alias, _)?: "\(alias.name), \(alias.deviceName)"
+            case .device(let device)?: device.name
+            case nil: choice.device
+            }
+            print("→ \(shownAs) (\(choice.reason))")
+        } else if directory.recordable.isEmpty {
+            print("→ none: no iPhone or iPad is connected by USB")
+        } else {
+            print("→ none chosen: several are connected; name one with --device or RETAKE_DEVICE")
+        }
     }
 
     struct Add: AsyncParsableCommand {
@@ -95,7 +140,23 @@ struct Devices: AsyncParsableCommand {
         var device: String?
 
         func run() async throws {
-            throw RetakeError.notImplemented("devices add")
+            var directory = try DeviceDirectory.current()
+            let alias = try DeviceNaming.alias(self.alias, for: device, in: directory, finder: ScreenCaptureDevices()) { devices in
+                let names = devices.map { "\($0.name) (\($0.udid))" }
+                guard let chosen = Prompt.choose("Which device should be \"\(self.alias)\"?", from: names) else { return nil }
+                return devices[names.firstIndex(of: chosen)!]
+            }
+            directory.aliases.aliases.append(alias)
+            try directory.aliases.save(to: DeviceAliases.defaultFile())
+            print("\"\(alias.name)\" is \(alias.deviceName).")
+            let environment = ProcessInfo.processInfo.environment
+            if let named = environment[DeviceOptions.environmentVariable], !named.isEmpty,
+               let note = DeviceChoice.noteAfterNaming(
+                   alias: alias.name, udid: alias.udid, name: alias.deviceName,
+                   environmentDevice: (named, DeviceOptions.environmentVariable),
+               ) {
+                Console.note(note)
+            }
         }
     }
 
@@ -106,7 +167,14 @@ struct Devices: AsyncParsableCommand {
         var alias: String
 
         func run() async throws {
-            throw RetakeError.notImplemented("devices remove")
+            let file = DeviceAliases.defaultFile()
+            var aliases = try DeviceAliases.load(from: file)
+            guard let existing = aliases[alias] else {
+                throw RetakeError(.usage, "There's no alias \"\(alias)\".")
+            }
+            aliases.aliases.removeAll { $0.name == alias }
+            try aliases.save(to: file)
+            print("Forgot \"\(alias)\", which was \(existing.deviceName).")
         }
     }
 }
