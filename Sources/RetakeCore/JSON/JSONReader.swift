@@ -7,11 +7,15 @@ public struct FileProblem: Error, Equatable, Sendable, CustomStringConvertible {
     public var file: String
     public var path: JSONPath
     public var message: String
+    /// The exact value the problem is about, when it's named at the object holding it, as an
+    /// unknown key is: its object is `path`, and the key's own place is this.
+    public var about: JSONPath?
 
-    public init(file: String, path: JSONPath, message: String) {
+    public init(file: String, path: JSONPath, message: String, about: JSONPath? = nil) {
         self.file = file
         self.path = path
         self.message = message
+        self.about = about
     }
 
     public var description: String {
@@ -32,8 +36,8 @@ public final class JSONReader {
         self.file = file
     }
 
-    public func problem(_ message: String, at path: JSONPath) {
-        problems.append(FileProblem(file: file, path: path, message: message))
+    public func problem(_ message: String, at path: JSONPath, about: JSONPath? = nil) {
+        problems.append(FileProblem(file: file, path: path, message: message, about: about))
     }
 
     public func warning(_ message: String, at path: JSONPath) {
@@ -242,9 +246,9 @@ public struct ObjectReader {
     public func finish() {
         for key in object.keys where !known.contains(key) {
             if let suggestion = Self.closest(to: key, in: known) {
-                reader.problem("unknown key \"\(key)\"; did you mean \"\(suggestion)\"?", at: path)
+                reader.problem("unknown key \"\(key)\"; did you mean \"\(suggestion)\"?", at: path, about: path.appending(key))
             } else {
-                reader.problem("unknown key \"\(key)\"", at: path)
+                reader.problem("unknown key \"\(key)\"", at: path, about: path.appending(key))
             }
         }
     }

@@ -68,6 +68,18 @@ public struct ProjectFiles {
         return scene
     }
 
+    public func editURL(_ name: String) -> URL { project.edits.appending(path: "\(name).json") }
+
+    /// An edit, each device type's overrides laid over it, or nil with problems in `report`.
+    public func readEdit(_ name: String, into report: Report) -> EditFile? {
+        let url = editURL(name)
+        guard let text = text(of: url, into: report) else { return nil }
+        let reader = JSONReader(file: project.displayPath(url))
+        let edit = EditFile.read(text, with: reader)
+        report.add(reader)
+        return edit
+    }
+
     /// A set as its own file says it, without what it extends.
     public func readSet(_ name: String, into report: Report) -> SetFile? {
         let url = setURL(name)
