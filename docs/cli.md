@@ -174,8 +174,7 @@ and exits with the worst status among them.
 | [`compose`](#retake-compose) | Writes a scene a step at a time, on the device. |
 | [`record`](#retake-record) | Records takes, or with `--dry-run`, plays scenes without recording them. |
 | [`takes`](#retake-takes) | Lists takes. |
-| [`discard`](#retake-discard) | Deletes a take. |
-| [`clean`](#retake-clean) | Deletes takes and videos. |
+| [`clean`](#retake-clean) | Deletes takes and cuts. |
 | [`conform`](#retake-conform) | Pins an edit to newer takes of its scenes. |
 | [`cut`](#retake-cut) | Renders videos. |
 | [`status`](#retake-status) | Summarizes scenes, takes, edits and videos. |
@@ -534,31 +533,36 @@ device and its model, duration, frames dropped, whether it failed, and the edits
 
 Without `--device` or `--type`, lists takes of both device types.
 
-### `retake discard`
-
-```
-retake discard <scene> <take>... [--type <type>]
-```
-
-Deletes takes. Fails (1), deleting nothing, if an edit pins one of them; conform the edit onto
-another take first.
-
 ### `retake clean`
 
 ```
-retake clean [--takes | --videos] [--type <type>] [--yes]
+retake clean [--takes [<scene>[@<take>],...]] [--cuts [<edit>,...]] [--type <type>] [--yes]
 retake clean --on-device [--device <device>]
 ```
 
-Deletes every take and every rendered video, or with `--takes` or `--videos` only those, of both
-device types unless `--type` names one. Asks first, unless `--yes`.
+Deletes takes and cuts, of both device types unless `--type` names one:
+
+| Form | Deletes |
+| --- | --- |
+| `retake clean` | Every take and every cut. |
+| `retake clean --takes` | Every take. |
+| `retake clean --takes create-note,share-note@2` | Every take of `create-note`, and take 2 of `share-note`. |
+| `retake clean --cuts` | Every cut. |
+| `retake clean --cuts video1` | `video1`'s cuts. |
+
+`--takes` and `--cuts` can be given together. It lists what it will delete, naming each take an edit
+pins, and asks first, unless `--yes`. Fails (2), deleting nothing, if a scene, take or edit named
+doesn't exist.
+
+Since [`conform`](#retake-conform) pins each scene's latest take, deleting later takes is how an edit goes back to an
+earlier one: `retake clean --takes create-note@5`, then `retake conform video1`, pins take 4.
 
 `--on-device` deletes, instead, what Retake leaves in the app's container on the device: takes'
 copies of the app's data, and staged set files. `record` does this at the end of a run, so it's for
 one that was interrupted. Only the app can delete files in its container, so this launches it in a
 mode that deletes them and quits before any of the app's own code runs; iOS then opens the app
 again, as from the home screen, and Retake closes it. It never touches the app's real data, nor
-takes or videos on the Mac.
+takes or cuts on the Mac.
 
 Edits' pins are left as they are, now pointing at takes that don't exist, so `cut` fails until
 they're recorded and conformed again. `retake clean` then `retake record` starts everything over.
@@ -566,11 +570,11 @@ they're recorded and conformed again. `retake clean` then `retake record` starts
 ### `retake conform`
 
 ```
-retake conform <edit> [--type <type>] [--to latest | --to <scene>=<take>...] [--dry-run]
+retake conform <edit> [--type <type>] [--dry-run]
 ```
 
-Pins an edit to other takes of its scenes: by default the latest successful take of each scene it
-uses, for each device type it names, or only `--type`'s.
+Pins an edit to the latest successful take of each scene it uses, for each device type it names, or
+only `--type`'s. To cut from an earlier take, delete the takes after it with [`clean --takes`](#retake-clean).
 
 An edit's anchors name steps, not seconds, so they find the same moments in the new takes without
 changing. `conform` checks that every anchor resolves in the new takes, updates the edit's `takes`
@@ -592,10 +596,10 @@ retake cut --all [--type <type>] [--draft]
 ```
 
 Renders each edit, for each device type it names (or only `--type`'s), from the takes it pins, to
-`output/videos/<type>/<video>/`:
+`output/cuts/<type>/<edit>/`:
 
-- `<video>-<type>-master.mov`, ProRes, and
-- `<video>-<type>.mp4`, H.264 at the size and frame rate App Store Connect specifies for the type.
+- `<edit>-<type>-master.mov`, ProRes, and
+- `<edit>-<type>.mp4`, H.264 at the size and frame rate App Store Connect specifies for the type.
 
 `--draft` renders a quick, smaller H.264 alone, for checking timing. `--open` opens the result.
 
@@ -720,7 +724,7 @@ Paths in the project are relative to its folder, `Retake/` unless [`init`](#reta
 | --- | --- |
 | `takes/<type>/<scene>/<n>.mov` | A take's footage. |
 | `takes/<type>/<scene>/<n>.json` | A take's step log, and what it was recorded with: device, app version and build, set and state, Retake and Button Heist versions. |
-| `videos/<type>/<video>/` | Rendered videos. |
+| `cuts/<type>/<edit>/` | Rendered videos, from `cut`. |
 | `build/` | The app as `install` builds it, and the copy it embeds Retake in. |
 
 **On the device**, in the app's container:
