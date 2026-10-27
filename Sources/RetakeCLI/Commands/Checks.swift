@@ -126,7 +126,7 @@ struct Version: AsyncParsableCommand {
     @OptionGroup var output: OutputOptions
 
     func run() async throws {
-        let version = RetakeVersion.current
+        let version = RetakeVersion.withClone()
         if output.json {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
@@ -134,7 +134,7 @@ struct Version: AsyncParsableCommand {
         } else {
             print("Retake \(version.version)")
             if let commit = version.buttonHeist.commit {
-                print("The Button Heist \(version.buttonHeist.version) (\(commit))")
+                print("The Button Heist \(version.buttonHeist.version) (\(commit)), built from \(version.buttonHeist.clonePath ?? "a local clone")")
             } else {
                 print("The Button Heist \(version.buttonHeist.version)")
             }

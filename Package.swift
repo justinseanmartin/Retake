@@ -4,7 +4,8 @@ import PackageDescription
 
 // Retake is built against exactly one release of The Button Heist. RETAKE_BUTTONHEIST_PATH builds it
 // against a local clone instead, for changes that span both; see README.md, "Building from source".
-let buttonHeist: Package.Dependency = if let path = ProcessInfo.processInfo.environment["RETAKE_BUTTONHEIST_PATH"] {
+let clonePath = ProcessInfo.processInfo.environment["RETAKE_BUTTONHEIST_PATH"].flatMap { $0.isEmpty ? nil : $0 }
+let buttonHeist: Package.Dependency = if let path = clonePath {
     .package(name: "TheButtonHeist", path: path)
 } else {
     .package(url: "https://github.com/TheButtonHeist/TheButtonHeist", exact: "0.7.1")
@@ -37,6 +38,8 @@ let package = Package(
         .target(
             name: "RetakeCore",
             dependencies: [.product(name: "TheScore", package: "TheButtonHeist")],
+            // A build against a clone says so, in `retake version` and each take's metadata.
+            swiftSettings: clonePath == nil ? [] : [.define("RETAKE_BUTTONHEIST_CLONE")],
         ),
         .testTarget(
             name: "RetakeCLITests",

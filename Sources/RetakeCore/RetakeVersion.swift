@@ -1,3 +1,4 @@
+import Foundation
 import TheScore
 
 /// This Retake's version, and The Button Heist it's built against; see README.md, "The Button Heist,
@@ -10,6 +11,8 @@ public struct RetakeVersion: Codable, Equatable, Sendable {
         /// The commit of a local clone Retake was built from, ending in `-dirty` when it had
         /// uncommitted changes; nil for a release, which the version names exactly.
         public var commit: String?
+        /// The local clone Retake was built from, when it was.
+        public var clonePath: String?
     }
 
     public var version: String
@@ -23,6 +26,18 @@ public struct RetakeVersion: Codable, Equatable, Sendable {
 
     public static let current = RetakeVersion(
         version: "0.0.1-dev",
-        buttonHeist: ButtonHeist(version: buttonHeistVersion.description, commit: nil),
+        buttonHeist: ButtonHeist(version: buttonHeistVersion.description, commit: nil, clonePath: nil),
     )
+
+    /// This Retake's version, with the clone it was built from when it was: its path and commit, as
+    /// `scripts/fetch-insidejob.sh` recorded them when it built the clone's framework.
+    public static func withClone(cache: URL = InsideJobFramework.defaultCache) -> RetakeVersion {
+        var version = current
+        if InsideJobFramework.isBuiltFromClone {
+            let clone = InsideJobFramework.clone(in: cache)
+            version.buttonHeist.clonePath = clone?.path ?? "a local clone"
+            version.buttonHeist.commit = clone?.commit ?? "unknown; run scripts/fetch-insidejob.sh"
+        }
+        return version
+    }
 }

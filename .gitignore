@@ -2,3 +2,6 @@
 .swiftpm/
 xcuserdata/
 Examples/**/Signing.local.xcconfig
+# Built only from a local clone, whose pins it would record.
+InsideJob/Package.resolved
+InsideJob/.build/
