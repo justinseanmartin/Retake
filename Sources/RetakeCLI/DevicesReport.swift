@@ -3,8 +3,10 @@ import RetakeCore
 
 extension DeviceDirectory {
     /// The devices devicectl sees now, and this person's aliases.
-    static func current() throws(RetakeError) -> DeviceDirectory {
-        DeviceDirectory(devices: try Devicectl().devices(), aliases: try DeviceAliases.load(from: DeviceAliases.defaultFile()))
+    /// The devices connected, and the project's aliases; none outside a project.
+    static func current(_ project: Project?) throws(RetakeError) -> DeviceDirectory {
+        let aliases = try project.map { project throws(RetakeError) in try DeviceAliases.load(from: project.devicesFile) }
+        return DeviceDirectory(devices: try Devicectl().devices(), aliases: aliases ?? DeviceAliases())
     }
 }
 

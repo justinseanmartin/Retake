@@ -1,11 +1,15 @@
 import Foundation
 
 /// A Retake project: a configuration file, `retake.json` by default, what it says, and the folders
-/// beside it.
+/// beside it, in `Retake/` unless `init` was told otherwise.
 public struct Project: Sendable, Equatable {
     public static let configurationFileName = "retake.json"
-    /// Where takes, videos and builds go unless the command or the configuration file says otherwise.
-    public static let defaultOutputDirectoryName = "RetakeOutput"
+    /// The folder `init` makes a project in, and commands look in, in the current directory.
+    public static let defaultFolderName = "Retake"
+    /// Where takes, cuts and builds go unless the command or the configuration file says otherwise.
+    public static let defaultOutputDirectoryName = "output"
+    /// Device aliases, beside the configuration file, and gitignored.
+    public static let devicesFileName = "devices.json"
 
     /// The project's configuration file. Everything else in the project, and every relative path
     /// the file gives, is found relative to the directory holding it.
@@ -15,8 +19,8 @@ public struct Project: Sendable, Equatable {
     /// What reading the configuration file warned about, for the command to print.
     public var warnings: [FileProblem]
 
-    /// Where Retake writes takes, videos and builds: what the command names, else the configuration
-    /// file's `output`, else `RetakeOutput/` beside it. It holds the takes edits pin, so one that's
+    /// Where Retake writes takes, cuts and builds: what the command names, else the configuration
+    /// file's `output`, else `output/` beside it. It holds the takes edits pin, so one that's
     /// thrown away takes them with it.
     public var output: URL
 
@@ -44,8 +48,24 @@ public struct Project: Sendable, Equatable {
         output.appending(path: "takes/\(type.rawValue)", directoryHint: .isDirectory)
     }
 
-    public func videos(for type: DeviceType) -> URL {
-        output.appending(path: "videos/\(type.rawValue)", directoryHint: .isDirectory)
+    public func cuts(for type: DeviceType) -> URL {
+        output.appending(path: "cuts/\(type.rawValue)", directoryHint: .isDirectory)
+    }
+
+    /// The device aliases, which `devices add` keeps; see README.md, "Devices".
+    public var devicesFile: URL { root.appending(path: Project.devicesFileName) }
+
+    /// The configuration file a command finds unnamed: `retake.json` in the current directory, else
+    /// `Retake/retake.json`, whichever exists first; nil when neither does.
+    public static func unnamedConfiguration(in currentDirectory: URL, fileManager: FileManager = .default) -> URL? {
+        let candidates = [
+            currentDirectory.appending(path: configurationFileName),
+            currentDirectory.appending(path: "\(defaultFolderName)/\(configurationFileName)"),
+        ]
+        return candidates.first { candidate in
+            var isDirectory: ObjCBool = false
+            return fileManager.fileExists(atPath: candidate.path, isDirectory: &isDirectory) && !isDirectory.boolValue
+        }?.standardizedFileURL
     }
 
     /// A path in the project as messages name it: relative to its directory, `edits/video1.json`.
@@ -56,9 +76,9 @@ public struct Project: Sendable, Equatable {
     }
 
     /// The project a command runs in: the configuration file `configuration` names (`--config`),
-    /// otherwise `retake.json` in the current directory, read strictly. No other directory is
-    /// searched, so a command never acts on a project it wasn't pointed at. `output`
-    /// (`--output-dir`) moves where it writes; it needn't exist yet. A file that can't be found
+    /// otherwise `retake.json` or `Retake/retake.json` in the current directory, read strictly. No
+    /// other directory is searched, so a command never acts on a project it wasn't pointed at.
+    /// `output` (`--output-dir`) moves where it writes; it needn't exist yet. A file that can't be found
     /// is misuse (2); one that can't be read, or says something it shouldn't, fails (1), naming
     /// each problem.
     public static func locate(
@@ -67,11 +87,11 @@ public struct Project: Sendable, Equatable {
         currentDirectory: URL,
         fileManager: FileManager = .default,
     ) throws(RetakeError) -> Project {
-        let file = (configuration ?? currentDirectory.appending(path: configurationFileName)).standardizedFileURL
-        var isDirectory: ObjCBool = false
-        let exists = fileManager.fileExists(atPath: file.path, isDirectory: &isDirectory)
-        if configuration != nil {
-            guard exists else {
+        let file: URL
+        if let configuration {
+            file = configuration.standardizedFileURL
+            var isDirectory: ObjCBool = false
+            guard fileManager.fileExists(atPath: file.path, isDirectory: &isDirectory) else {
                 throw RetakeError(.usage, "No configuration file at \(file.path).")
             }
             guard !isDirectory.boolValue else {
@@ -81,11 +101,14 @@ public struct Project: Sendable, Equatable {
                         + "such as \(file.appending(path: configurationFileName).path).",
                 )
             }
-        } else if !exists || isDirectory.boolValue {
+        } else if let found = unnamedConfiguration(in: currentDirectory, fileManager: fileManager) {
+            file = found
+        } else {
             throw RetakeError(
                 .usage,
-                "No \(configurationFileName) in the current directory, \(file.deletingLastPathComponent().path). Run where it is, "
-                    + "name it with --config, or create one with `retake init`.",
+                "No \(configurationFileName) or \(defaultFolderName)/\(configurationFileName) in the current directory, "
+                    + "\(currentDirectory.standardizedFileURL.path). Run where it is, name it with --config, "
+                    + "or create one with `retake init`.",
             )
         }
 

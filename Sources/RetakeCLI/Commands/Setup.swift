@@ -6,10 +6,32 @@ struct Init: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Creates a project.",
         discussion: """
-            Creates retake.json and the folders sets/, scenes/iphone/, scenes/ipad/ and edits/ in the \
-            current directory, and adds RetakeOutput/ to .gitignore. Fails (2) if retake.json already exists.
+            Creates retake.json and beside it the folders sets/, scenes/iphone/, scenes/ipad/ and \
+            edits/, in Retake/ unless --config or RETAKE_CONFIG names the file to create, and \
+            gitignores the output directory and devices.json. At a terminal, offers to name each device \
+            connected. Fails (2) if the configuration file already exists.
             """,
     )
+
+    @Option(
+        help: ArgumentHelp(
+            "The configuration file to create (default: $RETAKE_CONFIG, then Retake/retake.json). The "
+                + "project's folders go beside it.",
+            valueName: "path",
+        ),
+        completion: .file(extensions: ["json"]),
+    )
+    var config: String?
+
+    @Option(
+        help: ArgumentHelp(
+            "Where the project's takes, cuts and builds go (default: output/ beside the configuration "
+                + "file), written into retake.json as its output.",
+            valueName: "dir",
+        ),
+        completion: .directory,
+    )
+    var outputDir: String?
 
     @Option(help: ArgumentHelp("The app's bundle ID.", valueName: "id"))
     var bundleID: String?
@@ -18,16 +40,65 @@ struct Init: AsyncParsableCommand {
     var scheme: String?
 
     func run() async throws {
-        let directory = URL(filePath: FileManager.default.currentDirectoryPath, directoryHint: .isDirectory)
-        let result = try ProjectInitializer.initialize(in: directory, bundleID: bundleID, scheme: scheme) { schemes in
+        let environment = ProcessInfo.processInfo.environment
+        let currentPath = FileManager.default.currentDirectoryPath
+        let current = URL(filePath: currentPath, directoryHint: .isDirectory)
+        let named = flagOrEnvironment(config, ConfigOption.environmentVariable, in: environment)
+        let configuration = try named.map { path($0.value, isDirectory: false, in: currentPath) }
+            ?? ProjectInitializer.defaultConfiguration(in: current)
+        let result = try ProjectInitializer.initialize(
+            configuration: configuration,
+            output: outputDir.map { path($0, isDirectory: true, in: currentPath) },
+            currentDirectory: current,
+            bundleID: bundleID,
+            scheme: scheme,
+        ) { schemes in
             Prompt.choose("Which scheme builds the app?", from: schemes)
         }
-        print("Created \(Project.configurationFileName), sets/, scenes/iphone/, scenes/ipad/ and edits/.")
+        let project = Project(configuration: result.configuration, settings: result.settings)
+        let shown = ProjectInitializer.relativePath(of: project.root, from: current)
+        print("Created \(shown)/: \(Project.configurationFileName), sets/, scenes/iphone/, scenes/ipad/ and edits/.")
         if case .scheme(let build)? = result.settings.build {
             print("Builds the \(build.scheme) scheme with xcodebuild.")
         }
         for note in result.notes {
             Console.note(note)
+        }
+        if Prompt.isInteractive { nameDevices(in: project) }
+
+        if named == nil {
+            print(
+                "Commands find it from here, or from inside \(shown)/. If you move or rename it, name its "
+                    + "\(Project.configurationFileName) with --config or \(ConfigOption.environmentVariable).",
+            )
+        } else if named?.variable == nil {
+            let file = ProjectInitializer.relativePath(of: result.configuration, from: current)
+            print("""
+                Commands need --config or \(ConfigOption.environmentVariable) to find it. To name it for every \
+                command in the repository, add this to a mise.toml in this directory, its root:
+
+                [env]
+                \(ConfigOption.environmentVariable) = "{{config_root}}/\(file)"
+                """)
+        }
+    }
+
+    /// Offers to name each device connected that no alias names yet, once through. Nothing here
+    /// stops `init`: a device can always be named later with `devices add`.
+    private func nameDevices(in project: Project) {
+        guard var directory = try? DeviceDirectory.current(project) else { return }
+        for device in DeviceNaming.unnamed(in: directory) {
+            guard let suggestion = DeviceNaming.suggestedName(for: device, besides: directory.aliases),
+                  let name = Prompt.answer("Call \(device.name)\((device.marketingName ?? device.model).map { " (\($0))" } ?? "")", suggesting: suggestion)
+            else { continue }
+            do {
+                let alias = try DeviceNaming.alias(name, for: device.udid, in: directory, finder: ScreenCaptureDevices())
+                directory.aliases.aliases.append(alias)
+                try directory.aliases.save(to: project.devicesFile)
+                print("\"\(alias.name)\" is \(alias.deviceName).")
+            } catch {
+                Console.warn("\(error.message) Name it later with `retake devices add`.")
+            }
         }
     }
 }
@@ -57,7 +128,7 @@ struct Devices: AsyncParsableCommand {
         discussion: """
             With no subcommand, lists each connected device's name, UDID, type, model, and whether it's \
             wired, and each alias, whether connected or not; then which device commands would use, and \
-            what chose it. Needs no project, but reads the configuration file's device when there is one.
+            what chose it. Needs no project, but reads one's aliases and device when there is one.
             """,
         subcommands: [Add.self, Remove.self],
     )
@@ -67,7 +138,7 @@ struct Devices: AsyncParsableCommand {
 
     func run() async throws {
         let project = try config.locateIfPresent()
-        let directory = try DeviceDirectory.current()
+        let directory = try DeviceDirectory.current(project)
         let choice = DeviceChoice.choose(
             named: flagOrEnvironment(nil, DeviceOptions.environmentVariable, in: ProcessInfo.processInfo.environment)
                 .map { ($0.value, $0.variable) },
@@ -119,10 +190,11 @@ struct Devices: AsyncParsableCommand {
         static let configuration = CommandConfiguration(
             abstract: "Names a device.",
             discussion: """
-                Records the device's UDID and its screen-capture identity in \
-                ~/.config/retake/devices.json. Names the device given, or with none given, the one \
-                connected; with several, asks which. Fails (2) if the alias is taken. Notes when \
-                RETAKE_DEVICE names another device, which the shell's commands will still use.
+                Records the device's UDID and its screen-capture identity in the project's \
+                devices.json, beside retake.json. Names the device given, or with none given, the one \
+                connected; with several, asks which. Fails (2) if the alias is taken, or there's no \
+                project. Notes when RETAKE_DEVICE names another device, which the shell's commands will \
+                still use.
                 """,
         )
 
@@ -139,15 +211,21 @@ struct Devices: AsyncParsableCommand {
         )
         var device: String?
 
+        @OptionGroup var config: ConfigOption
+
         func run() async throws {
-            var directory = try DeviceDirectory.current()
+            let project = try config.locate(
+                environment: ProcessInfo.processInfo.environment,
+                currentDirectory: FileManager.default.currentDirectoryPath,
+            )
+            var directory = try DeviceDirectory.current(project)
             let alias = try DeviceNaming.alias(self.alias, for: device, in: directory, finder: ScreenCaptureDevices()) { devices in
                 let names = devices.map { "\($0.name) (\($0.udid))" }
                 guard let chosen = Prompt.choose("Which device should be \"\(self.alias)\"?", from: names) else { return nil }
                 return devices[names.firstIndex(of: chosen)!]
             }
             directory.aliases.aliases.append(alias)
-            try directory.aliases.save(to: DeviceAliases.defaultFile())
+            try directory.aliases.save(to: project.devicesFile)
             print("\"\(alias.name)\" is \(alias.deviceName).")
             let environment = ProcessInfo.processInfo.environment
             if let named = environment[DeviceOptions.environmentVariable], !named.isEmpty,
@@ -166,8 +244,13 @@ struct Devices: AsyncParsableCommand {
         @Argument(help: ArgumentHelp("The alias to forget.", valueName: "alias"))
         var alias: String
 
+        @OptionGroup var config: ConfigOption
+
         func run() async throws {
-            let file = DeviceAliases.defaultFile()
+            let file = try config.locate(
+                environment: ProcessInfo.processInfo.environment,
+                currentDirectory: FileManager.default.currentDirectoryPath,
+            ).devicesFile
             var aliases = try DeviceAliases.load(from: file)
             guard let existing = aliases[alias] else {
                 throw RetakeError(.usage, "There's no alias \"\(alias)\".")
@@ -228,7 +311,8 @@ struct Install: AsyncParsableCommand {
         abstract: "Builds the app if asked, embeds Retake in it, and installs it.",
         discussion: """
             The app comes from --app, else a build of --scheme, else retake.json's build. Retake embeds \
-            into a copy, in RetakeOutput/build/, and installs that.
+            into a copy, in the output directory's build/installed/, a clone where the disk allows, and \
+            installs that.
             """,
     )
 
@@ -278,7 +362,7 @@ struct Install: AsyncParsableCommand {
         let located = try project.locate()
         let current = URL(filePath: FileManager.default.currentDirectoryPath, directoryHint: .isDirectory)
         func given(_ path: String) -> URL { URL(filePath: path, relativeTo: current).standardizedFileURL }
-        let directory = try DeviceDirectory.current()
+        let directory = try DeviceDirectory.current(located)
         let target = try directory.resolve(device.choice(
             configuration: located.settings.device.map { ($0, located.configuration) },
             connected: directory.recordable.map(\.udid),

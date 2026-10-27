@@ -1,6 +1,6 @@
 import Foundation
 
-/// What `retake init` does: creates a project in a directory, as docs/cli.md, "retake init", says.
+/// What `retake init` does: creates a project, as docs/cli.md, "retake init", says.
 public enum ProjectInitializer {
     /// Finds an Xcode workspace's or project's schemes, behind a seam so tests needn't run Xcode.
     public protocol SchemeLister {
@@ -28,25 +28,34 @@ public enum ProjectInitializer {
 
     public struct Result: Equatable, Sendable {
         public var settings: ProjectSettings
+        /// The configuration file created.
+        public var configuration: URL
         /// What a person should know about what was or wasn't found, one line each.
         public var notes: [String]
     }
 
-    /// Creates `retake.json`, `sets/`, `scenes/iphone/`, `scenes/ipad/` and `edits/` in `directory`,
-    /// and adds `RetakeOutput/` to its `.gitignore`. The scheme is `scheme` when given, else the
-    /// only one the directory's Xcode project has, else `ask`'s choice among several; with none, the
-    /// project has no `build`, and `install` needs `--scheme` or `--app` until one is added.
+    /// Creates `configuration`, and beside it `sets/`, `scenes/iphone/`, `scenes/ipad/` and
+    /// `edits/`, as docs/cli.md, "retake init", says. `output`, when given, is written as the
+    /// project's `output`. The output directory and `devices.json` are added to the project's
+    /// `.gitignore`, or an output directory outside the project to `currentDirectory`'s when it's
+    /// below it. The scheme is `scheme` when given, else the only one the current directory's Xcode
+    /// project has, else `ask`'s choice among several; with none, the project has no `build`, and
+    /// `install` needs `--scheme` or `--app` until one is added.
     public static func initialize(
-        in directory: URL,
+        configuration given: URL,
+        output: URL? = nil,
+        currentDirectory: URL,
         bundleID: String?,
         scheme: String?,
         lister: SchemeLister = XcodebuildSchemeLister(),
         ask: ([String]) -> String? = { _ in nil },
         fileManager: FileManager = .default,
     ) throws(RetakeError) -> Result {
-        let configuration = directory.appending(path: Project.configurationFileName)
+        let configuration = given.standardizedFileURL
+        let current = currentDirectory.standardizedFileURL
+        let root = configuration.deletingLastPathComponent()
         guard !fileManager.fileExists(atPath: configuration.path) else {
-            throw RetakeError(.usage, "\(Project.configurationFileName) already exists in \(directory.path).")
+            throw RetakeError(.usage, "\(configuration.path) already exists.")
         }
         if let bundleID {
             let reader = JSONReader(file: "--bundle-id")
@@ -56,18 +65,21 @@ public enum ProjectInitializer {
         }
 
         var notes: [String] = []
-        let entries = (try? fileManager.contentsOfDirectory(atPath: directory.path)) ?? []
+        let entries = (try? fileManager.contentsOfDirectory(atPath: current.path)) ?? []
         let workspaces = entries.filter { $0.hasSuffix(".xcworkspace") }.sorted()
         let projects = entries.filter { $0.hasSuffix(".xcodeproj") }.sorted()
-        // The container is named only when xcodebuild couldn't tell on its own which to build.
+        // Named relative to the project, where xcodebuild runs. Beside the configuration file, it's
+        // named only when xcodebuild couldn't tell on its own which to build.
+        let besideConfiguration = root == current
+        func named(_ name: String) -> String { relativePath(of: current.appending(path: name), from: root) }
         let container: ProjectSettings.Container?
         let listed: ProjectSettings.Container?
         switch (workspaces.count, projects.count) {
         case (1, _):
-            container = projects.isEmpty ? nil : .workspace(workspaces[0])
+            container = projects.isEmpty && besideConfiguration ? nil : .workspace(named(workspaces[0]))
             listed = .workspace(workspaces[0])
         case (0, 1):
-            container = nil
+            container = besideConfiguration ? nil : .project(named(projects[0]))
             listed = .project(projects[0])
         case (0, 0):
             container = nil
@@ -84,7 +96,7 @@ public enum ProjectInitializer {
 
         var chosen = scheme
         if chosen == nil, let listed {
-            let schemes = (try? lister.schemes(in: listed, at: directory)) ?? []
+            let schemes = (try? lister.schemes(in: listed, at: current)) ?? []
             switch schemes.count {
             case 0: notes.append("Found no schemes in \(name(of: listed)); give \"build\" in retake.json, or --scheme to install.")
             case 1: chosen = schemes[0]
@@ -96,20 +108,49 @@ public enum ProjectInitializer {
             }
         }
 
+        // Relative to the project when it's in the same tree as the current directory, so the
+        // project can move with its repository; otherwise as given.
+        let outputDirectory = output?.standardizedFileURL
+        let outputSetting = outputDirectory.map { directory in
+            isInside(directory, current) || isInside(directory, root) ? relativePath(of: directory, from: root) : directory.path
+        }
         let settings = ProjectSettings(
             bundleID: bundleID,
             build: chosen.map { .scheme(ProjectSettings.SchemeBuild(scheme: $0, container: container)) },
+            output: outputSetting,
         )
         do {
             for folder in ["sets", "scenes/iphone", "scenes/ipad", "edits"] {
-                try fileManager.createDirectory(at: directory.appending(path: folder), withIntermediateDirectories: true)
+                try fileManager.createDirectory(at: root.appending(path: folder), withIntermediateDirectories: true)
             }
             try Data(JSONWriter.write(settings.json).utf8).write(to: configuration)
-            try ignoreOutput(in: directory, fileManager: fileManager)
+            let outputs = outputDirectory ?? root.appending(path: Project.defaultOutputDirectoryName, directoryHint: .isDirectory)
+            var ignoredHere = ["/\(Project.devicesFileName)"]
+            if isInside(outputs, root) {
+                ignoredHere.append("/\(relativePath(of: outputs, from: root))/")
+            } else if isInside(outputs, current) {
+                try ignore(["/\(relativePath(of: outputs, from: current))/"], in: current, fileManager: fileManager)
+            }
+            try ignore(ignoredHere, in: root, fileManager: fileManager)
         } catch {
-            throw RetakeError(.failed, "Couldn't create the project in \(directory.path): \(error.localizedDescription)")
+            throw RetakeError(.failed, "Couldn't create the project in \(root.path): \(error.localizedDescription)")
         }
-        return Result(settings: settings, notes: notes)
+        return Result(settings: settings, configuration: configuration, notes: notes)
+    }
+
+    /// The configuration file `init` creates when none is named: `Retake/retake.json`. Misuse (2)
+    /// when commands in `currentDirectory` would already find a project, so `init` run inside one
+    /// doesn't make another within it.
+    public static func defaultConfiguration(in currentDirectory: URL, fileManager: FileManager = .default) throws(RetakeError) -> URL {
+        let current = currentDirectory.standardizedFileURL
+        if let existing = Project.unnamedConfiguration(in: current, fileManager: fileManager) {
+            throw RetakeError(
+                .usage,
+                "Commands here already find the project in \(relativePath(of: existing, from: current)); "
+                    + "name another configuration file with --config to create one beside it.",
+            )
+        }
+        return current.appending(path: "\(Project.defaultFolderName)/\(Project.configurationFileName)")
     }
 
     private static func name(of container: ProjectSettings.Container) -> String {
@@ -118,17 +159,35 @@ public enum ProjectInitializer {
         }
     }
 
-    /// Adds `RetakeOutput/` to `.gitignore`, creating it if need be, unless it's there already.
-    static func ignoreOutput(in directory: URL, fileManager: FileManager) throws {
+    /// Whether `url` is `directory` or inside it.
+    static func isInside(_ url: URL, _ directory: URL) -> Bool {
+        let path = url.standardizedFileURL.path
+        let folder = directory.standardizedFileURL.path
+        return path == folder || path.hasPrefix(folder.hasSuffix("/") ? folder : folder + "/")
+    }
+
+    /// `url`'s path from `directory`, with `..` for each folder up: `../MyApp.xcodeproj`.
+    public static func relativePath(of url: URL, from directory: URL) -> String {
+        let target = url.standardizedFileURL.pathComponents.filter { $0 != "/" }
+        let base = directory.standardizedFileURL.pathComponents.filter { $0 != "/" }
+        let shared = zip(target, base).prefix { $0 == $1 }.count
+        let path = Array(repeating: "..", count: base.count - shared) + target.dropFirst(shared)
+        return path.isEmpty ? "." : path.joined(separator: "/")
+    }
+
+    /// Adds each of `entries` to `directory`'s `.gitignore`, creating it if need be, unless an entry
+    /// is there already, with or without its leading or trailing `/`.
+    static func ignore(_ entries: [String], in directory: URL, fileManager: FileManager) throws {
         let file = directory.appending(path: ".gitignore")
-        let entry = "\(Project.defaultOutputDirectoryName)/"
         var text = fileManager.contents(atPath: file.path).map { String(decoding: $0, as: UTF8.self) } ?? ""
-        let lines = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
-        guard !lines.contains(where: { [entry, "/" + entry, Project.defaultOutputDirectoryName, "/" + Project.defaultOutputDirectoryName].contains($0) }) else {
-            return
+        func bare(_ line: some StringProtocol) -> String {
+            line.trimmingCharacters(in: .whitespaces).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         }
+        let present = Set(text.split(whereSeparator: \.isNewline).map(bare))
+        let missing = entries.filter { !present.contains(bare($0)) }
+        guard !missing.isEmpty else { return }
         if !text.isEmpty, !text.hasSuffix("\n") { text += "\n" }
-        text += entry + "\n"
+        text += missing.map { $0 + "\n" }.joined()
         try Data(text.utf8).write(to: file)
     }
 }

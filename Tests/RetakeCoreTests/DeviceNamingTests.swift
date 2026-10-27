@@ -24,6 +24,15 @@ struct DeviceNamingTests {
         }
     }
 
+    @Test func initOffersEachUnnamedRecordableDeviceItsTypeOrTheNextFree() {
+        let otherIPad = Device(udid: "00008103-0000000000000005", name: "Sam’s Other iPad", type: .ipad)
+        let named = DeviceAlias(name: "ipad", udid: ipad.udid, captureID: ipadScreen.uniqueID, deviceName: ipad.name, type: .ipad, model: nil)
+        let directory = DeviceDirectory(devices: [ipad, otherIPad, iphone, watch, networked], aliases: DeviceAliases([named]))
+        #expect(DeviceNaming.unnamed(in: directory).map(\.udid) == [otherIPad.udid, iphone.udid])
+        #expect(DeviceNaming.suggestedName(for: otherIPad, besides: directory.aliases) == "ipad2")
+        #expect(DeviceNaming.suggestedName(for: iphone, besides: directory.aliases) == "iphone")
+    }
+
     @Test func theOnlyConnectedDeviceIsNamedWithItsCaptureIdentity() throws {
         let directory = DeviceDirectory(devices: [ipad, watch, networked], aliases: DeviceAliases())
         let alias = try DeviceNaming.alias("ipad", for: nil, in: directory, finder: Screens(screens: [ipadScreen]))
@@ -72,7 +81,6 @@ struct DeviceNamingTests {
         ])
         try aliases.save(to: file)
         #expect(try DeviceAliases.load(from: file) == aliases)
-        #expect(DeviceAliases.defaultFile(environment: ["XDG_CONFIG_HOME": "/cfg"]).path == "/cfg/retake/devices.json")
     }
 }
 

@@ -17,7 +17,7 @@ struct ExampleOnDevice {
     init() throws {
         let root = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/RetakeNotes").standardizedFileURL
         project = try Project.locate(configuration: nil, currentDirectory: root)
-        let directory = DeviceDirectory(devices: try Devicectl().devices(), aliases: try DeviceAliases.load(from: DeviceAliases.defaultFile()))
+        let directory = DeviceDirectory(devices: try Devicectl().devices(), aliases: try DeviceAliases.load(from: project.devicesFile))
         device = try directory.resolve(DeviceChoice(device: testDevice!, source: .environment(variable: "RETAKE_TEST_DEVICE")))
         bundleID = try Installer.bundleID(for: project)
         files = ProjectFiles(project: project)

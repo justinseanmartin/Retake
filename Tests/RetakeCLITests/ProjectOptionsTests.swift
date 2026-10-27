@@ -24,7 +24,7 @@ struct ProjectOptionsTests {
     @Test func withNothingGivenTheCurrentDirectoryIsUsed() throws {
         let project = try locate([])
         #expect(project.configuration.path == root.appending(path: "retake.json").path)
-        #expect(project.output.path == root.appending(path: "RetakeOutput").path)
+        #expect(project.output.path == root.appending(path: "output").path)
     }
 
     @Test func theEnvironmentStandsInForAbsentFlags() throws {
@@ -45,7 +45,7 @@ struct ProjectOptionsTests {
     @Test func emptyVariablesCountAsUnset() throws {
         let project = try locate([], ["RETAKE_CONFIG": "", "RETAKE_OUTPUT_DIR": ""])
         #expect(project.configuration.path == root.appending(path: "retake.json").path)
-        #expect(project.output.path == root.appending(path: "RetakeOutput").path)
+        #expect(project.output.path == root.appending(path: "output").path)
     }
 
     @Test func aCommandThatNeedsNoProjectReadsOneOnlyWhenThereIsOne() throws {

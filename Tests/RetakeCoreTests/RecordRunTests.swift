@@ -17,8 +17,8 @@ struct RecordRunTests {
     /// take 1 was discarded, `c` none; and an edit using `c` then `a`.
     func makeProject() throws {
         for scene in ["a", "b", "c"] { try write("scenes/ipad/\(scene).json", #"{ "steps": [{ "hold": 1 }] }"#) }
-        try write("RetakeOutput/takes/ipad/a/1.json", #"{ "scene": "a" }"#)
-        try write("RetakeOutput/takes/ipad/b/2.json", #"{ "scene": "b", "failure": "step 1 didn't run" }"#)
+        try write("output/takes/ipad/a/1.json", #"{ "scene": "a" }"#)
+        try write("output/takes/ipad/b/2.json", #"{ "scene": "b", "failure": "step 1 didn't run" }"#)
         try write("edits/video1.json", """
             { "devices": ["ipad"], "takes": { "ipad": {} }, "clips": [
               { "take": "c", "from": { "step": "start" }, "to": { "step": "end" } },

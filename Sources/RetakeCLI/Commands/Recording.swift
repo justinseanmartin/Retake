@@ -29,7 +29,7 @@ struct Compose: AsyncParsableCommand {
 
     func run() async throws {
         let located = try project.locate()
-        let directory = try DeviceDirectory.current()
+        let directory = try DeviceDirectory.current(located)
         let target = try directory.resolve(device.choice(
             configuration: located.settings.device.map { ($0, located.configuration) },
             connected: directory.recordable.map(\.udid),
@@ -220,7 +220,7 @@ struct Record: AsyncParsableCommand {
 
     func run() async throws {
         let located = try project.locate()
-        let directory = try DeviceDirectory.current()
+        let directory = try DeviceDirectory.current(located)
         let target = try directory.resolve(device.choice(
             configuration: located.settings.device.map { ($0, located.configuration) },
             connected: directory.recordable.map(\.udid),
@@ -389,7 +389,7 @@ struct Clean: AsyncParsableCommand {
     func run() async throws {
         let located = try project.locate()
         guard onDevice else { throw RetakeError.notImplemented("clean") }
-        let directory = try DeviceDirectory.current()
+        let directory = try DeviceDirectory.current(located)
         let target = try directory.resolve(device.choice(
             configuration: located.settings.device.map { ($0, located.configuration) },
             connected: directory.recordable.map(\.udid),

@@ -30,4 +30,14 @@ enum Prompt {
         if let number = Int(answer), choices.indices.contains(number - 1) { return choices[number - 1] }
         return choices.first { $0 == answer }
     }
+
+    /// An answer to `question`, `suggestion` when it's left empty, and nil when it's `-` or no one
+    /// can be asked.
+    static func answer(_ question: String, suggesting suggestion: String) -> String? {
+        guard isInteractive else { return nil }
+        FileHandle.standardError.write(Data("\(question) [\(suggestion), or - to skip] ".utf8))
+        guard let answer = readLine()?.trimmingCharacters(in: .whitespaces) else { return nil }
+        if answer == "-" { return nil }
+        return answer.isEmpty ? suggestion : answer
+    }
 }

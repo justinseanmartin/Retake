@@ -1,6 +1,7 @@
 {
   "$schema": "https://justinseanmartin.github.io/Retake/schemas/0.0.1/retake.schema.json",
   "build": {
-    "scheme": "RetakeNotes"
+    "scheme": "RetakeNotes",
+    "xcodeproj": "../RetakeNotes.xcodeproj"
   }
 }

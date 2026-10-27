@@ -25,10 +25,10 @@ struct InstallerTests {
 
     @Test func xcodebuildBuildsTheSchemeForTheDeviceUnderTheOutputDirectory() {
         let build = ProjectSettings.SchemeBuild(scheme: "Notes", container: .workspace("Notes.xcworkspace"), configuration: nil, allowProvisioningUpdates: false)
-        let derivedData = URL(filePath: "/p/RetakeOutput/build/DerivedData")
+        let derivedData = URL(filePath: "/p/output/build/DerivedData")
         #expect(Installer.xcodebuildArguments(build, udid: "00008103-1", derivedData: derivedData, allowProvisioningUpdates: false) == [
             "xcodebuild", "-workspace", "Notes.xcworkspace", "-scheme", "Notes", "-configuration", "Debug",
-            "-destination", "id=00008103-1", "-derivedDataPath", "/p/RetakeOutput/build/DerivedData", "build",
+            "-destination", "id=00008103-1", "-derivedDataPath", "/p/output/build/DerivedData", "build",
         ])
         let allowed = ProjectSettings.SchemeBuild(scheme: "Notes", configuration: "Preview", allowProvisioningUpdates: true)
         let arguments = Installer.xcodebuildArguments(allowed, udid: "u", derivedData: derivedData, allowProvisioningUpdates: false, showingSettings: true)

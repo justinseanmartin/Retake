@@ -63,13 +63,13 @@ struct ProjectSettingsTests {
     @Test func theOutputDirectoryIsTheCommandsThenTheFilesThenTheDefault() {
         let file = URL(filePath: "/work/Previews/retake.json")
         let configured = ProjectSettings(output: "../Takes")
-        #expect(Project(configuration: file).output.path == "/work/Previews/RetakeOutput")
+        #expect(Project(configuration: file).output.path == "/work/Previews/output")
         #expect(Project(configuration: file, settings: configured).output.path == "/work/Takes")
         #expect(Project(configuration: file, settings: configured, output: URL(filePath: "/tmp/run")).output.path == "/tmp/run")
     }
 
     @Test func theExamplesConfigurationReadsCleanly() throws {
-        let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/RetakeNotes/retake.json")
+        let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/RetakeNotes/Retake/retake.json")
         let text = try String(contentsOf: example, encoding: .utf8)
         let result = read(text)
         #expect(result.problems.isEmpty)
@@ -79,6 +79,7 @@ struct ProjectSettingsTests {
             return
         }
         #expect(build.scheme == "RetakeNotes")
+        #expect(build.container == .project("../RetakeNotes.xcodeproj"), "xcodebuild runs in Retake/, beside no Xcode project")
     }
 }
 
@@ -123,6 +124,7 @@ struct ProjectInitializerTests {
     init() throws {
         directory = FileManager.default.temporaryDirectory
             .appending(path: "RetakeInitTests-\(UUID().uuidString)", directoryHint: .isDirectory)
+            .resolvingSymlinksInPath()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 
@@ -130,31 +132,60 @@ struct ProjectInitializerTests {
         FileManager.default.contents(atPath: directory.appending(path: path).path).map { String(decoding: $0, as: UTF8.self) }
     }
 
-    @Test func createsTheProjectWithTheOnlySchemeFound() throws {
-        try FileManager.default.createDirectory(at: directory.appending(path: "Notes.xcodeproj"), withIntermediateDirectories: true)
-        let result = try ProjectInitializer.initialize(in: directory, bundleID: nil, scheme: nil, lister: Lister(schemes: ["Notes"]))
+    func folder(_ name: String) throws {
+        try FileManager.default.createDirectory(at: directory.appending(path: name), withIntermediateDirectories: true)
+    }
+
+    @discardableResult
+    func initialize(
+        _ configuration: String = "Retake/retake.json",
+        output: URL? = nil,
+        bundleID: String? = nil,
+        scheme: String? = nil,
+        schemes: [String] = [],
+        ask: ([String]) -> String? = { _ in nil },
+    ) throws(RetakeError) -> ProjectInitializer.Result {
+        try ProjectInitializer.initialize(
+            configuration: directory.appending(path: configuration),
+            output: output,
+            currentDirectory: directory,
+            bundleID: bundleID,
+            scheme: scheme,
+            lister: Lister(schemes: schemes),
+            ask: ask,
+        )
+    }
+
+    @Test func createsTheProjectInRetakeNamingTheXcodeProjectAboveIt() throws {
+        try folder("Notes.xcodeproj")
+        let result = try initialize(schemes: ["Notes"])
         #expect(result.notes.isEmpty)
         for folder in ["sets", "scenes/iphone", "scenes/ipad", "edits"] {
             var isDirectory: ObjCBool = false
-            #expect(FileManager.default.fileExists(atPath: directory.appending(path: folder).path, isDirectory: &isDirectory) && isDirectory.boolValue)
+            #expect(FileManager.default.fileExists(atPath: directory.appending(path: "Retake/\(folder)").path, isDirectory: &isDirectory) && isDirectory.boolValue)
         }
         let project = try Project.locate(configuration: nil, currentDirectory: directory)
-        #expect(project.settings.build == .scheme(.init(scheme: "Notes")))
-        #expect(file(".gitignore") == "RetakeOutput/\n")
+        #expect(project.root.path == directory.appending(path: "Retake").path)
+        // xcodebuild runs in the project's folder, which holds no Xcode project of its own.
+        #expect(project.settings.build == .scheme(.init(scheme: "Notes", container: .project("../Notes.xcodeproj"))))
+        #expect(file("Retake/.gitignore") == "/devices.json\n/output/\n")
+        #expect(file(".gitignore") == nil)
     }
 
-    @Test func aWorkspaceBesideItsProjectIsNamed() throws {
-        for name in ["Notes.xcodeproj", "Notes.xcworkspace"] {
-            try FileManager.default.createDirectory(at: directory.appending(path: name), withIntermediateDirectories: true)
-        }
-        let result = try ProjectInitializer.initialize(in: directory, bundleID: "com.example.notes", scheme: nil, lister: Lister(schemes: ["Notes"]))
+    @Test func besideItsXcodeProjectTheProjectNamesItOnlyWhenXcodebuildCouldntTell() throws {
+        try folder("Notes.xcodeproj")
+        #expect(try initialize("retake.json", schemes: ["Notes"]).settings.build == .scheme(.init(scheme: "Notes")))
+
+        try FileManager.default.removeItem(at: directory.appending(path: "retake.json"))
+        try folder("Notes.xcworkspace")
+        let result = try initialize("retake.json", bundleID: "com.example.notes", schemes: ["Notes"])
         #expect(result.settings == ProjectSettings(bundleID: "com.example.notes", build: .scheme(.init(scheme: "Notes", container: .workspace("Notes.xcworkspace")))))
     }
 
     @Test func severalSchemesAreAskedAboutOrLeftForThePersonToGive() throws {
-        try FileManager.default.createDirectory(at: directory.appending(path: "Notes.xcodeproj"), withIntermediateDirectories: true)
+        try folder("Notes.xcodeproj")
         var asked: [String] = []
-        let unanswered = try ProjectInitializer.initialize(in: directory, bundleID: nil, scheme: nil, lister: Lister(schemes: ["Notes", "NotesKit"])) {
+        let unanswered = try initialize(schemes: ["Notes", "NotesKit"]) {
             asked = $0
             return nil
         }
@@ -164,37 +195,57 @@ struct ProjectInitializerTests {
     }
 
     @Test func aGivenSchemeNeedsNoXcodeProject() throws {
-        let result = try ProjectInitializer.initialize(in: directory, bundleID: nil, scheme: "Notes", lister: Lister(schemes: []))
+        let result = try initialize(scheme: "Notes")
         #expect(result.settings.build == .scheme(.init(scheme: "Notes")))
         #expect(result.notes.isEmpty)
     }
 
     @Test func anExistingProjectIsLeftAlone() throws {
-        _ = try ProjectInitializer.initialize(in: directory, bundleID: nil, scheme: "Notes", lister: Lister(schemes: []))
+        try initialize(scheme: "Notes")
         do {
-            _ = try ProjectInitializer.initialize(in: directory, bundleID: nil, scheme: "Other", lister: Lister(schemes: []))
+            try initialize(scheme: "Other")
             Issue.record("initialized twice")
         } catch {
             #expect(error.status == .usage)
         }
     }
 
-    @Test func gitignoreGainsTheOutputDirectoryOnce() throws {
-        try Data("build/".utf8).write(to: directory.appending(path: ".gitignore"))
-        _ = try ProjectInitializer.initialize(in: directory, bundleID: nil, scheme: "Notes", lister: Lister(schemes: []))
-        #expect(file(".gitignore") == "build/\nRetakeOutput/\n")
+    @Test func gitignoreGainsEachEntryOnce() throws {
+        try folder("Retake")
+        try Data("output/".utf8).write(to: directory.appending(path: "Retake/.gitignore"))
+        try initialize(scheme: "Notes")
+        #expect(file("Retake/.gitignore") == "output/\n/devices.json\n")
+    }
 
-        let other = directory.appending(path: "other", directoryHint: .isDirectory)
-        try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)
-        try Data("/RetakeOutput\n".utf8).write(to: other.appending(path: ".gitignore"))
-        _ = try ProjectInitializer.initialize(in: other, bundleID: nil, scheme: "Notes", lister: Lister(schemes: []))
-        #expect(FileManager.default.contents(atPath: other.appending(path: ".gitignore").path) == Data("/RetakeOutput\n".utf8))
+    @Test func anOutputDirectoryIsWrittenRelativeToTheProjectAndIgnoredWhereItLives() throws {
+        let inside = try initialize("Inside/retake.json", output: directory.appending(path: "Inside/takes-here"), scheme: "Notes")
+        #expect(inside.settings.output == "takes-here")
+        #expect(file("Inside/.gitignore") == "/devices.json\n/takes-here/\n")
+
+        let elsewhere = try initialize("Elsewhere/retake.json", output: directory.appending(path: "build/retake"), scheme: "Notes")
+        #expect(elsewhere.settings.output == "../build/retake")
+        #expect(file("Elsewhere/.gitignore") == "/devices.json\n")
+        #expect(file(".gitignore") == "/build/retake/\n")
+        let project = try Project.locate(configuration: directory.appending(path: "Elsewhere/retake.json"), currentDirectory: directory)
+        #expect(project.output.path == directory.appending(path: "build/retake").path)
+
+        let outside = URL(filePath: "/Volumes/Scratch/retake", directoryHint: .isDirectory)
+        #expect(try initialize("Outside/retake.json", output: outside, scheme: "Notes").settings.output == "/Volumes/Scratch/retake")
+        #expect(file("Outside/.gitignore") == "/devices.json\n")
+    }
+
+    @Test func unnamedTheProjectGoesInRetakeButNotInsideOneCommandsWouldFind() throws {
+        #expect(try ProjectInitializer.defaultConfiguration(in: directory).path == directory.appending(path: "Retake/retake.json").path)
+        try initialize(scheme: "Notes")
+        for place in [directory, directory.appending(path: "Retake")] {
+            #expect(throws: RetakeError.self, "\(place.lastPathComponent)") { try ProjectInitializer.defaultConfiguration(in: place) }
+        }
     }
 
     @Test func aMalformedBundleIDIsMisuse() {
         #expect(throws: RetakeError.self) {
-            try ProjectInitializer.initialize(in: directory, bundleID: "not a bundle id", scheme: "Notes", lister: Lister(schemes: []))
+            try initialize(bundleID: "not a bundle id", scheme: "Notes")
         }
-        #expect(!FileManager.default.fileExists(atPath: directory.appending(path: "retake.json").path))
+        #expect(!FileManager.default.fileExists(atPath: directory.appending(path: "Retake/retake.json").path))
     }
 }

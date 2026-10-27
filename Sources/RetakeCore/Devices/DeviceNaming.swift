@@ -69,4 +69,18 @@ public enum DeviceNaming {
         }
         return DeviceAlias(name: name, udid: device.udid, captureID: screen.uniqueID, deviceName: device.name, type: device.type, model: device.model)
     }
+
+    /// The devices `init` offers to name: those connected by USB that no alias names yet.
+    public static func unnamed(in directory: DeviceDirectory) -> [Device] {
+        directory.recordable.filter { device in !directory.aliases.aliases.contains { $0.udid == device.udid } }
+    }
+
+    /// The alias `init` suggests for `device`: its type, `ipad`, or `ipad2` and on when that's taken.
+    public static func suggestedName(for device: Device, besides aliases: DeviceAliases) -> String? {
+        guard let type = device.type?.rawValue else { return nil }
+        if aliases[type] == nil { return type }
+        var number = 2
+        while aliases["\(type)\(number)"] != nil { number += 1 }
+        return "\(type)\(number)"
+    }
 }

@@ -30,16 +30,17 @@ struct ConfigOption: ParsableArguments {
 
     @Option(
         help: ArgumentHelp(
-            "The project's configuration file (default: $RETAKE_CONFIG, then retake.json in the current "
-                + "directory). The project's folders, and relative paths in the file, are found beside it.",
+            "The project's configuration file (default: $RETAKE_CONFIG, then retake.json or "
+                + "Retake/retake.json in the current directory). The project's folders, and relative paths "
+                + "in the file, are found beside it.",
             valueName: "path",
         ),
         completion: .file(extensions: ["json"]),
     )
     var config: String?
 
-    /// The project, from the configuration file named or `retake.json` in the current directory;
-    /// `output` moves where it writes.
+    /// The project, from the configuration file named, else `retake.json` or `Retake/retake.json` in
+    /// the current directory; `output` moves where it writes.
     func locate(
         output: URL? = nil,
         environment: [String: String],
@@ -62,16 +63,15 @@ struct ConfigOption: ParsableArguments {
     }
 
     /// For a command that can run outside a project, such as `devices`: the project when a
-    /// configuration file is named or the current directory has a `retake.json`, otherwise nil. A
-    /// file that's named must exist.
+    /// configuration file is named or one is found unnamed, otherwise nil. A file that's named must
+    /// exist.
     func locateIfPresent(
         environment: [String: String] = ProcessInfo.processInfo.environment,
         currentDirectory: String = FileManager.default.currentDirectoryPath,
     ) throws(RetakeError) -> Project? {
         let named = flagOrEnvironment(config, Self.environmentVariable, in: environment) != nil
-        let local = URL(filePath: currentDirectory, directoryHint: .isDirectory)
-            .appending(path: Project.configurationFileName)
-        guard named || FileManager.default.fileExists(atPath: local.path) else { return nil }
+        let local = Project.unnamedConfiguration(in: URL(filePath: currentDirectory, directoryHint: .isDirectory))
+        guard named || local != nil else { return nil }
         return try locate(environment: environment, currentDirectory: currentDirectory)
     }
 }
@@ -86,8 +86,8 @@ struct ProjectOptions: ParsableArguments {
 
     @Option(
         help: ArgumentHelp(
-            "Where to write takes, videos and builds (default: $RETAKE_OUTPUT_DIR, then RetakeOutput/ "
-                + "beside the configuration file). It holds the takes edits pin, so somewhere temporary "
+            "Where to write takes, cuts and builds (default: $RETAKE_OUTPUT_DIR, then the configuration "
+                + "file's output, then output/ beside it). It holds the takes edits pin, so somewhere temporary "
                 + "loses them when it's cleared.",
             valueName: "dir",
         ),

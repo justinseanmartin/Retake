@@ -19,6 +19,24 @@ struct ProjectTests {
         #expect(project.root.path == root.path)
     }
 
+    @Test func aProjectInRetakeIsFoundFromTheFolderHoldingIt() throws {
+        let folder = root.appending(path: "Retake", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: folder.appending(path: "retake.json"))
+        let fromAbove = try Project.locate(configuration: nil, currentDirectory: root)
+        #expect(fromAbove.root.path == folder.path)
+        #expect(fromAbove.devicesFile.path == folder.appending(path: "devices.json").path)
+        let fromInside = try Project.locate(configuration: nil, currentDirectory: folder)
+        #expect(fromInside.configuration == fromAbove.configuration)
+    }
+
+    @Test func retakeJSONHereComesBeforeRetakesOwn() throws {
+        try FileManager.default.createDirectory(at: root.appending(path: "Retake"), withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: root.appending(path: "Retake/retake.json"))
+        try Data("{}".utf8).write(to: root.appending(path: "retake.json"))
+        #expect(try Project.locate(configuration: nil, currentDirectory: root).root.path == root.path)
+    }
+
     @Test func directoriesAboveAreNeverSearched() throws {
         try Data("{}".utf8).write(to: root.appending(path: "retake.json"))
         do {
@@ -63,14 +81,14 @@ struct ProjectTests {
     @Test func foldersFollowTheDeviceType() {
         let project = Project(configuration: root.appending(path: "retake.json"))
         #expect(project.scenes(for: .ipad).path == root.appending(path: "scenes/ipad").path)
-        #expect(project.takes(for: .iphone).path == root.appending(path: "RetakeOutput/takes/iphone").path)
+        #expect(project.takes(for: .iphone).path == root.appending(path: "output/takes/iphone").path)
     }
 
     @Test func theOutputDirectoryCanMoveAnywhere() throws {
         try Data("{}".utf8).write(to: root.appending(path: "retake.json"))
         let scratch = root.appending(path: "scratch/run-1", directoryHint: .isDirectory)
         let project = try Project.locate(configuration: nil, output: scratch, currentDirectory: root)
-        #expect(project.videos(for: .ipad).path == scratch.appending(path: "videos/ipad").path)
+        #expect(project.cuts(for: .ipad).path == scratch.appending(path: "cuts/ipad").path)
         #expect(project.scenes(for: .ipad).path == root.appending(path: "scenes/ipad").path)
     }
 

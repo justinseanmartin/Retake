@@ -7,7 +7,7 @@ extension OnDevice {
     @Suite struct RecordingTests {
         /// A take of `create-note`: its movie with the take's metadata, and a step log with every
         /// step, in order, on the movie's clock from the device's own times, with what was on
-        /// screen after each. Kept in the example's `RetakeOutput/tests/` to look at.
+        /// screen after each. Kept in the example's `Retake/output/tests/` to look at.
         @Test(arguments: ["create-note", "first-launch"])
         func aTakeHasItsStepLogAndMetadata(_ name: String) async throws {
             let example = try ExampleOnDevice()
@@ -38,7 +38,7 @@ extension OnDevice {
 
         /// Records the example while the device turns left, back, right and back: one movie of the
         /// first frame's shape, every change of shape noted with its turn, and next to nothing lost.
-        /// The movie is kept in the example's `RetakeOutput/tests/` to look at.
+        /// The movie is kept in the example's `Retake/output/tests/` to look at.
         @Test func aRecordingKeepsGoingThroughTurns() async throws {
             let example = try ExampleOnDevice()
             let capture = try #require(ScreenCaptureDevices().captureDevices(waitingFor: example.device.name, timeout: 10).first { $0.name == example.device.name })

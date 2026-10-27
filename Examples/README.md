@@ -1,6 +1,6 @@
 # Examples
 
-## Notes
+## RetakeNotes
 
 A small SwiftUI notes app for iPhone and iPad, made to be recorded by Retake: everything a scene
 drives, and nothing that changes between takes.
@@ -14,7 +14,10 @@ drives, and nothing that changes between takes.
 What it starts on is a set's to decide: its notes are in `Documents/notes.json`, and its settings in
 `UserDefaults` (`hasSeenWelcome`, and `sortOrder`, `manual` or `title`).
 
-To build it for a device, copy `Notes/Config/Signing.example.xcconfig` to
-`Notes/Config/Signing.local.xcconfig`, which isn't checked in, and fill in your team and a bundle ID
-prefix of your own. Then open `Notes/Notes.xcodeproj`, or build its `Notes` scheme with
-`xcodebuild`.
+Its Retake project is in `RetakeNotes/Retake/`, as `retake init` makes one: `retake.json`, its sets,
+scenes and edits, and the files its sets copy, in `data/`. Run Retake's commands from
+`Examples/RetakeNotes/`, or from inside `Retake/`.
+
+To build it for a device, copy `Config/Signing.example.xcconfig` to `Config/Signing.local.xcconfig`,
+which isn't checked in, and fill in your team and a bundle ID prefix of your own. Then open
+`RetakeNotes.xcodeproj`, build its `RetakeNotes` scheme with `xcodebuild`, or run `retake install`.
