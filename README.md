@@ -79,7 +79,7 @@ You don't need any other tools installed to use Retake.
 ## Quick start
 
 ```sh
-retake init                              # retake.json and the folders below
+retake init                              # Retake/: retake.json and the folders below
 retake devices add iphone                # name the connected device "iphone"
 retake install --scheme MyApp            # build Debug, embed Retake, and install it
 retake compose create-note               # write a scene a step at a time, on the device
@@ -568,8 +568,8 @@ UDID.
 
 ## Devices
 
-Devices are named by aliases you choose, kept per user in `~/.config/retake/devices.json` rather
-than in the project, since devices belong to people:
+Devices are named by aliases you choose, kept in the project's `devices.json`, which `retake init`
+gitignores, since devices belong to people:
 
 ```sh
 retake devices                 # connected devices, their type, and whether they're wired
@@ -609,16 +609,24 @@ whether an app and a Retake can work together, and it's what Retake checks and r
 
 ## Project layout
 
-A project keeps the instructions for its videos in its repository, and the footage out of it:
+A project keeps the instructions for its videos in its repository, and the footage out of it.
+`retake init` makes it in `Retake/`, at the repository's root, where every command finds it, from
+the root or from inside `Retake/`:
 
 ```
-retake.json          # the app, its build, the default device, and paths
-sets/*.json          # starting states, and the files they copy
-scenes/iphone/*.json
-scenes/ipad/*.json
-edits/*.json
-RetakeOutput/        # takes and videos; gitignored, and movable with --output-dir
+Retake/
+  retake.json        # the app, its build, the default device, and paths
+  sets/*.json        # starting states, and the files they copy
+  scenes/iphone/*.json
+  scenes/ipad/*.json
+  edits/*.json
+  devices.json       # your device aliases; gitignored
+  output/            # takes and videos; gitignored, and movable with --output-dir
 ```
+
+A project can live anywhere, under any folder's name: `retake init --config Previews/retake.json`
+makes one in `Previews/`, and commands then need `--config` or `RETAKE_CONFIG` to find it, which the
+repository's `mise.toml` can set for everyone; see [finding the project](docs/cli.md#finding-the-project).
 
 ### Schemas
 
