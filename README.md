@@ -239,8 +239,16 @@ On a physical device, nothing outside the app can grant permissions in advance (
 
 ## Scenes: the walk through the app
 
-A scene is a set and the steps played on it. Its `set` is the project's `defaultSet` unless it
-names one:
+A scene is a set and the steps played on it. The way to write one is **`retake compose`**, on the
+device: it launches the app on the set, shows what's on screen, and takes each step as an action
+with named options, such as `tap --label "New Note"`, running it at once and adding it to the scene
+when it runs, so a scene is only ever made of steps that worked. `undo` takes the last one back.
+An agent can drive it just as well: `retake compose <scene> --json` reads actions a line each from
+standard input and answers each with a line of JSON, saying what ran, what failed and why, and
+what's on screen now. See [`retake compose`](docs/cli.md#retake-compose).
+
+Scenes are JSON files, so they can be written or changed by hand too. A scene's `set` is the
+project's `defaultSet` unless it names one:
 
 ```json
 {
@@ -308,8 +316,7 @@ step and after the last, 1 second each unless given, so the edit has frames to c
 
 Points are in the device's screen points, so scenes are written per device type: `scenes/iphone/`
 and `scenes/ipad/`. A scene of the same name on each type, with the same steps and ids, is what lets
-one edit cut both. `retake compose` writes a scene a step at a time, printing each element's label
-and activation point as it goes.
+one edit cut both.
 
 ## Takes: footage and a step log
 
