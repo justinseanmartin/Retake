@@ -74,10 +74,8 @@ retake doctor
 - Xcode, for `devicectl` and `codesign`. Its version doesn't matter to Retake.
 - A physical iPhone or iPad on iOS 17 or later, connected **by USB**. Devices over Wi-Fi can't be
   recorded, and a simulator recording stutters where a preview needs to be smooth.
-- A development signing identity and a provisioning profile that covers your app and the device:
-  whatever you already use to run Debug builds on it.
 
-You don't need Tuist, The Button Heist, or any other tool.
+You don't need any other tools installed to use Retake.
 
 ## Quick start
 

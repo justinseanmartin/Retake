@@ -300,7 +300,7 @@ done
 ```
 retake install [--app <path>]
                [--scheme <name> [--workspace <path> | --xcodeproj <path>] [--configuration <name>]
-                [--allow-provisioning-updates]]
+                [--allow-provisioning-updates] [--no-optimize]]
                [--device <device>] [--identity <identity>] [--profile <path>]
 ```
 
@@ -336,6 +336,13 @@ unless given), with its build products under `RetakeOutput/build/`, so it doesn'
 builds, and finds the `.app` from the build's settings. Signing is the project's own. Any
 configuration works, so long as it's development-signed for the device; `Debug` is the default
 because it usually is.
+
+It builds with the compiler's optimisation on, whatever the configuration says (Swift at `-O`, C
+and Objective-C at `-Os`), since a preview should show the app running as fast as it does for
+its users, and a Debug build at `-Onone` can stutter where a release wouldn't. The configuration
+is otherwise the same, so `#if DEBUG` code, and the launch flags a set turns on, still work.
+`--no-optimize` (or `"optimize": false` in `build`) builds as the configuration says instead. A
+`command` build is the project's own, and is left as it is.
 
 **A device the profile doesn't include.** When the build or the embedded app can't be signed for
 the device, typically because it isn't registered on your team, Retake fails (3) and says so,
