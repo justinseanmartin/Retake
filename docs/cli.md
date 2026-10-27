@@ -601,7 +601,8 @@ Renders each edit, for each device type it names (or only `--type`'s), from the 
 - `<edit>-<type>-master.mov`, ProRes, and
 - `<edit>-<type>.mp4`, H.264 at the size and frame rate App Store Connect specifies for the type.
 
-`--draft` renders a quick, smaller H.264 alone, for checking timing. `--open` opens the result.
+`--draft` renders a quick, smaller H.264 alone: for checking timing, and for sharing where the full
+size isn't needed, such as a post on social media. `--open` opens the result.
 
 Warns, and carries on, when the edit's takes were recorded on more than one build of the app, device
 or iOS version, or Button Heist, naming the takes on each; the video's [metadata](#a-videos-fields) lists all of them.
