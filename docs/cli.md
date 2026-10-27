@@ -414,9 +414,9 @@ retake compose <scene> [--set <set>] [--device <device>] [--json]
 Writes a scene a step at a time, on the device. Launches the app on the scene's set, or for a new
 scene, `--set` (`retake.json`'s `defaultSet` when not given); plays the steps the scene already has,
 with their holds, as `record` does, since a step can need the app to have settled after the one
-before; and prints what's on screen: each element's label, value, identifier, traits, frame and
-activation point, in screen points. Then it takes actions, one a line, each an action's name and its
-options:
+before; and prints what's on screen: each element's label, value, identifier, hint, traits, frame
+and activation point, in screen points. Then it takes actions, one a line, each an action's name and
+its options:
 
 ```
 > tap --label "New Note" --id new-note --hold 0.8
@@ -444,9 +444,9 @@ takes the options its step does there; every one but `hold` also takes `--id <na
 `hold` adds a step that's only a pause, as `{ "hold": 2 }` does in a file. A step's `--hold` is the
 scene's `defaultHold` when it isn't given.
 
-An element is any of `--label <text>`, `--value <text>` and `--identifier <text>`, at least one,
-with `--occurrence <n>` (from 1, optional) to pick one of several that match. Other actions act on
-the scene rather than the app, and add no step:
+An element is any of `--label <text>`, `--value <text>`, `--identifier <text>`, `--hint <text>` and
+`--traits <trait>,<trait>`, at least one, with `--occurrence <n>` (from 1, optional) to pick one of
+several that match. Other actions act on the scene rather than the app, and add no step:
 
 | Action | Required | Optional | Does |
 | --- | --- | --- | --- |
@@ -469,7 +469,7 @@ optional and what they default to. Read from a pipe, as when a script or an agen
 action fails instead, naming what's missing, and nothing is asked. With `--json`, each reply is one
 line of JSON, for a program to read: `{"ok": true, "step": {…}, "screen": […]}` after a step,
 `{"ok": false, "error": "…"}` when one doesn't run or an action is wrong, and `{"ok": true,
-"screen": […]}` for `inspect`, the screen as each element's `label`, `value`, `identifier`,
+"screen": […]}` for `inspect`, the screen as each element's `label`, `value`, `identifier`, `hint`,
 `traits`, `frame` and `activationPoint`, with its `occurrence` when `inspect` was given an element.
 
 The scene is written after each change, its other fields kept as they are; a new scene's file names

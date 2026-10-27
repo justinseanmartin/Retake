@@ -291,10 +291,13 @@ the edit trims what it doesn't need. It's the scene's `defaultHold` unless given
 the scene gives one. A step can be only a `hold`, a pause. Last comes its `id`, below.
 
 A step names an element as VoiceOver knows it: by its `label`, its `value` (a text field's
-placeholder or what's typed in it, as the field has no label of its own), or its `identifier` (an
-`accessibilityIdentifier` the app sets), any of them together. When several elements match, the step
-fails, listing them, and saying to name the one meant more closely, by its value or identifier as
-well, or with `occurrence`, which picks one, counted from 1 in the order VoiceOver reads the screen.
+placeholder or what's typed in it, as the field has no label of its own), its `identifier` (an
+`accessibilityIdentifier` the app sets), its `hint` (what VoiceOver says it does), or its `traits`,
+as `retake compose` prints them, such as `["header"]` or `["button", "selected"]`, every one of
+which it must have; any of them together. Traits tell apart elements that share a label, such as a
+screen's title and a button named the same. When several elements match, the step fails, listing
+them, and saying to name the one meant more closely, by its traits, value or identifier as well, or
+with `occurrence`, which picks one, counted from 1 in the order VoiceOver reads the screen.
 
 **Name elements rather than points wherever you can.** A step that names an element finds it
 wherever the layout puts it, on every device, and after the app's layout changes, where a point
