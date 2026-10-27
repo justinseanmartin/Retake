@@ -47,7 +47,7 @@ struct Validate: AsyncParsableCommand {
 
     func run() async throws {
         let located = try project.locate()
-        let validator = ProjectValidator(files: ProjectFiles(project: located))
+        let validator = ProjectValidator(files: ProjectFiles(project: located), offline: offline)
         let current = URL(filePath: FileManager.default.currentDirectoryPath, directoryHint: .isDirectory)
         var targets: [ProjectValidator.Target]?
         if !files.isEmpty {
@@ -85,9 +85,6 @@ struct Validate: AsyncParsableCommand {
             for problem in report.problems { print(problem.description) }
             let count = report.problems.count
             print(count == 0 ? "No problems." : "\(count) problem\(count == 1 ? "" : "s").")
-        }
-        if !offline {
-            Console.note("anchors and elements aren't checked against takes yet; these are the --offline checks.")
         }
         if !report.problems.isEmpty { throw ExitCode.failure }
     }

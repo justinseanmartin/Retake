@@ -26,6 +26,10 @@ public struct ProjectFiles {
             problems.append(problem)
         }
 
+        public func warning(_ warning: FileProblem) {
+            warnings.append(warning)
+        }
+
         /// A command's failure (1), listing every problem.
         public var error: RetakeError {
             RetakeError(.failed, problems.map(\.description).joined(separator: "\n"))

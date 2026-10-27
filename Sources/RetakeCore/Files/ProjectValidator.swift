@@ -1,13 +1,18 @@
 import Foundation
 
-/// What `retake validate` checks without takes: every file read strictly, then what a schema
-/// can't say, across the files. See docs/cli.md, "retake validate".
+/// What `retake validate` checks: every file read strictly, then what a schema can't say, across
+/// the files, and unless `offline`, what only the takes can: that each edit's anchors resolve in
+/// the takes it pins, and the elements it names are on screen there. See docs/cli.md, "retake
+/// validate".
 public struct ProjectValidator {
     public let files: ProjectFiles
+    /// Whether to leave out the checks that need takes.
+    public let offline: Bool
     let fileManager: FileManager
 
-    public init(files: ProjectFiles, fileManager: FileManager = .default) {
+    public init(files: ProjectFiles, offline: Bool = true, fileManager: FileManager = .default) {
         self.files = files
+        self.offline = offline
         self.fileManager = fileManager
     }
 
@@ -192,6 +197,15 @@ public struct ProjectValidator {
                     checkAnchor(still.at, in: stillScene, sceneName: still.take, type, at: stillAt.appending("at"))
                 }
             }
+            if !offline {
+                checkTakes(of: edit, video, for: type, problem: { problem($0, $1, for: type) }, warning: { path, message in
+                    let found = FileProblem(file: file, path: edit.source(of: path, for: type), message: message)
+                    if !report.warnings.contains(found) { report.warning(found) }
+                }, reported: { path in
+                    let source = edit.source(of: path, for: type)
+                    return report.problems.contains { $0.file == file && $0.path == source }
+                })
+            }
         }
 
         // A scene the edit cuts on more than one device type must have the same step ids on each,
@@ -216,6 +230,115 @@ public struct ProjectValidator {
                     path: JSONPath.root.appending("steps"),
                     message: "its step ids differ from \(project.displayPath(files.sceneURL(name, for: firstType)))'s, which \(file) cuts both from: \(differences.joined(separator: "; "))",
                 ))
+            }
+        }
+    }
+
+    // MARK: - Against the takes
+
+    /// What `cut` will check of `video`, in the takes it pins that are recorded here: each clip's
+    /// anchors resolving inside its take, in order; its captions', sounds', spotlight's and blurs'
+    /// within the stretch the clip plays; and the elements a spotlight or blur names on screen as it
+    /// starts. Takes aren't in a repository, so a take that isn't pinned, isn't recorded here, or
+    /// failed only warns that what's cut from it isn't checked.
+    func checkTakes(
+        of edit: EditFile, _ video: Edit, for type: DeviceType, problem: (JSONPath, String) -> Void, warning: (JSONPath, String) -> Void,
+        reported: (JSONPath) -> Bool,
+    ) {
+        let pins = Dictionary((edit.takes[type] ?? []).map { ($0.name, $0.value) }, uniquingKeysWith: { first, _ in first })
+        var timelines: [String: TakeTimeline?] = [:]
+        func pinned(_ scene: String, at path: JSONPath) -> TakeTimeline? {
+            if let known = timelines[scene] { return known }
+            var found: TakeTimeline?
+            if let number = pins[scene] {
+                let take = TakeStore.takes(of: scene, for: [type], in: project).first { $0.number == number }
+                if let take, let log = take.recorded, log.failure == nil, take.problem == nil {
+                    found = TakeTimeline(log)
+                } else if let log = take?.recorded, let failure = log.failure {
+                    warning(path, "take \(number) of \(scene) for \(type.rawValue) failed (\(failure)), so it can't be cut from, and isn't checked")
+                } else if let take {
+                    warning(path, "take \(number) of \(scene) for \(type.rawValue) can't be read, so isn't checked: \(take.problem ?? "")")
+                } else {
+                    warning(path, "take \(number) of \(scene) for \(type.rawValue) isn't recorded here, so what's cut from it isn't checked")
+                }
+            } else {
+                warning(path, "the edit pins no \(type.rawValue) take of \(scene), so what's cut from it isn't checked; conform it")
+            }
+            timelines[scene] = found
+            return found
+        }
+        func resolve(_ anchor: Anchor, in timeline: TakeTimeline, at path: JSONPath) -> Double? {
+            do {
+                let time = try timeline.time(of: anchor)
+                guard time >= 0, time <= timeline.log.duration else {
+                    problem(path, "is \(TakeTimeline.seconds(time)) into the take, outside it: it's \(TakeTimeline.seconds(timeline.log.duration)) long")
+                    return nil
+                }
+                return time
+            } catch {
+                // A step the scene lacks is named already, by the checks that need no take.
+                if !reported(path.appending("step")) { problem(path, "doesn't resolve: \(error.message)") }
+                return nil
+            }
+        }
+        func within(_ time: Double?, _ range: ClosedRange<Double>?, at path: JSONPath) {
+            guard let time, let range, !range.contains(time) else { return }
+            problem(path, "is \(TakeTimeline.seconds(time)) into the take, outside the stretch its clip plays, \(TakeTimeline.seconds(range.lowerBound)) to \(TakeTimeline.seconds(range.upperBound))")
+        }
+
+        // Each clip's stretch of its take, where it resolves; what's in a clip is checked against it.
+        var stretches: [Int: ClosedRange<Double>] = [:]
+        var ranges: [String: ClosedRange<Double>] = [:]
+        let clips = video.clips.enumerated().map { index, clip in (index, clip, JSONPath.root.appending("clips").appending(index)) }
+        for (index, clip, at) in clips {
+            guard let timeline = pinned(clip.take, at: at.appending("take")) else { continue }
+            let from = resolve(clip.from, in: timeline, at: at.appending("from"))
+            let to = resolve(clip.to, in: timeline, at: at.appending("to"))
+            guard let from, let to else { continue }
+            guard from < to else {
+                problem(at.appending("to"), "is \(TakeTimeline.seconds(to)) into the take, not after from, at \(TakeTimeline.seconds(from))")
+                continue
+            }
+            stretches[index] = from...to
+            if let id = clip.id { ranges[id] = from...to }
+        }
+        for (index, clip, at) in clips {
+            guard let played = stretches[index], let timeline = pinned(clip.take, at: at.appending("take")) else { continue }
+            let from = played.lowerBound
+            for (index, caption) in clip.captions.enumerated() {
+                let captionAt = at.appending("captions").appending(index)
+                within(caption.from.flatMap { resolve($0, in: timeline, at: captionAt.appending("from")) }, played, at: captionAt.appending("from"))
+                guard let end = caption.to, let anchor = end.anchor else { continue }
+                if let later = end.clip {
+                    guard let laterClip = video.clips.first(where: { $0.id == later }),
+                          let laterTimeline = pinned(laterClip.take, at: captionAt.appending("to")) else { continue }
+                    within(resolve(anchor, in: laterTimeline, at: captionAt.appending("to")), ranges[later], at: captionAt.appending("to"))
+                } else {
+                    within(resolve(anchor, in: timeline, at: captionAt.appending("to")), played, at: captionAt.appending("to"))
+                }
+            }
+            for (index, sound) in clip.sounds.enumerated() {
+                let soundAt = at.appending("sounds").appending(index).appending("at")
+                within(resolve(sound.at, in: timeline, at: soundAt), played, at: soundAt)
+            }
+            var regions: [(Edit.Region, Anchor?, Anchor?, JSONPath)] = []
+            if let spotlight = clip.spotlight { regions.append((spotlight.region, spotlight.from, spotlight.to, at.appending("spotlight"))) }
+            for (index, blur) in clip.blurs.enumerated() { regions.append((blur.region, blur.from, blur.to, at.appending("blurs").appending(index))) }
+            for (region, regionFrom, regionTo, regionAt) in regions {
+                let starts = regionFrom.flatMap { resolve($0, in: timeline, at: regionAt.appending("from")) }
+                within(starts, played, at: regionAt.appending("from"))
+                within(regionTo.flatMap { resolve($0, in: timeline, at: regionAt.appending("to")) }, played, at: regionAt.appending("to"))
+                guard case .element(let element) = region else { continue }
+                do {
+                    _ = try timeline.element(element, at: starts ?? from)
+                } catch {
+                    problem(regionAt.appending("element"), error.message)
+                }
+            }
+            for (index, still) in clip.stills.enumerated() {
+                let stillAt = at.appending("stills").appending(index)
+                guard let stillTimeline = pinned(still.take, at: stillAt.appending("take")) else { continue }
+                _ = resolve(still.at, in: stillTimeline, at: stillAt.appending("at"))
             }
         }
     }

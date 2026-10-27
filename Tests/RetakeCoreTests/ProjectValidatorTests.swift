@@ -122,4 +122,62 @@ struct ProjectValidatorTests {
         #expect(validator.target(for: root.appending(path: "edits/video.json")) == .edit("video"))
         #expect(validator.target(for: root.appending(path: "data/notes.json")) == nil)
     }
+
+    // MARK: Against the takes
+
+    func validateWithTakes() throws -> (problems: [String], warnings: [String]) {
+        let project = try Project.locate(configuration: nil, currentDirectory: root)
+        let report = ProjectValidator(files: ProjectFiles(project: project), offline: false).validate()
+        return (report.problems.map(\.description), report.warnings.map(\.description))
+    }
+
+    /// Take 1 of `walk` for iPad, as `TakeTimelineTests` lays it out: `a` at 1–1.5 s, `b` at 2–3 s,
+    /// 6 s long, its screen read after `b`.
+    func recordWalk(failure: String? = nil) throws {
+        var log = TakeTimelineTests.timeline().log
+        log.scene = "walk"
+        log.take = 1
+        log.failure = failure
+        log.steps = log.steps.prefix(2).map { var step = $0; step.id = step.id == "a" ? "open" : "done"; return step }
+        try FileManager.default.createDirectory(at: root.appending(path: "output/takes/ipad/walk"), withIntermediateDirectories: true)
+        try write("output/takes/ipad/walk/1.json", JSONWriter.write(log.json))
+        try write("output/takes/ipad/walk/1.mov", "")
+    }
+
+    @Test func anchorsAndElementsAreCheckedInThePinnedTakeOnly() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try recordWalk()
+        try write("edits/video.json", #"""
+            {"devices": ["ipad"], "takes": {"ipad": {"walk": 1}}, "clips": [
+              {"take": "walk", "from": {"step": "open"}, "to": {"step": "done", "offset": 9},
+               "captions": [{"text": "a", "y": 0.1, "color": "#000000", "from": {"step": "start"}}]},
+              {"take": "walk", "from": {"step": "done"}, "to": {"step": "open"}},
+              {"take": "walk", "from": {"step": "open"}, "to": {"step": "end"},
+               "spotlight": {"element": {"label": "Share"}, "from": {"step": "done", "offset": 0.1}},
+               "blurs": [{"element": {"label": "Send"}, "from": {"step": "done", "offset": 0.1}}]}
+            ]}
+            """#)
+        let (problems, warnings) = try validateWithTakes()
+        #expect(problems == [
+            "edits/video.json: clips[0].to: is 12 s into the take, outside it: it's 6 s long",
+            "edits/video.json: clips[1].to: is 1 s into the take, not after from, at 2 s",
+            #"edits/video.json: clips[2].blurs[0].element: "Send" isn't on screen after step 2, at 3 s"#,
+        ])
+        #expect(warnings.isEmpty)
+        #expect(try validate().isEmpty, "--offline checks none of it")
+    }
+
+    @Test func aTakeNotPinnedOrNotRecordedHereOnlyWarns() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try edit(#"{"take": "walk", "from": {"step": "open"}, "to": {"step": "done"}}"#, devices: #"["ipad"]"#)
+        var (problems, warnings) = try validateWithTakes()
+        #expect(problems.isEmpty)
+        #expect(warnings == ["edits/video.json: clips[0].take: the edit pins no ipad take of walk, so what's cut from it isn't checked; conform it"])
+
+        try recordWalk(failure: "step 2 didn't run")
+        try write("edits/video.json", #"{"devices": ["ipad"], "takes": {"ipad": {"walk": 1}}, "clips": [{"take": "walk", "from": {"step": "open"}, "to": {"step": "done"}}]}"#)
+        (problems, warnings) = try validateWithTakes()
+        #expect(problems.isEmpty)
+        #expect(warnings == ["edits/video.json: clips[0].take: take 1 of walk for ipad failed (step 2 didn't run), so it can't be cut from, and isn't checked"])
+    }
 }
