@@ -24,8 +24,8 @@ Four questions could each have changed Retake's shape, so they were answered bef
    it, and recording across the turn. If turning hadn't worked, an `aspect` step faking a landscape
    band inside a portrait screen would have stood in for it.
 
-All four came back yes, and The Button Heist's 0.7.0 and 0.7.1 releases then answered most of
-[ASKS.md](../../ASKS.md), so the first was run again on 0.7.1.
+All four came back yes, and The Button Heist's 0.7.0 and 0.7.1 releases then answered most of [the
+asks for The Button Heist](2026-10-26-button-heist-asks.md), so the first was run again on 0.7.1.
 
 ## Before the proofs of concept (2026-10-23)
 
@@ -267,11 +267,11 @@ other system windows alone. Same iPad, test app showing its own geometry:
 
 ## Proof of concept 1 again, on The Button Heist 0.7.1's release (2026-10-26)
 
-0.7.0 and 0.7.1 answered most of [ASKS.md](ASKS.md), so Retake moved from a commit on main to the
-0.7.1 release: `Package.swift` pins it `exact:`, and `retake version` reads its version from
-`TheScore`, so the two can't drift. `spikes/client071` reran proof of concept 1 through the public
-API alone, on the same iPad (iOS 26.6.2) from Xcode 27.1, against the test app with the release's
-framework injected. Everything held:
+0.7.0 and 0.7.1 answered most of [the asks for The Button Heist](2026-10-26-button-heist-asks.md),
+so Retake moved from a commit on main to the 0.7.1 release: `Package.swift` pins it `exact:`, and
+`retake version` reads its version from `TheScore`, so the two can't drift. `spikes/client071` reran
+proof of concept 1 through the public API alone, on the same iPad (iOS 26.6.2) from Xcode 27.1,
+against the test app with the release's framework injected. Everything held:
 
 - **The published framework injects as is.** `theinsidejob-0.7.1.zip` matched its checksum; its
   `ios-arm64` `TheInsideJob.framework` (28 MB, both AccessibilitySnapshotBH resource bundles

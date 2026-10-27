@@ -1,12 +1,13 @@
 # Asks for The Button Heist
 
-Requests for The Button Heist, collected while building Retake, to share with its author. Each says
-what would help, why, and what we found; the suggestions are only suggestions.
-
-**Where they stand (2026-10-26).** Shared with the maintainer, who answered all but the last in
-0.7.0 and 0.7.1 (released 2026-10-24 and 2026-10-26). Retake now pins the 0.7.1 release; what it
-changes for Retake is in [the proofs of concept](docs/records/2026-10-26-proofs-of-concept.md),
-under "Proof of concept 1 again".
+Status: **resolved** (2026-10-26). Requests for The Button Heist, collected while building Retake's
+proofs of concept and shared with its maintainer, who answered all but the last in 0.7.0 and 0.7.1
+(released 2026-10-24 and 2026-10-26); the last was closed without being sent, as Retake doesn't
+need it. Each says what would help, why, and what we found. Retake relies on what they changed (a
+version that names the contract, refusing a mismatch at the handshake, injection as a supported
+way to use TheInsideJob, and a public Swift client), so this record is where to start if any of it
+changes. Retake now pins the 0.7.1 release; what that showed is in
+[the proofs of concept](2026-10-26-proofs-of-concept.md), under "Proof of concept 1 again".
 
 | Ask | Status |
 | --- | --- |
@@ -16,7 +17,7 @@ under "Proof of concept 1 again".
 | [4. Building The Button Heist's Tuist project on Xcode 27.1](#4-building-the-button-heists-tuist-project-on-xcode-271) | Done (#1481). |
 | [5. A public way to drive an app from Swift](#5-a-public-way-to-drive-an-app-from-swift) | Done: `ButtonHeist.withSession` (#1483). |
 | [6. Two connection details found along the way](#6-two-connection-details-found-along-the-way) | Both fixed (#1480). |
-| [7. Optional: a build stamp in the binary](#7-optional-a-build-stamp-in-the-binary) | Open, and needed less now that (1) is done. |
+| [7. Optional: a build stamp in the binary](#7-optional-a-build-stamp-in-the-binary) | Closed, not sent: Retake doesn't need it. |
 
 **Context.** Retake records App Store preview videos by driving an app with The Button Heist on a
 USB-connected device. Rather than asking apps to link TheInsideJob, Retake builds it as one Debug
@@ -154,6 +155,9 @@ else's script, or linking The Button Heist from a local checkout or a vendored f
 app that pins it as a Swift package, the commit in `Package.resolved` is enough. Today the
 framework's `Info.plist` has a generic `1.0` (`1`), and a static link leaves no framework at all.
 
-**Open.** The release bundle's `VERSION` file names the version, but nothing in the framework
-itself does. With (1) done, the version the handshake reports is precise enough for Retake's
-compatibility check, so this matters only for records of builds made outside a release.
+**Closed, not sent.** The release bundle's `VERSION` file names the version, but nothing in the
+framework itself does, not even its `Info.plist`. Retake wouldn't use it: a take records the version
+the app reports at the handshake, which (1) made exact; `record` and `doctor` judge an installed
+app's compatibility from the `Retake` dictionary `embed` writes into its `Info.plist`; and `check`
+and `embed` need only whether TheInsideJob is there, not which. At most it would let a message say
+which version an app links, which isn't worth asking another project for.
