@@ -31,31 +31,37 @@ struct ExampleOnDevice {
     }
 }
 
+/// Every device suite, nested here so they run one at a time: they share one device, and one
+/// launch ends another's.
 @Suite(.enabled(if: testDevice != nil, "RETAKE_TEST_DEVICE names no device"), .serialized)
-struct LaunchingTests {
-    @Test func aSceneLaunchesOnItsSetAndTheLibraryReportsIn() throws {
-        let example = try ExampleOnDevice()
-        for scene in ["first-launch", "create-note"] {
-            let plan = try example.plan(scene: scene)
-            let launched = try Launcher.launch(plan, on: example.device, logs: example.project.output.appending(path: "logs"))
-            defer { launched.stop() }
-            #expect(launched.report.take == plan.take)
-            #expect(launched.report.contract == SupportLibrary.contractVersion)
-            #expect(launched.report.state == "clean")
-            #expect(launched.endpoint.hasPrefix("[") && launched.endpoint.hasSuffix("]:\(plan.port)"))
-        }
-    }
+struct OnDevice {}
 
-    @Test func cleaningUpLeavesNoTakeOnTheDevice() throws {
-        let example = try ExampleOnDevice()
-        let launched = try Launcher.launch(try example.plan(scene: "create-note"), on: example.device, logs: example.project.output.appending(path: "logs"))
-        launched.stop()
-        try Launcher.cleanUp(bundleID: example.bundleID, on: example.device)
-        let listing = try Subprocess.xcrun([
-            "devicectl", "device", "info", "files", "--device", example.device.udid, "--domain-type", "appDataContainer",
-            "--domain-identifier", example.bundleID, "--subdirectory", "tmp",
-        ])
-        #expect(!listing.outputText.contains("RetakeTakes"))
-        #expect(!listing.outputText.contains("RetakeSet"))
+extension OnDevice {
+    @Suite struct LaunchingTests {
+        @Test func aSceneLaunchesOnItsSetAndTheLibraryReportsIn() throws {
+            let example = try ExampleOnDevice()
+            for scene in ["first-launch", "create-note"] {
+                let plan = try example.plan(scene: scene)
+                let launched = try Launcher.launch(plan, on: example.device, logs: example.project.output.appending(path: "logs"))
+                defer { launched.stop() }
+                #expect(launched.report.take == plan.take)
+                #expect(launched.report.contract == SupportLibrary.contractVersion)
+                #expect(launched.report.state == "clean")
+                #expect(launched.endpoint.hasPrefix("[") && launched.endpoint.hasSuffix("]:\(plan.port)"))
+            }
+        }
+
+        @Test func cleaningUpLeavesNoTakeOnTheDevice() throws {
+            let example = try ExampleOnDevice()
+            let launched = try Launcher.launch(try example.plan(scene: "create-note"), on: example.device, logs: example.project.output.appending(path: "logs"))
+            launched.stop()
+            try Launcher.cleanUp(bundleID: example.bundleID, on: example.device)
+            let listing = try Subprocess.xcrun([
+                "devicectl", "device", "info", "files", "--device", example.device.udid, "--domain-type", "appDataContainer",
+                "--domain-identifier", example.bundleID, "--subdirectory", "tmp",
+            ])
+            #expect(!listing.outputText.contains("RetakeTakes"))
+            #expect(!listing.outputText.contains("RetakeSet"))
+        }
     }
 }

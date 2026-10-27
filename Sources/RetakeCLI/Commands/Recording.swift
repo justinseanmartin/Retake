@@ -1,4 +1,5 @@
 import ArgumentParser
+import Foundation
 import RetakeCore
 
 struct Inspect: AsyncParsableCommand {
@@ -6,7 +7,8 @@ struct Inspect: AsyncParsableCommand {
         abstract: "Prints what's on screen.",
         discussion: """
             Launches the app on a set and prints each element's label, traits, frame and activation \
-            point, in screen points.
+            point, in screen points. With --watch, prints again each time the screen changes, until \
+            stopped with Control-C.
             """,
     )
 
@@ -21,9 +23,70 @@ struct Inspect: AsyncParsableCommand {
     @OptionGroup var project: ProjectOptions
 
     func run() async throws {
-        _ = try project.locate()
-        throw RetakeError.notImplemented("inspect")
+        let located = try project.locate()
+        let set = try Inspection.set(self.set, in: located)
+        let directory = try DeviceDirectory.current()
+        let target = try directory.resolve(device.choice(
+            configuration: located.settings.device.map { ($0, located.configuration) },
+            connected: directory.recordable.map(\.udid),
+        ))
+        // Control-C ends watching rather than the process, so the device is still cleaned up.
+        let interruption = Interruption()
+        if watch { interruption.start() }
+        defer { interruption.stop() }
+        let started = Date()
+        let shown = Counter()
+        let inspection = Inspection(stopped: { interruption.happened }) { elements in
+            let count = shown.next()
+            if count > 1 { Swift.print("") }
+            let when = count == 1 ? "On screen" : String(format: "Changed, %.1f s in", Date().timeIntervalSince(started))
+            Swift.print("\(when), \(elements.count) element\(elements.count == 1 ? "" : "s"):")
+            for element in elements { Swift.print("  \(element.line)") }
+            if count == 1, watch { Swift.print("Watching for changes; press Control-C to stop.") }
+            // Each screen as it comes, through a pipe too, since watching runs until stopped.
+            fflush(stdout)
+        }
+        let name = target.name
+        try await Inspection.run(set, in: located, on: target, watch: watch, inspection: inspection) { event in
+            if case .launching(let set, let state) = event {
+                Swift.print("Launching the app on \(name), from \(set) (\(state.rawValue)).")
+            } else {
+                Rehearse.show(event, scene: "", device: name)
+            }
+        }
+        if interruption.happened { Swift.print("Stopped.") }
     }
+}
+
+/// Control-C, caught while it's started rather than ending the process.
+final class Interruption: @unchecked Sendable {
+    private let lock = NSLock()
+    private var fired = false
+    private var source: DispatchSourceSignal?
+
+    func start() {
+        signal(SIGINT, SIG_IGN)
+        let source = DispatchSource.makeSignalSource(signal: SIGINT, queue: .global())
+        source.setEventHandler { [self] in lock.withLock { fired = true } }
+        source.resume()
+        self.source = source
+    }
+
+    var happened: Bool { lock.withLock { fired } }
+
+    func stop() {
+        guard let source else { return }
+        source.cancel()
+        signal(SIGINT, SIG_DFL)
+    }
+}
+
+/// Counts up from 1, from any thread.
+final class Counter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+
+    func next() -> Int { lock.withLock { count += 1; return count } }
 }
 
 struct Rehearse: AsyncParsableCommand {
