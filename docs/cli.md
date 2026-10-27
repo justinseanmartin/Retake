@@ -151,8 +151,7 @@ each, and exits with the worst status among them.
 | [`embed`](#retake-embed) | Adds what Retake needs to a built app, for installing it yourself. |
 | [`install`](#retake-install) | Builds the app if asked, embeds Retake in it, and installs it. |
 | [`inspect`](#retake-inspect) | Prints what's on screen. |
-| [`rehearse`](#retake-rehearse) | Plays a scene without recording it. |
-| [`record`](#retake-record) | Records takes. |
+| [`record`](#retake-record) | Records takes, or with `--dry-run`, plays scenes without recording them. |
 | [`takes`](#retake-takes) | Lists takes. |
 | [`discard`](#retake-discard) | Deletes a take. |
 | [`clean`](#retake-clean) | Deletes takes and videos. |
@@ -282,7 +281,7 @@ embedding every build again, when two things agree:
   against. Builds between releases carry a hash of The Button Heist's contract in their version,
   so equal versions mean the same commands and wire format.
 
-`record`, `rehearse`, `inspect` and `doctor` check both at launch: the contract version from what
+`record`, `inspect` and `doctor` check both at launch: the contract version from what
 the support library reports, and The Button Heist's version at its own handshake, which refuses a
 mismatch before any command runs. They stop (3) when either differs, saying to embed the app again. An upgrade of Retake
 that changes neither works with apps already on devices.
@@ -360,23 +359,11 @@ screen: each element's label, traits, frame and activation point, in screen poin
 `--watch`, prints again whenever the screen changes, until stopped, so you can walk the app by hand
 and note targets as you go.
 
-### `retake rehearse`
-
-```
-retake rehearse <scene> [--device <device>] [--from <step>]
-```
-
-Plays a scene as `record` does, without recording it: launches on the scene's set, plays its setup
-and steps with their holds, and prints each step as it plays. `--from <step>` skips to a step
-(numbered from 1), playing the steps before it without their holds.
-
-Writes nothing, and deletes the take's copy of the app's data from the device at the end, as
-`record` does. Fails (1) at the first step that doesn't run, naming it.
-
 ### `retake record`
 
 ```
 retake record [<scene>... | --for <edit>] [--force] [--device <device>] [--stop-on-failure]
+              [--dry-run [--from <step>]]
 ```
 
 Records a new take of each scene chosen:
@@ -417,6 +404,13 @@ and a summary at the end lists each scene's new take or failure.
 
 Existing takes are never changed.
 
+**`--dry-run`** plays the scenes chosen as `record` would, without recording them, for trying a
+scene out while writing it: it launches on each scene's set, plays its setup and steps with their
+holds, prints each step as it plays, and deletes the take's copy of the app's data from the device
+at the end. It writes nothing, and fails (1) at the first step that doesn't run, naming it.
+`--from <step>`, with one scene, skips to a step (numbered from 1), playing the steps before it
+without their holds.
+
 ### `retake takes`
 
 ```
@@ -448,7 +442,7 @@ Deletes every take and every rendered video, or with `--takes` or `--videos` onl
 device types unless `--type` names one. Asks first, unless `--yes`.
 
 `--on-device` deletes, instead, what Retake leaves in the app's container on the device: takes'
-copies of the app's data, and staged set files. `record` and `rehearse` do this at the end of a run,
+copies of the app's data, and staged set files. `record` does this at the end of a run,
 so it's for one that was interrupted. Only the app can delete files in its container, so this
 launches it in a mode that deletes them and quits before any of the app's own code runs; iOS then
 opens the app again, as from the home screen, and Retake closes it. It never touches the app's real

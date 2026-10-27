@@ -86,7 +86,7 @@ retake init                              # retake.json and the folders below
 retake devices add iphone                # name the connected device "iphone"
 retake install --scheme MyApp            # build Debug, embed Retake, and install it
 retake inspect                           # what's on screen, to write a scene against
-retake rehearse create-note              # play a scene without recording it
+retake record --dry-run create-note      # play a scene without recording it
 retake record create-note share-note     # record takes
 retake cut video1                        # render the video, for each device type
 ```
@@ -187,8 +187,8 @@ Application Support and Caches, `URL.documentsDirectory`, `NSTemporaryDirectory(
 databases and files your code opens there, SQLite included. A `cloned` take's copy is a clone of
 the real files (`clonefile`), which takes no time to make and no space until the take writes to it.
 
-Each take's copy is deleted when the app next launches under Retake, and `record` and `rehearse`
-launch it once more at the end of a run to delete the last, so no copy is left on the device.
+Each take's copy is deleted when the app next launches under Retake, and `record` launches it once
+more at the end of a run to delete the last, so no copy is left on the device.
 `retake clean --on-device` does the same on demand, after a run that was interrupted. Only the app
 itself can delete files in its container, so both launch it in a mode that deletes them and quits
 before any of the app's own code runs. iOS then opens the app again, as it would from the home
