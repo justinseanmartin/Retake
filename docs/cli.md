@@ -723,10 +723,10 @@ schema` prints them.
 ## Files Retake writes
 
 Retake writes in four places: the project, its output directory, the app's container on the device,
-and its own cache, outside any project. Paths in the project are relative to its folder, `Retake/`
-unless [`init`](#retake-init) was told otherwise.
+and its own cache, outside any project.
 
-**In the project.** Nothing but these commands changes a project's own files:
+**In the project**, in `Retake/` unless [`init`](#retake-init) was told otherwise. Nothing but these commands
+changes a project's own files:
 
 | Path | What |
 | --- | --- |
@@ -735,8 +735,8 @@ unless [`init`](#retake-init) was told otherwise.
 | `scenes/<type>/*.json` | Written by `compose`. |
 | `edits/*.json` | Rewritten by `conform`. |
 
-**In the output directory**, `output/` unless [moved](#the-output-directory), and gitignored. What's worth keeping, and
-nothing that's rewritten wholesale:
+**In the output directory**, `output/` in the project's folder unless [moved](#the-output-directory), and gitignored.
+What's worth keeping, and nothing that's rewritten wholesale:
 
 | Path | What |
 | --- | --- |
