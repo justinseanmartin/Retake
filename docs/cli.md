@@ -477,7 +477,7 @@ names one.
 
 ```
 retake record [<scene>... | --for <edit>] [--force] [--device <device>] [--stop-on-failure]
-              [--dry-run [--from <step>]]
+              [--dry-run]
 ```
 
 Records a new take of each scene chosen:
@@ -519,9 +519,9 @@ Existing takes are never changed.
 **`--dry-run`** plays the scenes chosen as `record` would, without recording them, for trying a
 scene out while writing it: it launches on each scene's set, plays its setup and steps with their
 holds, prints each step as it plays, and deletes the take's copy of the app's data from the device
-at the end. It writes nothing, and fails (1) at the first step that doesn't run, naming it. `--from
-<step>`, with one scene, skips to a step (numbered from 1), playing the steps before it without
-their holds.
+at the end. It writes nothing, and fails (1) at the first step that doesn't run, naming it. It plays
+every step with its hold, as a take would: a step can need the app to have settled after the one
+before, so a dry run that skipped holds could fail where a take wouldn't, or pass where it fails.
 
 ### `retake takes`
 
