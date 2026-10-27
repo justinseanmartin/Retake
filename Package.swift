@@ -37,7 +37,11 @@ let package = Package(
         // What the commands do, with no knowledge of how they're invoked.
         .target(
             name: "RetakeCore",
-            dependencies: [.product(name: "TheScore", package: "TheButtonHeist")],
+            dependencies: [
+                .product(name: "ButtonHeist", package: "TheButtonHeist"),
+                .product(name: "ThePlans", package: "TheButtonHeist"),
+                .product(name: "TheScore", package: "TheButtonHeist"),
+            ],
             // A build against a clone says so, in `retake version` and each take's metadata.
             swiftSettings: clonePath == nil ? [] : [.define("RETAKE_BUTTONHEIST_CLONE")],
         ),
@@ -47,7 +51,11 @@ let package = Package(
         ),
         .testTarget(
             name: "RetakeCoreTests",
-            dependencies: ["RetakeCore"],
+            dependencies: [
+                "RetakeCore",
+                .product(name: "ButtonHeist", package: "TheButtonHeist"),
+                .product(name: "ThePlans", package: "TheButtonHeist"),
+            ],
         ),
         // Checks only a device can make, run with RETAKE_TEST_DEVICE naming one, and skipped otherwise.
         .testTarget(

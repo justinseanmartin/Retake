@@ -40,7 +40,7 @@ public enum Launcher {
     /// waits for the support library to report this take: an environment problem (3) when it
     /// doesn't, since the app then wasn't embedded, or was by an incompatible Retake.
     public static func launch(_ plan: LaunchPlan, on device: Device, logs: URL) throws(RetakeError) -> LaunchedApp {
-        try devicectl(["devicectl", "device", "orientation", "set", "--device", device.udid, LaunchPlan.devicectlName(plan.orientation)], "turn \(device.name) to \(plan.orientation.rawValue)")
+        try turn(device, to: plan.orientation)
         for staged in plan.staging {
             try devicectl(
                 ["devicectl", "device", "copy", "to", "--device", device.udid, "--domain-type", "appDataContainer",
@@ -92,6 +92,14 @@ public enum Launcher {
             throw RetakeError(.environment, "\(device.name) has no CoreDevice tunnel to reach the app over.")
         }
         return LaunchedApp(plan: plan, device: device, report: report, tunnelAddress: tunnel, consoleLog: consoleLog, console: console)
+    }
+
+    /// Turns the device with no hand on it; the app follows a moment later.
+    public static func turn(_ device: Device, to orientation: SceneFile.Orientation) throws(RetakeError) {
+        try devicectl(
+            ["devicectl", "device", "orientation", "set", "--device", device.udid, LaunchPlan.devicectlName(orientation)],
+            "turn \(device.name) to \(orientation.rawValue)",
+        )
     }
 
     /// The launch that deletes takes' homes and staged files from the device, then closes the app

@@ -55,8 +55,33 @@ struct Rehearse: AsyncParsableCommand {
     }
 
     func run() async throws {
-        _ = try project.locate()
-        throw RetakeError.notImplemented("rehearse")
+        let located = try project.locate()
+        let directory = try DeviceDirectory.current()
+        let target = try directory.resolve(device.choice(
+            configuration: located.settings.device.map { ($0, located.configuration) },
+            connected: directory.recordable.map(\.udid),
+        ))
+        let player = Player(report: { event in Self.show(event, scene: scene, device: target.name) })
+        try await Rehearsal.run(scene, in: located, on: target, from: fromStep ?? 1, player: player)
+        print("Played every step of \(scene).")
+    }
+
+    /// Each step once it's played, with how long it took, and what an `inspect` step saw.
+    @Sendable static func show(_ event: Player.Event, scene: String, device: String) {
+        switch event {
+        case .launching(let set, let state):
+            Swift.print("Rehearsing \(scene) on \(device), from \(set) (\(state.rawValue)).")
+        case .started:
+            break
+        case .finished(let played, let seconds):
+            Swift.print("  \(played.name): \(played.step.summary)  \(String(format: "%.2f", seconds)) s")
+        case .inspected(_, let elements):
+            for element in elements { Swift.print("      \(element.line)") }
+        case .note(let message):
+            Console.note(message)
+        case .warning(let message):
+            Console.warn(message)
+        }
     }
 }
 

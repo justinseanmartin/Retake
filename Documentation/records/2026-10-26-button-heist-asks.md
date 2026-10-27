@@ -1,13 +1,17 @@
 # Asks for The Button Heist
 
-Status: **resolved** (2026-10-26). Requests for The Button Heist, collected while building Retake's
-proofs of concept and shared with its maintainer, who answered all but the last in 0.7.0 and 0.7.1
-(released 2026-10-24 and 2026-10-26); the last was closed without being sent, as Retake doesn't need
-it. Each says what would help, why, and what we found. Retake relies on what they changed (a version
-that names the contract, refusing a mismatch at the handshake, injection as a supported way to use
-TheInsideJob, and a public Swift client), so this record is where to start if any of it changes.
-Retake now pins the 0.7.1 release; what that showed is in [the proofs of concept](2026-10-26-proofs-of-concept.md), under "Proof of
-concept 1 again".
+Status: **open** (2026-10-27). Requests for The Button Heist, collected while building Retake's
+proofs of concept and shared with its maintainer, who answered all but the seventh in 0.7.0 and
+0.7.1 (released 2026-10-24 and 2026-10-26); the seventh was closed without being sent, as Retake
+doesn't need it. Each says what would help, why, and what we found. Retake relies on what they
+changed (a version that names the contract, refusing a mismatch at the handshake, injection as a
+supported way to use TheInsideJob, and a public Swift client), so this record is where to start if
+any of it changes. Retake now pins the 0.7.1 release; what that showed is in [the proofs of
+concept](2026-10-26-proofs-of-concept.md), under "Proof of concept 1 again".
+
+Building on 0.7.1 then turned up three more, in [Asks for after 0.7.1](#asks-for-after-071): what Retake does through The
+Button Heist's tooling SPI, or works around, because the public client doesn't offer it yet. None is
+sent yet.
 
 | Ask | Status |
 | --- | --- |
@@ -18,6 +22,9 @@ concept 1 again".
 | [5. A public way to drive an app from Swift](#5-a-public-way-to-drive-an-app-from-swift) | Done: `ButtonHeist.withSession` (#1483). |
 | [6. Two connection details found along the way](#6-two-connection-details-found-along-the-way) | Both fixed (#1480). |
 | [7. Optional: a build stamp in the binary](#7-optional-a-build-stamp-in-the-binary) | Closed, not sent: Retake doesn't need it. |
+| [8. Timed drags in a plan](#8-timed-drags-in-a-plan) | Open, not sent. Retake uses the tooling SPI meanwhile. |
+| [9. A public failure code for a thrown error](#9-a-public-failure-code-for-a-thrown-error) | Open, not sent. Retake reads `FenceError`'s cases meanwhile. |
+| [10. The screen's size, or a turn, through the public client](#10-the-screens-size-or-a-turn-through-the-public-client) | Open, not sent. Retake watches element frames meanwhile. |
 
 **Context.** Retake records App Store preview videos by driving an app with The Button Heist on a
 USB-connected device. Rather than asking apps to link TheInsideJob, Retake builds it as one Debug
@@ -160,3 +167,77 @@ the app reports at the handshake, which (1) made exact; `record` and `doctor` ju
 app's compatibility from the `Retake` dictionary `embed` writes into its `Info.plist`; and `check`
 and `embed` need only whether TheInsideJob is there, not which. At most it would let a message say
 which version an app links, which isn't worth asking another project for.
+
+## Asks for after 0.7.1
+
+Found while building `retake rehearse` (the v0.0.1 plan's commit 18), which plays a scene's steps
+through 0.7.1's public Swift client: `ButtonHeist.withSession`, then one `heist.run(plan)` per step,
+and `heist.captureInterface()` to read the screen. Retake's goal is to use only the public client,
+so it can follow releases without depending on SPI that makes no compatibility promise. Where it
+can't yet, it uses `@_spi(ButtonHeistTooling) import ButtonHeist` in one file,
+`Sources/RetakeCore/Playing/ButtonHeistDriver.swift`, or works around the gap; each ask below names
+which, and what dropping the workaround needs. Code paths are in The Button Heist 0.7.1.
+
+## 8. Timed drags in a plan
+
+**Ask.** Admit a drag's `duration` (and a swipe's) in a `HeistPlan`, so `heist.run` can play a drag
+at a given speed; or offer a public way to send one direct action, outside a plan, with typed
+results.
+
+**Why.** A scene's `drag` has a `duration`, 0.5 s unless given (README, "Scenes"), and real scenes
+use others: an app's own scenes drag a piece in 0.25 s and draw one in 0.8 s, so the drag on camera
+matches how a person moves. In 0.7.1, a plan holding `.drag(DragTarget(…, duration:))` is refused at
+admission: `HeistActionCommand.durableHeistActionFailure`
+(`ThePlans/Model/HeistActionCommand+Durability.swift`) returns "drag duration … is not a durable
+heist action" for any non-nil duration, and the same for swipes. The builder `drag(from:to:)` has no
+duration at all. A drag with no duration plays at `DragTarget.defaultDuration`, 0.5 s.
+
+**What Retake does meanwhile.** A drag at exactly 0.5 s goes in a plan, through the public client.
+Any other duration is sent as a direct command through the tooling SPI: the typed
+`HeistActionCommand.drag` is encoded to JSON, decoded as a `HeistValue`, and run with
+`heist.execute(heist.admit(FenceCommandInput(command: .action, arguments:
+CommandArgumentEnvelope(values: ["action": …]))))`, judging the `FenceResponse` by `isFailure`
+(`ButtonHeistDriver.perform`). Checked on an iPad: a 0.8 s drag reordered the example's rows in 1.25
+s of wall time. Dropping the SPI for this needs either change above.
+
+## 9. A public failure code for a thrown error
+
+**Ask.** A public way to get The Button Heist's `KnownFailureCode` and message for any error its
+client throws: for example making `DiagnosticFailure.init(_ error: Error)` public, or a public
+`failureDetails` on `FenceError`.
+
+**Why.** Retake turns a client error into an exit status (docs/cli.md, "Exit status"): a
+`protocol.mismatch` at connect stops with 3 and says to embed the app again; an unreachable server
+(`connection.endpoint_unreachable`, `transport.*`) is retried for a few seconds, then is 3; an error
+inside a step fails the step (1). The mapping from an error to its code exists, but isn't public:
+`DiagnosticFailure.init(_:)` (`TheButtonHeist/TheFence/FenceResponseModels.swift`) is internal,
+`FenceError.diagnosticFailure` (`TheFence+FailureTaxonomy.swift`) is internal, and
+`FenceResponse.failure(_:)`, which uses it, is SPI. `HandoffConnectionError` is internal too, though
+`start()` wraps it in a `FenceError`.
+
+**What Retake does meanwhile.** It reads `FenceError`'s public cases itself
+(`ButtonHeistDriver.classify`): `.diagnostic(failure)` carries a public `failure.details.code`;
+`.authFailed`, `.notConnected`, `.actionTimeout` and `.sessionLocked` map to their codes; anything
+else has no code and is reported by its `localizedDescription`. If a release adds a case or wraps
+errors differently, Retake's mapping falls behind silently, which a public mapping would prevent.
+
+## 10. The screen's size, or a turn, through the public client
+
+**Ask.** Let a client know when the app's interface has turned: the screen's current bounds on
+`Interface` (or in a public, refreshable `ServerInfo`), or `WaitFor(.screenChanged)`, or another
+predicate, firing for a rotation.
+
+**Why.** A scene's `orientation` step turns the device with `devicectl device orientation set`, and
+"ends when the app has turned" (README), so the next step's points land on the turned layout.
+`devicectl` returns in about 0.2 s, before the app has relaid out. Proof of concept 4 found that
+`WaitFor(.screenChanged)` doesn't fire for a rotation. The server knows the screen's bounds
+(`ScreenMetrics.current.bounds`, sent as `ServerInfo.screenWidth` and `screenHeight` at the
+handshake), but `ServerInfo` reaches only the client's internal session state
+(`HandoffConnectionLifecycle.serverInfo`), and isn't sent again after a turn. `devicectl` doesn't
+report the screen's size in points either.
+
+**What Retake does meanwhile.** After turning, it reads the screen with `captureInterface()` every
+0.1 s until the elements' frames differ from before the turn and are the same twice running, failing
+after 5 s (`Player.turn`). On the iPad, turning the example to landscape and back ended in 0.76–1.31
+s, once its two-column layout had settled. It can be fooled by a screen whose elements don't move
+when it turns, and costs a capture every 0.1 s; knowing the bounds would make it exact.

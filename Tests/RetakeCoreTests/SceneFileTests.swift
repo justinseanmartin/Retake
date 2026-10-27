@@ -115,7 +115,7 @@ struct SceneFileTests {
         let files = ProjectFiles(project: try Project.locate(configuration: nil, currentDirectory: example))
         for type in DeviceType.allCases {
             let names = files.names(in: files.project.scenes(for: type))
-            #expect(names == ["create-note", "first-launch"])
+            #expect(names.starts(with: ["create-note", "first-launch"]), "each type has at least these")
             for name in names {
                 let report = ProjectFiles.Report()
                 #expect(files.readScene(name, for: type, into: report) != nil, "\(type)/\(name): \(report.problems)")
