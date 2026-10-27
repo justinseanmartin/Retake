@@ -260,7 +260,8 @@ Then:
 - an accessibility activation of the element ran its action: the sheet showed "Sent".
 
 The same scene's tap on the same button, after the sheet had settled, worked on an iPad Pro 11-inch
-(3rd generation) on iOS 26.6.2. The sheet is the app's own, in its process, so it isn't the
+(3rd generation) on iOS 26.6.2. It did again the same day, the iPad restarted and the scene played
+through `retake record --dry-run`. The sheet is the app's own, in its process, so it isn't the
 out-of-process boundary `docs/SCOPE-AND-LIMITS.md` describes. A touch that closes a medium sheet is
 what a touch outside it does, so the touch may be delivered to a window or view other than the one
 the frame came from; whether it's iOS 27's sheets, or iPhone sheets, isn't known yet. An iPad on iOS
