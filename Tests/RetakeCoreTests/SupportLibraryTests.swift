@@ -15,7 +15,7 @@ struct SupportLibraryTests {
             state: .cloned,
             defaults: [Named("hasSeenWelcome", .bool(true)), Named("sortOrder", .string("title")), Named("recent", .array([.number(1), .number(2)]))],
         )
-        let environment = SupportLibrary.environment(for: set, take: "create-note-3")
+        let environment = SupportLibrary.environment(for: set, type: .ipad, take: "create-note-3")
         #expect(environment["RETAKE_STATE"] == "cloned")
         #expect(environment["RETAKE_TAKE"] == "create-note-3")
         let defaults = try JSONParser.parse(try #require(environment["RETAKE_DEFAULTS"]))
@@ -24,7 +24,30 @@ struct SupportLibraryTests {
             .init(key: "sortOrder", value: .string("title")),
             .init(key: "recent", value: .array([.number(1), .number(2)])),
         ])))
-        #expect(SupportLibrary.environment(for: ResolvedSet(name: "plain"), take: "t")["RETAKE_DEFAULTS"] == "{}")
+        #expect(SupportLibrary.environment(for: ResolvedSet(name: "plain"), type: .ipad, take: "t")["RETAKE_DEFAULTS"] == "{}")
+        #expect(environment["RETAKE_ASPECT_PORTRAIT"] == nil)
+    }
+
+    @Test func aSetsAspectForTheDeviceTypeBecomesItsShapes() {
+        let set = ResolvedSet(name: "a", aspect: [
+            .ipad: SetFile.AspectChoice(portrait: .init(width: 3, height: 4)),
+            .iphone: SetFile.AspectChoice(portrait: .init(width: 9, height: 19.5), landscape: .init(width: 16, height: 9)),
+        ])
+        let ipad = SupportLibrary.environment(for: set, type: .ipad, take: "t")
+        #expect(ipad["RETAKE_ASPECT_PORTRAIT"] == "3:4" && ipad["RETAKE_ASPECT_LANDSCAPE"] == "4:3")
+        let iphone = SupportLibrary.environment(for: set, type: .iphone, take: "t")
+        #expect(iphone["RETAKE_ASPECT_PORTRAIT"] == "9:19.5" && iphone["RETAKE_ASPECT_LANDSCAPE"] == "16:9")
+    }
+
+    @Test func theLaunchReportIsCheckedAgainstTheTakeAndTheContract() throws {
+        let data = Data(#"{"contract":1,"home":"~/tmp/RetakeTakes/a2","milliseconds":5.49,"state":"clean","take":"a2"}"#.utf8)
+        let report = try #require(LaunchReport.parse(data))
+        #expect(report == LaunchReport(contract: 1, take: "a2", state: "clean", milliseconds: 5.49))
+        try report.check(take: "a2")
+        #expect(throws: RetakeError.self) { try report.check(take: "a3") }
+        #expect(throws: RetakeError.self) { try LaunchReport(contract: 99, take: "a2", state: "clean").check(take: "a2") }
+        #expect(LaunchReport.parse(Data(#"{"cleanedUp":true,"contract":1,"state":"","take":""}"#.utf8))?.cleanedUp == true)
+        #expect(LaunchReport.parse(Data("{}".utf8)) == nil)
     }
 
     @Test func aReleasesLibraryIsFoundBeforeALocalBuild() throws {

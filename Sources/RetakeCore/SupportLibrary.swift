@@ -37,14 +37,73 @@ public struct SupportLibrary: Equatable, Sendable {
         FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appending(path: "retake/support", directoryHint: .isDirectory)
     }
 
-    /// The environment that has the library set a take up from `set`, as Support/RetakeSupport.h
-    /// describes it.
-    public static func environment(for set: ResolvedSet, take: String) -> [String: String] {
+    /// The environment that has the library set a take up from `set`, on a device of `type`, as
+    /// Support/RetakeSupport.h describes it.
+    public static func environment(for set: ResolvedSet, type: DeviceType, take: String) -> [String: String] {
         let defaults = JSONValue.object(JSONObject(set.defaults.map { JSONObject.Entry(key: $0.name, value: $0.value) }))
-        return [
+        var environment = [
             "RETAKE_STATE": set.state.rawValue,
             "RETAKE_TAKE": take,
             "RETAKE_DEFAULTS": JSONWriter.write(defaults).trimmingCharacters(in: .whitespacesAndNewlines),
         ]
+        if let aspect = set.aspect[type] {
+            if let portrait = aspect.portrait { environment["RETAKE_ASPECT_PORTRAIT"] = portrait.description }
+            if let landscape = aspect.landscapeShape { environment["RETAKE_ASPECT_LANDSCAPE"] = landscape.description }
+        }
+        return environment
+    }
+
+    /// The environment for a launch that only deletes takes' homes and staged files, then exits.
+    public static let cleanupEnvironment = ["RETAKE_CLEANUP": "1"]
+
+    /// Where the library writes its report, in the app's container.
+    public static let reportPath = "tmp/RetakeLaunch/report.json"
+}
+
+/// What the support library reports at launch, from `tmp/RetakeLaunch/report.json`.
+public struct LaunchReport: Equatable, Sendable {
+    public var contract: Int
+    public var take: String
+    public var state: String
+    public var cleanedUp: Bool
+    /// How long the library took to set the take up.
+    public var milliseconds: Double
+
+    public init(contract: Int, take: String, state: String, cleanedUp: Bool = false, milliseconds: Double = 0) {
+        self.contract = contract
+        self.take = take
+        self.state = state
+        self.cleanedUp = cleanedUp
+        self.milliseconds = milliseconds
+    }
+
+    public static func parse(_ data: Data) -> LaunchReport? {
+        guard let value = try? JSONParser.parse(String(decoding: data, as: UTF8.self)),
+              case .number(let contract)? = value[path: "contract"] else { return nil }
+        var milliseconds = 0.0
+        if case .number(let value)? = value[path: "milliseconds"] { milliseconds = value }
+        return LaunchReport(
+            contract: Int(contract),
+            take: value[path: "take"]?.stringValue ?? "",
+            state: value[path: "state"]?.stringValue ?? "",
+            cleanedUp: value[path: "cleanedUp"] == .bool(true),
+            milliseconds: milliseconds,
+        )
+    }
+
+    /// That the report is the take's own, from a library speaking this Retake's contract; otherwise
+    /// an environment problem (3), since the app needs embedding again, as docs/cli.md,
+    /// "Compatibility with an embedded app", says.
+    public func check(take expected: String) throws(RetakeError) {
+        guard contract == SupportLibrary.contractVersion else {
+            throw RetakeError(
+                .environment,
+                "The app was embedded by a Retake whose support library speaks contract \(contract), and this Retake's speaks "
+                    + "\(SupportLibrary.contractVersion); embed it again with `retake embed` or `retake install`.",
+            )
+        }
+        guard take == expected else {
+            throw RetakeError(.environment, "The support library didn't report on this launch; embed the app again with `retake embed` or `retake install`.")
+        }
     }
 }

@@ -1,5 +1,5 @@
 // The library's one constructor, running each part in order: the take's home first, so that the
-// defaults are set up for the home the take will use.
+// defaults are set up for the home the take will use, then the windows' shape, then the report.
 #import "RetakeSupport.h"
 
 NSString *RetakeRealHome;
@@ -7,8 +7,12 @@ NSString *RetakeRealHome;
 __attribute__((constructor))
 static void RetakeSupportStart(void) {
     NSDictionary<NSString *, NSString *> *environment = NSProcessInfo.processInfo.environment;
-    if (!environment[@"RETAKE_STATE"]) return;
+    if (!environment[@"RETAKE_STATE"] && !environment[@"RETAKE_CLEANUP"]) return;
+    RetakeStartClock();
     RetakeRealHome = NSHomeDirectory();
+    if (environment[@"RETAKE_CLEANUP"]) RetakeCleanUpAndExit(environment);
     RetakeSetUpState(environment);
     RetakeSetUpDefaults(environment);
+    RetakeSetUpAspect(environment);
+    RetakeWriteReport(environment, NSHomeDirectory());
 }

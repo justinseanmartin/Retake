@@ -10,9 +10,13 @@
 //   RETAKE_STATE       clean, cloned or live: what the app's data starts as (README.md, "state")
 //   RETAKE_TAKE        an id for the take, naming its home in tmp/RetakeTakes/
 //   RETAKE_DEFAULTS    the set's defaults, as a JSON object
+//   RETAKE_ASPECT_PORTRAIT, RETAKE_ASPECT_LANDSCAPE
+//                      the shapes the app's windows take, such as 3:4 (README.md, "aspect")
+//   RETAKE_CLEANUP     1 for a launch that only deletes takes' homes and staged files, then exits
 //
 // and the set's files, which the Mac stages in the app's container, in tmp/RetakeSet/, laid out as
-// they go: Documents/…, Library/….
+// they go: Documents/…, Library/…. The library writes tmp/RetakeLaunch/report.json in the app's
+// real home, for Retake to copy back.
 #import <Foundation/Foundation.h>
 
 #define RETAKE_SUPPORT_CONTRACT 1
@@ -25,3 +29,14 @@ void RetakeSetUpState(NSDictionary<NSString *, NSString *> *environment);
 
 /// Replaces UserDefaults.standard for the take, or writes the set's defaults into the real ones.
 void RetakeSetUpDefaults(NSDictionary<NSString *, NSString *> *environment);
+
+/// Sizes the app's windows to the preview's shape.
+void RetakeSetUpAspect(NSDictionary<NSString *, NSString *> *environment);
+
+void RetakeStartClock(void);
+
+/// Writes the launch report; `home` is the take's, or nil when it has none.
+void RetakeWriteReport(NSDictionary<NSString *, NSString *> *environment, NSString *home);
+
+/// Deletes takes' homes and staged files, writes the report, and exits.
+void RetakeCleanUpAndExit(NSDictionary<NSString *, NSString *> *environment);
