@@ -10,16 +10,16 @@
 		10D28F4A97BBB5D705F068C0 /* NoteEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14D9F1A73452632AA4B3ABBC /* NoteEditorView.swift */; };
 		6CD5481300447CB8EBCE79E4 /* NoteLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EAEE8FA3580877C31DC76F2 /* NoteLibrary.swift */; };
 		8789AFE8A8869B56FE825428 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F9BA7B2A5071872439F196A /* LibraryView.swift */; };
-		EE4858999D137A4B11D7A580 /* NotesApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C04E1D61DF59F2481DABDCFF /* NotesApp.swift */; };
+		EE4858999D137A4B11D7A580 /* RetakeNotesApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C04E1D61DF59F2481DABDCFF /* RetakeNotesApp.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		14D9F1A73452632AA4B3ABBC /* NoteEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteEditorView.swift; sourceTree = "<group>"; };
 		2777A171A0D9A270F9113945 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 		3EAEE8FA3580877C31DC76F2 /* NoteLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteLibrary.swift; sourceTree = "<group>"; };
-		5860355D0A9FDA2668CC57E4 /* Notes.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Notes.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5860355D0A9FDA2668CC57E4 /* RetakeNotes.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RetakeNotes.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9F9BA7B2A5071872439F196A /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
-		C04E1D61DF59F2481DABDCFF /* NotesApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesApp.swift; sourceTree = "<group>"; };
+		C04E1D61DF59F2481DABDCFF /* RetakeNotesApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetakeNotesApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -38,7 +38,7 @@
 				9F9BA7B2A5071872439F196A /* LibraryView.swift */,
 				14D9F1A73452632AA4B3ABBC /* NoteEditorView.swift */,
 				3EAEE8FA3580877C31DC76F2 /* NoteLibrary.swift */,
-				C04E1D61DF59F2481DABDCFF /* NotesApp.swift */,
+				C04E1D61DF59F2481DABDCFF /* RetakeNotesApp.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -46,7 +46,7 @@
 		D126E93300653EB6B5CC3A59 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				5860355D0A9FDA2668CC57E4 /* Notes.app */,
+				5860355D0A9FDA2668CC57E4 /* RetakeNotes.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -62,9 +62,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		6E6B27D991F2F22DB520736D /* Notes */ = {
+		6E6B27D991F2F22DB520736D /* RetakeNotes */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = C95F8A5225E3ABFECCB2303F /* Build configuration list for PBXNativeTarget "Notes" */;
+			buildConfigurationList = C95F8A5225E3ABFECCB2303F /* Build configuration list for PBXNativeTarget "RetakeNotes" */;
 			buildPhases = (
 				924DCCBA2CADA9D7B5186E15 /* Sources */,
 			);
@@ -72,11 +72,11 @@
 			);
 			dependencies = (
 			);
-			name = Notes;
+			name = RetakeNotes;
 			packageProductDependencies = (
 			);
-			productName = Notes;
-			productReference = 5860355D0A9FDA2668CC57E4 /* Notes.app */;
+			productName = RetakeNotes;
+			productReference = 5860355D0A9FDA2668CC57E4 /* RetakeNotes.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -94,7 +94,7 @@
 					};
 				};
 			};
-			buildConfigurationList = A50297AA61232F959865C9A8 /* Build configuration list for PBXProject "Notes" */;
+			buildConfigurationList = A50297AA61232F959865C9A8 /* Build configuration list for PBXProject "RetakeNotes" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -108,7 +108,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				6E6B27D991F2F22DB520736D /* Notes */,
+				6E6B27D991F2F22DB520736D /* RetakeNotes */,
 			);
 		};
 /* End PBXProject section */
@@ -121,7 +121,7 @@
 				8789AFE8A8869B56FE825428 /* LibraryView.swift in Sources */,
 				10D28F4A97BBB5D705F068C0 /* NoteEditorView.swift in Sources */,
 				6CD5481300447CB8EBCE79E4 /* NoteLibrary.swift in Sources */,
-				EE4858999D137A4B11D7A580 /* NotesApp.swift in Sources */,
+				EE4858999D137A4B11D7A580 /* RetakeNotesApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -136,7 +136,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Notes;
+				INFOPLIST_KEY_CFBundleDisplayName = RetakeNotes;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -280,7 +280,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Notes;
+				INFOPLIST_KEY_CFBundleDisplayName = RetakeNotes;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -300,7 +300,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A50297AA61232F959865C9A8 /* Build configuration list for PBXProject "Notes" */ = {
+		A50297AA61232F959865C9A8 /* Build configuration list for PBXProject "RetakeNotes" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				71293B7BA4BDB906D2F2F8AE /* Debug */,
@@ -309,7 +309,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		C95F8A5225E3ABFECCB2303F /* Build configuration list for PBXNativeTarget "Notes" */ = {
+		C95F8A5225E3ABFECCB2303F /* Build configuration list for PBXNativeTarget "RetakeNotes" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				51DE409F225960FEDB61816F /* Debug */,

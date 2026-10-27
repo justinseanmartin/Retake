@@ -1,6 +1,6 @@
 {
   "$schema": "https://justinseanmartin.github.io/Retake/schemas/0.0.1/edit.schema.json",
-  "intent": "Notes in a few seconds: getting started, then a note written, synced and shared.",
+  "intent": "RetakeNotes in a few seconds: getting started, then a note written, synced and shared.",
   "devices": ["iphone", "ipad"],
   "background": "#F4F1EA",
   "clips": [

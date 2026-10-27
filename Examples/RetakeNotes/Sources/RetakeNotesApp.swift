@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// Notes, Retake's example app: a small notes app with everything a scene can drive, and nothing
-/// that changes between takes. Its notes live in `Documents/notes.json` and its settings in
-/// `UserDefaults`, so a set's `files` and `defaults` decide what it starts on.
+/// RetakeNotes, Retake's example app: a small notes app with everything a scene can drive, and
+/// nothing that changes between takes. Its notes live in `Documents/notes.json` and its settings
+/// in `UserDefaults`, so a set's `files` and `defaults` decide what it starts on.
 @main
-struct NotesApp: App {
+struct RetakeNotesApp: App {
     @State private var library = NoteLibrary()
 
     var body: some Scene {
@@ -36,7 +36,7 @@ struct WelcomeView: View {
             Image(systemName: "note.text")
                 .font(.system(size: 64))
                 .foregroundStyle(.tint)
-            Text("Welcome to Notes")
+            Text("Welcome to RetakeNotes")
                 .font(.largeTitle.bold())
             Text("Jot something down, share it, and watch it sync.")
                 .multilineTextAlignment(.center)

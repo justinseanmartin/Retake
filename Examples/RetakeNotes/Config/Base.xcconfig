@@ -1,4 +1,4 @@
-// Notes signs for development with your own team. Copy Signing.example.xcconfig to
+// RetakeNotes signs for development with your own team. Copy Signing.example.xcconfig to
 // Signing.local.xcconfig, which isn't checked in, and fill in your team and a bundle ID prefix of
 // your own: bundle IDs are unique across Apple's developer accounts, so the example's can't be.
 
