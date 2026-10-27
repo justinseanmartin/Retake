@@ -38,8 +38,50 @@ struct Validate: AsyncParsableCommand {
     @OptionGroup var project: ProjectOptions
 
     func run() async throws {
-        _ = try project.locate()
-        throw RetakeError.notImplemented("validate")
+        let located = try project.locate()
+        let validator = ProjectValidator(files: ProjectFiles(project: located))
+        let current = URL(filePath: FileManager.default.currentDirectoryPath, directoryHint: .isDirectory)
+        var targets: [ProjectValidator.Target]?
+        if !files.isEmpty {
+            targets = try files.map { file in
+                let url = URL(filePath: file, relativeTo: current).standardizedFileURL
+                guard let target = validator.target(for: url) else {
+                    throw RetakeError(
+                        .usage,
+                        "\(file) isn't one of the project's files: its configuration file, or a file in sets/, scenes/iphone/, scenes/ipad/ or edits/.",
+                    )
+                }
+                guard FileManager.default.fileExists(atPath: url.path) else {
+                    throw RetakeError(.usage, "\(file) doesn't exist.")
+                }
+                return target
+            }
+        }
+        let report = validator.validate(targets)
+        if output.json {
+            func entries(_ problems: [FileProblem]) -> JSONValue {
+                .array(problems.map { problem in
+                    .object(JSONObject([
+                        .init(key: "file", value: .string(problem.file)),
+                        .init(key: "path", value: .string(problem.path.description)),
+                        .init(key: "message", value: .string(problem.message)),
+                    ]))
+                })
+            }
+            print(JSONWriter.write(.object(JSONObject([
+                .init(key: "problems", value: entries(report.problems)),
+                .init(key: "warnings", value: entries(report.warnings)),
+            ]))), terminator: "")
+        } else {
+            for warning in report.warnings { Console.warn(warning.description) }
+            for problem in report.problems { print(problem.description) }
+            let count = report.problems.count
+            print(count == 0 ? "No problems." : "\(count) problem\(count == 1 ? "" : "s").")
+        }
+        if !offline {
+            Console.note("anchors and elements aren't checked against takes yet; these are the --offline checks.")
+        }
+        if !report.problems.isEmpty { throw ExitCode.failure }
     }
 }
 

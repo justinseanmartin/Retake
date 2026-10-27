@@ -41,6 +41,7 @@ extension EditFile {
         root.finish()
 
         var videos: [DeviceType: Edit] = [:]
+        var allOrigins: [DeviceType: Origins] = [:]
         var seen = Set(reader.problems.map(\.description))
         if case .object(let object) = value {
             for type in devices ?? [] {
@@ -57,10 +58,11 @@ extension EditFile {
                     }
                 }
                 videos[type] = edit
+                allOrigins[type] = origins
             }
         }
         guard reader.problems.count == problemsBefore, let devices, videos.count == devices.count else { return nil }
-        return EditFile(intent: intent, devices: devices, takes: takes, videos: videos)
+        return EditFile(intent: intent, devices: devices, takes: takes, videos: videos, origins: allOrigins)
     }
 
     static func readTakes(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> [DeviceType: [Named<Int>]]? {
@@ -355,16 +357,23 @@ extension EditFile {
 }
 
 /// Where each part of a merged object came from, so a problem in it is named where it's written.
-struct Origins {
-    private var entries: [(merged: JSONPath, source: JSONPath)] = []
+public struct Origins: Equatable, Sendable {
+    private var entries: [Entry] = []
+
+    private struct Entry: Equatable, Sendable {
+        var merged: JSONPath
+        var source: JSONPath
+    }
+
+    public init() {}
 
     mutating func record(_ merged: JSONPath, from source: JSONPath) {
-        entries.append((merged, source))
+        entries.append(Entry(merged: merged, source: source))
     }
 
     /// The path a problem at `path` in the merged object is written at: the longest recorded prefix
     /// of it, rewritten to where that part came from.
-    func source(of path: JSONPath) -> JSONPath {
+    public func source(of path: JSONPath) -> JSONPath {
         let match = entries.filter { path.components.starts(with: $0.merged.components) }
             .max { $0.merged.components.count < $1.merged.components.count }
         guard let match else { return path }

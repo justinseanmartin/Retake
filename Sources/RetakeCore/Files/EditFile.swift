@@ -10,12 +10,26 @@ public struct EditFile: Equatable, Sendable {
     public var takes: [DeviceType: [Named<Int>]]
     /// The edit as each device type's video is cut from it.
     public var videos: [DeviceType: Edit]
+    /// Where each device type's values were written, for naming a problem found in them later.
+    public var origins: [DeviceType: Origins]
 
-    public init(intent: String? = nil, devices: [DeviceType], takes: [DeviceType: [Named<Int>]] = [:], videos: [DeviceType: Edit]) {
+    public init(
+        intent: String? = nil,
+        devices: [DeviceType],
+        takes: [DeviceType: [Named<Int>]] = [:],
+        videos: [DeviceType: Edit],
+        origins: [DeviceType: Origins] = [:],
+    ) {
         self.intent = intent
         self.devices = devices
         self.takes = takes
         self.videos = videos
+        self.origins = origins
+    }
+
+    /// Where a value in a device type's video is written in the file.
+    public func source(of path: JSONPath, for type: DeviceType) -> JSONPath {
+        origins[type]?.source(of: path) ?? path
     }
 
     /// The keys a device type's overrides can't give, since they're already per type, or say which

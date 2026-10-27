@@ -104,6 +104,17 @@ struct CommandLineTests {
         #expect(outcome.status == 0)
     }
 
+    @Test func validateFailsWhenAFileHasAProblem() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "RetakeCLIValidate-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: root.appending(path: "sets"), withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: root.appending(path: "retake.json"))
+        let config = root.appending(path: "retake.json").path
+        #expect(await Retake.run(["validate", "--offline", "--config", config]).status == 0)
+        try Data(#"{"state": "fresh"}"#.utf8).write(to: root.appending(path: "sets/broken.json"))
+        #expect(await Retake.run(["validate", "--offline", "--config", config]).status == 1)
+        #expect(await Retake.run(["validate", "--offline", "--config", config, root.appending(path: "notes.txt").path]).status == 2)
+    }
+
     @Test func retakeErrorsKeepTheirStatus() {
         let outcome = Retake.outcome(of: RetakeError(.environment, "No device is connected by USB."))
         #expect(outcome.status == 3)
