@@ -154,7 +154,8 @@ that keeps its data in Documents or Application Support starts on a known state 
 `defaults` are what `UserDefaults.standard` holds at launch: strings, numbers, booleans, and lists
 and dictionaries of them, as JSON has; a `Data` or `Date` value can't be given yet. `environment`
 and `arguments` are added to the launch, for your app's own Debug-only flags and for the language
-and locale. `extends` builds on another set, so what every set shares is written once. `state` and
+and locale. `extends` builds on another set, so what every set shares is written once, and a flag
+only one scene needs goes in a small set of its own that extends the one it builds on. `state` and
 `aspect` are below, and every field is in the [set reference](docs/reference/set.md).
 
 ### `state`: clean, cloned or live
@@ -244,36 +245,46 @@ names one:
 ```json
 {
   "set": "returning-user",
-  "environment": { "MYAPP_SKIP_WHATS_NEW": "1" },
   "setup": [{ "activate": { "label": "Library" } }],
   "leadIn": 1.5,
   "tail": 2,
+  "defaultHold": 0.5,
   "steps": [
-    { "id": "new-note", "tap": { "label": "New Note" }, "hold": 1.2 },
+    { "tap": { "label": "New Note" }, "hold": 1.2, "id": "new-note" },
     { "type": { "text": "Groceries\n", "into": { "value": "Title" } } },
     { "tap": { "x": 195, "y": 410 } },
-    { "id": "reorder", "drag": { "from": { "x": 120, "y": 590 }, "to": { "x": 260, "y": 500 }, "duration": 0.8 } },
-    { "id": "synced", "waitFor": { "label": "Synced" } },
+    { "drag": { "from": { "x": 120, "y": 590 }, "to": { "x": 260, "y": 500 }, "duration": 0.8 }, "id": "reorder" },
+    { "waitFor": { "label": "Synced" }, "id": "synced" },
     { "hold": 2 }
   ]
 }
 ```
 
-Each step does one thing. `tap` touches a point, or an element; a tap by point is drawn in the
-video, and a tap on an element isn't. `drag` is a straight one-finger drag between two points,
-over `duration` seconds, 0.5 unless given. `type` types text key by key on the on-screen keyboard,
-where `\n` presses return, into the element `into` names, or the field already being typed in.
-`activate` is an accessibility activation, with no touch, for getting somewhere off camera.
-`orientation` turns the device with no hand on it, and ends when the app has turned. `waitFor` waits
-until an element is on screen, or with `"gone": true` until it isn't, for up to `timeout` seconds,
-10 unless given, and the step fails if it doesn't happen. A step's `hold` is the pause after it, 0
-unless given, so the take has room to breathe; the edit trims what it doesn't need. A step can be
-only a `hold`, a pause.
+Each step does one thing, led by what it does:
+
+- **`tap`** touches a point, `x` and `y`, or an element. A tap by point is drawn in the video; a
+  tap on an element isn't.
+- **`drag`** is a straight one-finger drag `from` one point `to` another, over `duration` seconds,
+  0.5 unless given.
+- **`type`** types `text` key by key on the on-screen keyboard, where `\n` presses return, into the
+  element `into` names, or the field already being typed in.
+- **`activate`** is an accessibility activation of an element, with no touch, for getting somewhere
+  off camera.
+- **`orientation`** turns the device, to `portrait`, `portrait-upside-down`, `landscape-left` or
+  `landscape-right`, with no hand on it, and ends when the app has turned.
+- **`waitFor`** waits until an element is on screen, or with `"gone": true` until it isn't, for up to
+  `timeout` seconds, 10 unless given. The step fails if it doesn't happen.
+
+After what it does, a step can give its `hold`, the pause after it, so the take has room to
+breathe; the edit trims what it doesn't need. It's the scene's `defaultHold` unless given, which is
+0 unless the scene gives one. A step can be only a `hold`, a pause. Last comes its `id`, below.
 
 A step names an element as VoiceOver knows it: by its `label`, its `value` (a text field's
 placeholder or what's typed in it, as the field has no label of its own), or its `identifier` (an
-`accessibilityIdentifier` the app sets), any of them together. When several elements match,
-`occurrence` picks one, counted from 1 in the order VoiceOver reads the screen.
+`accessibilityIdentifier` the app sets), any of them together. When several elements match, the
+step fails, listing them, and saying to name the one meant more closely, by its value or identifier
+as well, or with `occurrence`, which picks one, counted from 1 in the order VoiceOver reads the
+screen.
 
 A tap or a drag that lands while something is still moving, such as a sheet rising, can miss what
 it was aimed at, so a step that follows one that presents or dismisses something should wait for
@@ -293,8 +304,7 @@ to it before launching the app, so a take never starts the way the last one ende
 
 `setup` steps play before recording starts. `leadIn` and `tail` record a little before the first
 step and after the last, 1 second each unless given, so the edit has frames to cut in and out on.
-`"recordsLaunch": true` starts recording before the app launches, to catch its launch screen. A
-scene's `environment` adds to its set's, for a flag only that take needs.
+`"recordsLaunch": true` starts recording before the app launches, to catch its launch screen.
 
 Points are in the device's screen points, so scenes are written per device type: `scenes/iphone/`
 and `scenes/ipad/`. A scene of the same name on each type, with the same steps and ids, is what lets
@@ -304,7 +314,9 @@ and activation point as it goes.
 ## Takes: footage and a step log
 
 `retake record` records a USB-connected device's screen and sound the way QuickTime's "New Movie
-Recording" does: at the device's own resolution and frame rate, with nothing shown on the device.
+Recording" does: at the device's own resolution and frame rate, with no prompt or recording
+indicator on the device. The app plays on the device's screen as usual, but its sound comes
+through the Mac while it's recorded, rather than the device's speaker.
 
 Each take is a movie and a step log: when each step started and ended on the movie's own clock,
 where each touch landed, and the elements on screen after each step, with their labels and frames.

@@ -389,6 +389,8 @@ scene file, and every one also takes `--id <name>` and `--hold <seconds>`, both 
 | `turn` | `--to portrait`, `portrait-upside-down`, `landscape-left` or `landscape-right` | |
 | `pause` | `--seconds <seconds>` | |
 
+`--hold` is the scene's `defaultHold` when it isn't given.
+
 An element is any of `--label <text>`, `--value <text>` and `--identifier <text>`, at least one,
 with `--occurrence <n>` (from 1, optional) to pick one of several that match. Other actions act on
 the scene rather than the app, and add no step:
@@ -441,7 +443,7 @@ scene chosen already has a take, `record` says so and records nothing.
 For each scene, in order:
 
 1. Stops the app, and copies the set's files to the device; its defaults go with the launch.
-2. Launches the app with the set's environment and arguments, and the scene's environment. Before
+2. Launches the app with the set's environment and arguments. Before
    the app's code runs, Retake's support library builds the take's data from the set's `state`
    (`clean`, `cloned` or `live`; see the README) and deletes earlier takes' copies.
    If the support library doesn't report in, or reports an
