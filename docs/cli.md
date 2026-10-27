@@ -169,8 +169,8 @@ and exits with the worst status among them.
 | [`init`](#retake-init) | Creates a project. |
 | [`doctor`](#retake-doctor) | Checks the setup end to end. |
 | [`devices`](#retake-devices) | Lists devices, and names them. |
-| [`embed`](#retake-embed) | Adds what Retake needs to a built app, for installing it yourself. |
 | [`install`](#retake-install) | Builds the app if asked, embeds Retake in it, and installs it. |
+| [`embed`](#retake-embed) | Adds what Retake needs to a built app, for installing it yourself. |
 | [`compose`](#retake-compose) | Writes a scene a step at a time, on the device. |
 | [`record`](#retake-record) | Records takes, or with `--dry-run`, plays scenes without recording them. |
 | [`takes`](#retake-takes) | Lists takes. |
@@ -276,6 +276,69 @@ is often theirs too ("Anna's iPad"); and one person's `ipad` isn't another's. A 
 `retake.json` can name a default `device` for everyone, which each person's own alias of that name
 then stands for.
 
+### `retake install`
+
+```
+retake install [--app <path>]
+               [--scheme <name> [--workspace <path> | --xcodeproj <path>] [--configuration <name>]
+                [--allow-provisioning-updates] [--no-optimize]]
+               [--device <device>] [--identity <identity>] [--profile <path>]
+```
+
+Builds the app if asked to, runs [`embed`](#retake-embed) on a copy of it, and installs the copy on the device.
+It's the usual way to get the app onto a device for Retake; `embed` alone is for a build script or
+tool that installs the app itself. It's needed once per build of the app, not before each recording.
+
+The build itself isn't changed: the copy is in `output/build/installed/`, replaced each time. On
+APFS, the copy is a clone of the build, so it takes no time and no space until embedding changes it,
+when the build is on the same volume as the output directory, as one `install` builds always is.
+
+Where the app comes from, the first that applies:
+
+1. `--app`: an already built, development-signed `.app` for iOS devices.
+2. `--scheme`: Retake builds it with `xcodebuild`, as below.
+3. `retake.json`'s `build`, in one of two forms:
+
+   ```json
+   "build": { "scheme": "MyApp", "workspace": "MyApp.xcworkspace", "configuration": "Debug" }
+   ```
+
+   ```json
+   "build": { "command": "scripts/build-for-retake.sh", "app": "build/Debug-iphoneos/MyApp.app" }
+   ```
+
+   The first builds with `xcodebuild`, as `--scheme` does; `workspace` or `xcodeproj` is needed only
+   when the directory holds more than one. The second is for projects one `xcodebuild` call can't
+   build: generated projects (Tuist, XcodeGen), fastlane, Bazel, or anything with its own steps.
+   Retake runs `command` with `/bin/sh` in the project's directory, passing the device's UDID in
+   `RETAKE_DEVICE_UDID`, and fails (1) if it exits non-zero or `app` doesn't exist afterwards.
+
+With none of these, fails (2).
+
+**Building with `xcodebuild`.** Retake builds the scheme for iOS devices in `configuration` (`Debug`
+unless given), with its build products under `output/build/`, so it doesn't disturb your own builds,
+and finds the `.app` from the build's settings. Signing is the project's own. Any configuration
+works, so long as it's development-signed for the device; `Debug` is the default because it usually
+is.
+
+It builds with the compiler's optimisation on, whatever the configuration says (Swift at `-O`, C and
+Objective-C at `-Os`), since a preview should show the app running as fast as it does for its users,
+and a Debug build at `-Onone` can stutter where a release wouldn't. The configuration is otherwise
+the same, so `#if DEBUG` code, and the launch flags a set turns on, still work. `--no-optimize` (or
+`"optimize": false` in `build`) builds as the configuration says instead. A `command` build is the
+project's own, and is left as it is.
+
+**A device the profile doesn't include.** When the build or the embedded app can't be signed for the
+device, typically because it isn't registered on your team, Retake fails (3) and says so, naming the
+device's UDID. It never registers devices or changes profiles on its own. With
+`--allow-provisioning-updates` (or `"allowProvisioningUpdates": true` in `build`), it passes
+`-allowProvisioningUpdates` to `xcodebuild`, which lets Xcode register the device and update
+profiles on your team. That's only possible when Retake runs `xcodebuild`; for `--app` and `command`
+builds, register the device in Xcode or your own build.
+
+Fails (3) if no identity and profile can sign it for development on the device: the build's own, or
+those given instead.
+
 ### `retake embed`
 
 ```
@@ -284,8 +347,8 @@ retake embed <app> [--output <path>] [--identity <identity>] [--profile <path>]
 ```
 
 Adds what Retake needs to an already built, development-signed `.app` for iOS devices, for when your
-own build script or tool installs the app. `install` does the same as one of its steps. Needs no
-project and no device.
+own build script or tool installs the app. [`install`](#retake-install) runs it as one of its steps. Needs no project
+and no device.
 
 1. Adds the TheInsideJob framework Retake is built against to the app's `Frameworks/`.
 2. Adds Retake's support library to `Frameworks/`.
@@ -336,65 +399,6 @@ for udid in $DEVICES; do
   xcrun devicectl device install app --device "$udid" "$APP"
 done
 ```
-
-### `retake install`
-
-```
-retake install [--app <path>]
-               [--scheme <name> [--workspace <path> | --xcodeproj <path>] [--configuration <name>]
-                [--allow-provisioning-updates] [--no-optimize]]
-               [--device <device>] [--identity <identity>] [--profile <path>]
-```
-
-Builds the app if asked to, embeds Retake in it as [`embed`](#retake-embed) does, and installs it on the device.
-It's needed once per build of the app, not before each recording. The build itself isn't changed:
-Retake embeds into a copy, in `output/build/`.
-
-Where the app comes from, the first that applies:
-
-1. `--app`: an already built, development-signed `.app` for iOS devices.
-2. `--scheme`: Retake builds it with `xcodebuild`, as below.
-3. `retake.json`'s `build`, in one of two forms:
-
-   ```json
-   "build": { "scheme": "MyApp", "workspace": "MyApp.xcworkspace", "configuration": "Debug" }
-   ```
-
-   ```json
-   "build": { "command": "scripts/build-for-retake.sh", "app": "build/Debug-iphoneos/MyApp.app" }
-   ```
-
-   The first builds with `xcodebuild`, as `--scheme` does; `workspace` or `xcodeproj` is needed only
-   when the directory holds more than one. The second is for projects one `xcodebuild` call can't
-   build: generated projects (Tuist, XcodeGen), fastlane, Bazel, or anything with its own steps.
-   Retake runs `command` with `/bin/sh` in the project's directory, passing the device's UDID in
-   `RETAKE_DEVICE_UDID`, and fails (1) if it exits non-zero or `app` doesn't exist afterwards.
-
-With none of these, fails (2).
-
-**Building with `xcodebuild`.** Retake builds the scheme for iOS devices in `configuration` (`Debug`
-unless given), with its build products under `output/build/`, so it doesn't disturb your own builds,
-and finds the `.app` from the build's settings. Signing is the project's own. Any configuration
-works, so long as it's development-signed for the device; `Debug` is the default because it usually
-is.
-
-It builds with the compiler's optimisation on, whatever the configuration says (Swift at `-O`, C and
-Objective-C at `-Os`), since a preview should show the app running as fast as it does for its users,
-and a Debug build at `-Onone` can stutter where a release wouldn't. The configuration is otherwise
-the same, so `#if DEBUG` code, and the launch flags a set turns on, still work. `--no-optimize` (or
-`"optimize": false` in `build`) builds as the configuration says instead. A `command` build is the
-project's own, and is left as it is.
-
-**A device the profile doesn't include.** When the build or the embedded app can't be signed for the
-device, typically because it isn't registered on your team, Retake fails (3) and says so, naming the
-device's UDID. It never registers devices or changes profiles on its own. With
-`--allow-provisioning-updates` (or `"allowProvisioningUpdates": true` in `build`), it passes
-`-allowProvisioningUpdates` to `xcodebuild`, which lets Xcode register the device and update
-profiles on your team. That's only possible when Retake runs `xcodebuild`; for `--app` and `command`
-builds, register the device in Xcode or your own build.
-
-Fails (3) if no identity and profile can sign it for development on the device: the build's own, or
-those given instead.
 
 ### `retake compose`
 
