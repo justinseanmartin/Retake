@@ -54,6 +54,20 @@ public struct ProjectFiles {
         return text
     }
 
+    public func sceneURL(_ name: String, for type: DeviceType) -> URL {
+        project.scenes(for: type).appending(path: "\(name).json")
+    }
+
+    /// A scene for a device type, or nil with problems in `report`.
+    public func readScene(_ name: String, for type: DeviceType, into report: Report) -> SceneFile? {
+        let url = sceneURL(name, for: type)
+        guard let text = text(of: url, into: report) else { return nil }
+        let reader = JSONReader(file: project.displayPath(url))
+        let scene = SceneFile.read(text, with: reader)
+        report.add(reader)
+        return scene
+    }
+
     /// A set as its own file says it, without what it extends.
     public func readSet(_ name: String, into report: Report) -> SetFile? {
         let url = setURL(name)

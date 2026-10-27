@@ -1,0 +1,10 @@
+{
+  "$schema": "https://justinseanmartin.github.io/Retake/schemas/0.0.1/scene.schema.json",
+  "set": "first-launch",
+  "recordsLaunch": true,
+  "steps": [
+    { "id": "welcome", "waitFor": { "label": "Get Started" }, "hold": 1.5 },
+    { "id": "get-started", "tap": { "label": "Get Started" } },
+    { "id": "library", "waitFor": { "label": "New Note" }, "hold": 1 }
+  ]
+}

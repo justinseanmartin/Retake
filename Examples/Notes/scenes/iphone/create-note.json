@@ -1,0 +1,17 @@
+{
+  "$schema": "https://justinseanmartin.github.io/Retake/schemas/0.0.1/scene.schema.json",
+  "set": "returning-user",
+  "tail": 1.5,
+  "steps": [
+    { "id": "new-note", "tap": { "label": "New Note" }, "hold": 0.8 },
+    { "id": "type-title", "type": { "text": "Groceries\n", "into": { "value": "Title" } } },
+    { "id": "synced", "waitFor": { "label": "Synced" }, "hold": 1 },
+    { "id": "share", "tap": { "label": "Share" }, "hold": 0.6 },
+    { "id": "send", "tap": { "label": "Send to Alex" } },
+    { "id": "sent", "waitFor": { "label": "Sent" }, "hold": 1 },
+    { "tap": { "label": "Done" } },
+    { "waitFor": { "label": "Done", "gone": true }, "hold": 0.5 },
+    { "id": "library", "tap": { "label": "Library" } },
+    { "waitFor": { "label": "New Note" }, "hold": 1 }
+  ]
+}

@@ -1,0 +1,126 @@
+import Foundation
+import RetakeCore
+import Testing
+
+struct SceneFileTests {
+    func read(_ text: String) -> (scene: SceneFile?, problems: [String]) {
+        let reader = JSONReader(file: "scenes/ipad/create-note.json")
+        let scene = SceneFile.read(text, with: reader)
+        return (scene, reader.problems.map(\.description))
+    }
+
+    /// A scene's steps, given as the JSON inside `"steps": [ … ]`.
+    func steps(_ steps: String) -> (scene: SceneFile?, problems: [String]) {
+        read(#"{"steps": [\#(steps)]}"#)
+    }
+
+    @Test func theREADMEsExampleReads() {
+        let result = read(#"""
+            {
+              "set": "returning-user",
+              "environment": { "MYAPP_SKIP_WHATS_NEW": "1" },
+              "setup": [{ "activate": { "label": "Library" } }],
+              "leadIn": 1.5,
+              "tail": 2,
+              "steps": [
+                { "id": "new-note", "tap": { "label": "New Note" }, "hold": 1.2 },
+                { "type": { "text": "Groceries\n", "into": { "value": "Title" } } },
+                { "tap": { "x": 195, "y": 410 } },
+                { "id": "reorder", "drag": { "from": { "x": 120, "y": 590 }, "to": { "x": 260, "y": 500 }, "duration": 0.8 } },
+                { "id": "synced", "waitFor": { "label": "Synced" } },
+                { "hold": 2 }
+              ]
+            }
+            """#)
+        #expect(result.problems.isEmpty)
+        #expect(result.scene == SceneFile(
+            set: "returning-user",
+            environment: [Named("MYAPP_SKIP_WHATS_NEW", "1")],
+            setup: [Step(.activate(ElementTarget(label: "Library")))],
+            steps: [
+                Step(id: "new-note", .tapElement(ElementTarget(label: "New Note")), hold: 1.2),
+                Step(.type(text: "Groceries\n", into: ElementTarget(value: "Title"))),
+                Step(.tapPoint(Point(x: 195, y: 410))),
+                Step(id: "reorder", .drag(from: Point(x: 120, y: 590), to: Point(x: 260, y: 500), duration: 0.8)),
+                Step(id: "synced", .waitFor(ElementTarget(label: "Synced"), gone: false, timeout: Step.defaultWaitTimeout)),
+                Step(nil, hold: 2),
+            ],
+            leadIn: 1.5,
+            tail: 2,
+        ))
+    }
+
+    @Test func whatsLeftOutHasItsDefault() {
+        let scene = steps(#"{"drag": {"from": {"x": 1, "y": 2}, "to": {"x": 3, "y": 4}}}, {"waitFor": {"value": "Title", "gone": true}}"#).scene
+        #expect(scene?.leadIn == 1 && scene?.tail == 1 && scene?.orientation == .portrait && scene?.recordsLaunch == false)
+        #expect(scene?.set == nil)
+        #expect(scene?.steps == [
+            Step(.drag(from: Point(x: 1, y: 2), to: Point(x: 3, y: 4), duration: 0.5)),
+            Step(.waitFor(ElementTarget(value: "Title"), gone: true, timeout: 10)),
+        ])
+    }
+
+    @Test func elementsCanBeNamedEveryWayTogether() {
+        let scene = steps(#"{"tap": {"label": "Delete", "identifier": "row.delete", "occurrence": 2}}, {"type": {"text": "a"}}, {"orientation": "landscape-left"}, {"inspect": {}}, {"inspect": true}"#).scene
+        #expect(scene?.steps.map(\.action) == [
+            .tapElement(ElementTarget(label: "Delete", identifier: "row.delete", occurrence: 2)),
+            .type(text: "a", into: nil),
+            .orientation(.landscapeLeft),
+            .inspect,
+            .inspect,
+        ])
+    }
+
+    @Test(arguments: [
+        (#"{"tapp": {"label": "a"}}"#, #"scenes/ipad/create-note.json: steps[0]: unknown key "tapp"; did you mean "tap"?"#),
+        (#"{"tap": {"label": "a"}, "drag": {"from": {"x": 1, "y": 1}, "to": {"x": 2, "y": 2}}}"#, #"scenes/ipad/create-note.json: steps[0]: does one thing, so "tap" and "drag" can't be given together"#),
+        (#"{"id": "pause"}"#, "scenes/ipad/create-note.json: steps[0]: has nothing to do: give an action (tap, drag, type, activate, orientation, waitFor, inspect) or a hold"),
+        (#"{"tap": {"x": 10, "y": 10, "label": "a"}}"#, #"scenes/ipad/create-note.json: steps[0].tap: taps a point ("x" and "y") or an element, not both"#),
+        (#"{"tap": {"x": 10}}"#, #"scenes/ipad/create-note.json: steps[0].tap: is missing "y""#),
+        (#"{"tap": {"occurrence": 2}}"#, #"scenes/ipad/create-note.json: steps[0].tap: needs an element to name: its "label", "value" or "identifier""#),
+        (#"{"tap": {"label": "a", "occurrence": 0}}"#, "scenes/ipad/create-note.json: steps[0].tap.occurrence: 0 must be at least 1"),
+        (#"{"waitFor": {"label": "a", "timeout": 0}}"#, "scenes/ipad/create-note.json: steps[0].waitFor.timeout: 0 must be more than 0"),
+        (#"{"type": {"text": ""}}"#, "scenes/ipad/create-note.json: steps[0].type.text: can't be empty"),
+        (#"{"type": {"text": "a", "into": {}}}"#, #"scenes/ipad/create-note.json: steps[0].type.into: needs an element to name: its "label", "value" or "identifier""#),
+        (#"{"orientation": "sideways"}"#, #"scenes/ipad/create-note.json: steps[0].orientation: "sideways" isn't one of portrait, portrait-upside-down, landscape-left or landscape-right"#),
+        (#"{"inspect": false}"#, "scenes/ipad/create-note.json: steps[0].inspect: expected true or {}, found true or false"),
+        (#"{"hold": -1}"#, "scenes/ipad/create-note.json: steps[0].hold: -1 must be at least 0"),
+        (#"{"id": "3", "hold": 1}"#, #"scenes/ipad/create-note.json: steps[0].id: "3" looks like a number, which anchors count steps by; give it a name"#),
+        (#"{"id": "-1", "hold": 1}"#, #"scenes/ipad/create-note.json: steps[0].id: "-1" looks like a number, which anchors count steps by; give it a name"#),
+        (#"{"id": "end", "hold": 1}"#, #"scenes/ipad/create-note.json: steps[0].id: "end" names the take's own end, so a step can't have it"#),
+        (#"{"id": "a", "hold": 1}, {"id": "a", "hold": 1}"#, #"scenes/ipad/create-note.json: steps[1].id: "a" is already steps[0]'s id; ids are unique in a scene"#),
+        (#"{"drag": {"from": {"x": 1, "y": 1}, "to": {"x": 2, "y": 2}, "duration": 0}}"#, "scenes/ipad/create-note.json: steps[0].drag.duration: 0 must be more than 0"),
+        (#"{"tap": {"x": -5, "y": 1}}"#, "scenes/ipad/create-note.json: steps[0].tap.x: -5 must be at least 0"),
+    ])
+    func stepMistakesAreNamed(_ step: String, _ expected: String) {
+        let result = steps(step)
+        #expect(result.problems == [expected])
+        #expect(result.scene == nil)
+    }
+
+    @Test(arguments: [
+        (#"{}"#, #"scenes/ipad/create-note.json: is missing "steps""#),
+        (#"{"steps": []}"#, "scenes/ipad/create-note.json: steps: needs at least one step"),
+        (#"{"steps": [{"hold": 1}], "setup": [{"id": "go", "tap": {"label": "a"}}]}"#, "scenes/ipad/create-note.json: setup[0].id: setup steps aren't recorded, so nothing can anchor to them; leave the id out"),
+        (#"{"steps": [{"hold": 1}], "orientation": "upside-down"}"#, #"scenes/ipad/create-note.json: orientation: "upside-down" isn't one of portrait, portrait-upside-down, landscape-left or landscape-right"#),
+        (#"{"steps": [{"hold": 1}], "leadIn": -0.5}"#, "scenes/ipad/create-note.json: leadIn: -0.5 must be at least 0"),
+        (#"{"steps": [{"hold": 1}], "environment": {"RETAKE_X": "1"}}"#, "scenes/ipad/create-note.json: environment.RETAKE_X: is Retake's to set: it launches the app with its own RETAKE_ variables"),
+    ])
+    func sceneMistakesAreNamed(_ text: String, _ expected: String) {
+        #expect(read(text).problems == [expected])
+    }
+
+    @Test func theExamplesScenesRead() throws {
+        let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/Notes").standardizedFileURL
+        let files = ProjectFiles(project: try Project.locate(configuration: nil, currentDirectory: example))
+        for type in DeviceType.allCases {
+            let names = files.names(in: files.project.scenes(for: type))
+            #expect(names == ["create-note", "first-launch"])
+            for name in names {
+                let report = ProjectFiles.Report()
+                #expect(files.readScene(name, for: type, into: report) != nil, "\(type)/\(name): \(report.problems)")
+                #expect(report.warnings.isEmpty)
+            }
+        }
+    }
+}
