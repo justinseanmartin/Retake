@@ -46,6 +46,20 @@ struct ProjectTests {
         }
     }
 
+    @Test func aConfigurationFileWithProblemsFailsNamingEachOne() throws {
+        try Data(#"{"devise": "ipad", "build": {"scheme": 3}}"#.utf8).write(to: root.appending(path: "retake.json"))
+        do {
+            _ = try Project.locate(configuration: nil, currentDirectory: root)
+            Issue.record("read a malformed retake.json")
+        } catch {
+            #expect(error.status == .failed)
+            #expect(error.message == """
+                retake.json: build.scheme: expected a string, found a number
+                retake.json: unknown key "devise"; did you mean "device"?
+                """)
+        }
+    }
+
     @Test func foldersFollowTheDeviceType() {
         let project = Project(configuration: root.appending(path: "retake.json"))
         #expect(project.scenes(for: .ipad).path == root.appending(path: "scenes/ipad").path)

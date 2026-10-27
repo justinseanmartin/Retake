@@ -47,11 +47,13 @@ struct ConfigOption: ParsableArguments {
     ) throws(RetakeError) -> Project {
         let configuration = flagOrEnvironment(config, Self.environmentVariable, in: environment)
         do {
-            return try Project.locate(
+            let project = try Project.locate(
                 configuration: configuration.map { path($0.value, isDirectory: false, in: currentDirectory) },
                 output: output,
                 currentDirectory: URL(filePath: currentDirectory, directoryHint: .isDirectory),
             )
+            for warning in project.warnings { Console.warn(warning.description) }
+            return project
         } catch {
             // Say where the path came from, since nothing on the command line names it.
             guard let variable = configuration?.variable else { throw error }

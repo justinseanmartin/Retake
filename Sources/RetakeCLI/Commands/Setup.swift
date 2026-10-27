@@ -1,4 +1,5 @@
 import ArgumentParser
+import Foundation
 import RetakeCore
 
 struct Init: AsyncParsableCommand {
@@ -17,7 +18,17 @@ struct Init: AsyncParsableCommand {
     var scheme: String?
 
     func run() async throws {
-        throw RetakeError.notImplemented("init")
+        let directory = URL(filePath: FileManager.default.currentDirectoryPath, directoryHint: .isDirectory)
+        let result = try ProjectInitializer.initialize(in: directory, bundleID: bundleID, scheme: scheme) { schemes in
+            Prompt.choose("Which scheme builds the app?", from: schemes)
+        }
+        print("Created \(Project.configurationFileName), sets/, scenes/iphone/, scenes/ipad/ and edits/.")
+        if case .scheme(let build)? = result.settings.build {
+            print("Builds the \(build.scheme) scheme with xcodebuild.")
+        }
+        for note in result.notes {
+            Console.note(note)
+        }
     }
 }
 
