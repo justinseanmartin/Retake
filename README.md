@@ -355,7 +355,7 @@ every device type it names, from that type's takes of the same scenes:
     "ipad": { "create-note": 2, "share-note": 2 }
   },
   "music": { "file": "audio/theme.m4a", "volume": 0.6, "fadeOut": 1.5 },
-  "touchSound": { "file": "audio/tap.m4a", "volume": 0.5 },
+  "tapSound": { "file": "audio/tap.m4a", "volume": 0.5 },
   "background": "#F4F1EA",
   "clips": [
     {
@@ -524,7 +524,7 @@ A video's sound is the edit's music, under the sound of its clips:
 - **A clip's `takeAudio`** plays the take's own sound, recorded from the device, with the clip, at
   the speed the clip plays; the edit's `takeAudioVolume` sets its level for every clip that plays
   it.
-- **The edit's `touchSound`** plays with every touch a clip draws (`touches`), at its `volume`.
+- **The edit's `tapSound`** plays with every tap a clip draws (`touches`), at its `volume`.
 
 Sound files are paths relative to the directory holding the configuration file, as every path in
 an edit is.
