@@ -394,7 +394,7 @@ scene chosen already has a take, `record` says so and records nothing.
 
 For each scene, in order:
 
-1. Stops the app, and copies the set's files and defaults to the device.
+1. Stops the app, and copies the set's files to the device; its defaults go with the launch.
 2. Launches the app with the set's environment and arguments, and the scene's environment. Before
    the app's code runs, Retake's support library builds the take's data from the set's `state`
    (`clean`, `cloned` or `live`; see the README) and deletes earlier takes' copies.
@@ -448,10 +448,11 @@ Deletes every take and every rendered video, or with `--takes` or `--videos` onl
 device types unless `--type` names one. Asks first, unless `--yes`.
 
 `--on-device` deletes, instead, what Retake leaves in the app's container on the device: takes'
-copies of the app's data, and staged set files. `record` and `rehearse` do this at the end of a
-run, so it's for one that was interrupted. Only the app can delete files in its container, so this
-launches it in a mode that deletes them and quits before any of the app's own code runs. It never
-touches the app's real data, nor takes or videos on the Mac.
+copies of the app's data, and staged set files. `record` and `rehearse` do this at the end of a run,
+so it's for one that was interrupted. Only the app can delete files in its container, so this
+launches it in a mode that deletes them and quits before any of the app's own code runs; iOS then
+opens the app again, as from the home screen, and Retake closes it. It never touches the app's real
+data, nor takes or videos on the Mac.
 
 Edits' pins are left as they are, now pointing at takes that don't exist, so `cut` fails until
 they're recorded and conformed again. `retake clean` then `retake record` starts everything

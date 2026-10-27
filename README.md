@@ -191,7 +191,8 @@ Each take's copy is deleted when the app next launches under Retake, and `record
 launch it once more at the end of a run to delete the last, so no copy is left on the device.
 `retake clean --on-device` does the same on demand, after a run that was interrupted. Only the app
 itself can delete files in its container, so both launch it in a mode that deletes them and quits
-before any of the app's own code runs.
+before any of the app's own code runs. iOS then opens the app again, as it would from the home
+screen, and Retake closes it.
 
 ### Defaults in memory
 
