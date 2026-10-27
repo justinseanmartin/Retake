@@ -150,7 +150,7 @@ each, and exits with the worst status among them.
 | [`devices`](#retake-devices) | Lists devices, and names them. |
 | [`embed`](#retake-embed) | Adds what Retake needs to a built app, for installing it yourself. |
 | [`install`](#retake-install) | Builds the app if asked, embeds Retake in it, and installs it. |
-| [`inspect`](#retake-inspect) | Prints what's on screen. |
+| [`compose`](#retake-compose) | Writes a scene a step at a time, on the device. |
 | [`record`](#retake-record) | Records takes, or with `--dry-run`, plays scenes without recording them. |
 | [`takes`](#retake-takes) | Lists takes. |
 | [`discard`](#retake-discard) | Deletes a take. |
@@ -281,7 +281,7 @@ embedding every build again, when two things agree:
   against. Builds between releases carry a hash of The Button Heist's contract in their version,
   so equal versions mean the same commands and wire format.
 
-`record`, `inspect` and `doctor` check both at launch: the contract version from what
+`record`, `compose` and `doctor` check both at launch: the contract version from what
 the support library reports, and The Button Heist's version at its own handshake, which refuses a
 mismatch before any command runs. They stop (3) when either differs, saying to embed the app again. An upgrade of Retake
 that changes neither works with apps already on devices.
@@ -348,16 +348,68 @@ profiles on your team. That's only possible when Retake runs `xcodebuild`; for `
 Fails (3) if no identity and profile can sign it for development on the device: the build's own,
 or those given instead.
 
-### `retake inspect`
+### `retake compose`
 
 ```
-retake inspect [--set <set>] [--device <device>] [--watch]
+retake compose <scene> [--set <set>] [--device <device>] [--json]
 ```
 
-Launches the app on a set (`retake.json`'s `defaultSet` when not given) and prints what's on
-screen: each element's label, traits, frame and activation point, in screen points. With
-`--watch`, prints again whenever the screen changes, until stopped, so you can walk the app by hand
-and note targets as you go.
+Writes a scene a step at a time, on the device. Launches the app on the scene's set, or for a new
+scene, `--set` (`retake.json`'s `defaultSet` when not given); plays the steps the scene already
+has, without their holds; and prints what's on screen: each element's label, value, identifier,
+traits, frame and activation point, in screen points. Then it takes actions, one a line, each an
+action's name and its options:
+
+```
+> tap --label "New Note" --id new-note --hold 0.8
+> type --text "Groceries\n" --value "Title"
+> wait --label "Synced"
+> inspect
+```
+
+A step runs as soon as it's given. One that runs is added to `scenes/<type>/<scene>.json`, and
+what's on screen after it is printed; one that doesn't is left out, saying why, and the scene
+carries on from wherever the app is. Each step's action takes the options its step does in a
+scene file, and every one also takes `--id <name>` and `--hold <seconds>`, both optional:
+
+| Action | Required | Optional |
+| --- | --- | --- |
+| `tap` | An element, or `--x <x> --y <y>` | |
+| `drag` | `--from <x>,<y> --to <x>,<y>` | `--duration <seconds>` (0.5) |
+| `type` | `--text <text>`, where `\n` presses return | An element to type into (the field already being typed in) |
+| `activate` | An element | |
+| `wait` | An element | `--gone`, `--timeout <seconds>` (10) |
+| `turn` | `--to portrait`, `portrait-upside-down`, `landscape-left` or `landscape-right` | |
+| `pause` | `--seconds <seconds>` | |
+
+An element is any of `--label <text>`, `--value <text>` and `--identifier <text>`, at least one,
+with `--occurrence <n>` (from 1, optional) to pick one of several that match. Other actions act on
+the scene rather than the app, and add no step:
+
+| Action | Required | Optional | Does |
+| --- | --- | --- | --- |
+| `inspect` | | | Prints what's on screen again. |
+| `hold` | `--seconds <seconds>` | | Sets the last step's hold. |
+| `id` | `--name <name>` | | Names the last step, for edits to anchor to. |
+| `undo` | | | Drops the last step, then launches the app again and replays the rest. |
+| `steps` | | | Lists the scene's steps. |
+| `help` | | An action's name | Lists the actions and their options, or one action's. |
+| `quit` | | | Ends; so does Control-D. |
+
+At a terminal, an action given without an option it needs asks for it, saying which options are
+optional and what they default to. Read from a pipe, as when a script or an agent drives it, the
+action fails instead, naming what's missing, and nothing is asked. With `--json`, each reply is
+one line of JSON, for a program to read: `{"ok": true, "step": {…}, "screen": […]}` after a step,
+`{"ok": false, "error": "…"}` when one doesn't run or an action is wrong, and `{"ok": true,
+"screen": […]}` for `inspect`, the screen as each element's `label`, `value`, `identifier`,
+`traits`, `frame` and `activationPoint`.
+
+The scene is written after each change, its other fields kept as they are; a new scene's file names
+its set, and is first written with its first step. At the end, the app is launched once more to
+delete the take's copy of its data from the device, as `record` does.
+
+Fails (2) for a new scene with no set to launch on, and for `--set` given for a scene that already
+names one.
 
 ### `retake record`
 

@@ -85,7 +85,7 @@ You don't need Tuist, The Button Heist, or any other tool.
 retake init                              # retake.json and the folders below
 retake devices add iphone                # name the connected device "iphone"
 retake install --scheme MyApp            # build Debug, embed Retake, and install it
-retake inspect                           # what's on screen, to write a scene against
+retake compose create-note               # write a scene a step at a time, on the device
 retake record --dry-run create-note      # play a scene without recording it
 retake record create-note share-note     # record takes
 retake cut video1                        # render the video, for each device type
@@ -268,9 +268,9 @@ where `\n` presses return, into the element `into` names, or the field already b
 `activate` is an accessibility activation, with no touch, for getting somewhere off camera.
 `orientation` turns the device with no hand on it, and ends when the app has turned. `waitFor` waits
 until an element is on screen, or with `"gone": true` until it isn't, for up to `timeout` seconds,
-10 unless given, and the step fails if it doesn't happen. `inspect` prints what's on screen, for
-finding targets while writing a scene. A step's `hold` is the pause after it, 0 unless given, so the
-take has room to breathe; the edit trims what it doesn't need. A step can be only a `hold`, a pause.
+10 unless given, and the step fails if it doesn't happen. A step's `hold` is the pause after it, 0
+unless given, so the take has room to breathe; the edit trims what it doesn't need. A step can be
+only a `hold`, a pause.
 
 A step names an element as VoiceOver knows it: by its `label`, its `value` (a text field's
 placeholder or what's typed in it, as the field has no label of its own), or its `identifier` (an
@@ -300,7 +300,8 @@ scene's `environment` adds to its set's, for a flag only that take needs.
 
 Points are in the device's screen points, so scenes are written per device type: `scenes/iphone/`
 and `scenes/ipad/`. A scene of the same name on each type, with the same steps and ids, is what lets
-one edit cut both. `retake inspect` prints each element's label and activation point.
+one edit cut both. `retake compose` writes a scene a step at a time, printing each element's label
+and activation point as it goes.
 
 ## Takes: footage and a step log
 
