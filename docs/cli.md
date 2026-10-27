@@ -1,8 +1,8 @@
 # The `retake` command
 
 This is the contract for Retake's command line: each command, what it reads and writes, and how it
-fails. How the files fit together is in the [README](../README.md), and every field of every file
-is in the [reference](reference/), generated from Retake's schemas.
+fails. How the files fit together is in the [README](../README.md), and every field of every file is in the
+[reference](reference/), generated from Retake's schemas.
 
 Retake is in design, so this describes the command as it will be.
 
@@ -18,9 +18,9 @@ that's given names it:
 2. the `RETAKE_CONFIG` environment variable;
 3. `retake.json` in the current directory.
 
-A path from either of the first two is relative to the current directory. If the file doesn't
-exist, the command fails (2). No other directory is searched, so a command never acts on a project
-it wasn't pointed at. `RETAKE_CONFIG` saves typing `--config` in a shell that works on one project:
+A path from either of the first two is relative to the current directory. If the file doesn't exist,
+the command fails (2). No other directory is searched, so a command never acts on a project it
+wasn't pointed at. `RETAKE_CONFIG` saves typing `--config` in a shell that works on one project:
 
 ```sh
 export RETAKE_CONFIG=Previews/retake.json
@@ -31,8 +31,8 @@ retake cut video1
 The project's folders — `sets/`, `scenes/` and `edits/` — are beside the configuration file, and
 every relative path in it, such as `build`'s `workspace`, is relative to the directory holding it.
 So the file needn't sit beside the app's Xcode project: in a repository whose previews live in
-`Previews/`, `Previews/retake.json` can name `"workspace": "../MyApp.xcworkspace"`, and
-`retake record --config Previews/retake.json` runs it from the repository's root.
+`Previews/`, `Previews/retake.json` can name `"workspace": "../MyApp.xcworkspace"`, and `retake
+record --config Previews/retake.json` runs it from the repository's root.
 
 ### The output directory
 
@@ -44,8 +44,8 @@ directory, the first of these that's given:
 3. the configuration file's `output`, relative to the directory holding it;
 4. `RetakeOutput/` beside the configuration file.
 
-The paths below are written with the default. Retake creates the directory when it first writes
-to it. An environment variable that's set but empty counts as not set, for both variables.
+The paths below are written with the default. Retake creates the directory when it first writes to
+it. An environment variable that's set but empty counts as not set, for both variables.
 
 It holds the takes edits pin, so moving it somewhere temporary, such as `/tmp` or an agent's scratch
 directory, suits runs whose takes don't need to outlive it: a take recorded there is gone when the
@@ -54,8 +54,8 @@ again.
 
 ### Finding the app
 
-Commands that launch the app, or put a set's files in its container, need its bundle ID, which
-comes from the first of these that's given:
+Commands that launch the app, or put a set's files in its container, need its bundle ID, which comes
+from the first of these that's given:
 
 1. the configuration file's `bundleID`;
 2. the app `install` last built and embedded, in the output directory's `build/`, from its
@@ -81,21 +81,21 @@ file's `device`, and failing those the one device connected by USB. With several
 named, the command stops and lists them. `RETAKE_DEVICE` comes before the configuration file because
 devices belong to people, and the file is shared: it suits a session spent on one device.
 
-The device's **type** — `iphone` or `ipad`, asked of the device itself — picks the folders a
-command works in: `scenes/<type>/` and `RetakeOutput/takes/<type>/`.
+The device's **type** — `iphone` or `ipad`, asked of the device itself — picks the folders a command
+works in: `scenes/<type>/` and `RetakeOutput/takes/<type>/`.
 
 ### Names
 
 Scenes, sets and edits are named by their file name without `.json`: `create-note` is
-`scenes/<type>/create-note.json`, and `video1` is `edits/video1.json`. Takes are
-numbered per scene and device type, from 1, and are never renumbered.
+`scenes/<type>/create-note.json`, and `video1` is `edits/video1.json`. Takes are numbered per scene
+and device type, from 1, and are never renumbered.
 
 ### Reading the project's files
 
-Every command reads the project's files the same way, strictly, against Retake's
-[schemas](#schemas): a key Retake doesn't know, a value of the wrong type or outside its range, or a
-missing required field fails the command (1) before it does anything, and every error names the
-file and the path to the field:
+Every command reads the project's files the same way, strictly, against Retake's [schemas](#schemas): a key
+Retake doesn't know, a value of the wrong type or outside its range, or a missing required field
+fails the command (1) before it does anything, and every error names the file and the path to the
+field:
 
 ```
 edits/video1.json: clips[3].from.fraction: 1.4 is outside -1 to 1
@@ -114,9 +114,9 @@ Commands print progress for people. Those that report something — `devices`, `
 
 ### Environment variables
 
-Some options can also be set in the environment, for a shell or a script that runs many commands
-the same way. An option given on the command line always wins over its variable, and a variable
-that's set but empty counts as not set. Paths are relative to the current directory.
+Some options can also be set in the environment, for a shell or a script that runs many commands the
+same way. An option given on the command line always wins over its variable, and a variable that's
+set but empty counts as not set. Paths are relative to the current directory.
 
 | Variable | Stands in for | Used by |
 | --- | --- | --- |
@@ -138,8 +138,8 @@ to use. Nothing that discards work, such as `clean`'s `--yes`, has a variable.
 | 2 | The command was used wrongly: an unknown option, a missing argument, a name that doesn't exist. |
 | 3 | The environment isn't right: no device, a device on Wi-Fi, no signing identity, or an app that wasn't embedded, or was embedded by an incompatible Retake. |
 
-A command that does several things — recording several scenes, cutting several edits — reports
-each, and exits with the worst status among them.
+A command that does several things — recording several scenes, cutting several edits — reports each,
+and exits with the worst status among them.
 
 ## Commands
 
@@ -176,8 +176,7 @@ Creates `retake.json` and the folders `sets/`, `scenes/iphone/`, `scenes/ipad/` 
 current directory, and adds `RetakeOutput/` to `.gitignore`. `retake.json` names its schema's URL in
 `"$schema"`, which editors fetch to complete and check it. Asks for the scheme when it isn't given
 and can't be found in an Xcode project in the directory. Writes `bundleID` only when `--bundle-id`
-gives one; otherwise the bundle ID comes from the app `install` builds (see [Finding the
-app](#finding-the-app)).
+gives one; otherwise the bundle ID comes from the app `install` builds (see [Finding the app](#finding-the-app)).
 
 Fails (2) if `retake.json` already exists.
 
@@ -207,9 +206,9 @@ retake devices add <alias> [<device>]
 retake devices remove <alias>
 ```
 
-With no subcommand, lists devices: each connected device's name, UDID, type, model, and whether
-it's wired, and each alias, whether connected or not. Then it says which device commands would
-use, and what [chose it](#choosing-a-device), so a take never lands on a device by surprise:
+With no subcommand, lists devices: each connected device's name, UDID, type, model, and whether it's
+wired, and each alias, whether connected or not. Then it says which device commands would use, and
+what [chose it](#choosing-a-device), so a take never lands on a device by surprise:
 
 ```
 → ipad (from RETAKE_DEVICE)
@@ -240,16 +239,16 @@ retake embed <app> [--output <path>] [--identity <identity>] [--profile <path>]
                    [--json]
 ```
 
-Adds what Retake needs to an already built, development-signed `.app` for iOS devices, for when
-your own build script or tool installs the app. `install` does the same as one of its steps. Needs
-no project and no device.
+Adds what Retake needs to an already built, development-signed `.app` for iOS devices, for when your
+own build script or tool installs the app. `install` does the same as one of its steps. Needs no
+project and no device.
 
 1. Adds the TheInsideJob framework Retake is built against to the app's `Frameworks/`.
 2. Adds Retake's support library to `Frameworks/`.
 3. Adds a `Retake` dictionary to the app's `Info.plist`, recording the Retake version that embedded
    it, its support library's contract version, and the Button Heist version it embedded.
-4. Re-signs everything it added, and the app, with the identity and provisioning profile the app
-   was signed with, keeping the app's entitlements. `--identity` and `--profile`, or
+4. Re-signs everything it added, and the app, with the identity and provisioning profile the app was
+   signed with, keeping the app's entitlements. `--identity` and `--profile`, or
    `RETAKE_SIGNING_IDENTITY` and `RETAKE_PROVISIONING_PROFILE`, replace either: for an app built
    without signing, or signed with a profile that doesn't include the device.
 
@@ -257,34 +256,33 @@ The app's own executable isn't changed. The `.app` is changed in place, unless `
 where to write a copy. Prints the path of the result, or with `--json`, it and what was embedded.
 
 Nothing added runs unless Retake launches the app: the libraries load only through the launch
-environment Retake passes. Opened from the home screen, an embedded app behaves as it would
-without Retake, so one build can serve both for testing by hand and for recording.
+environment Retake passes. Opened from the home screen, an embedded app behaves as it would without
+Retake, so one build can serve both for testing by hand and for recording.
 
-Embedding an app again replaces what an earlier embed added, from any version of Retake, so a
-build script can embed every build without checking first.
+Embedding an app again replaces what an earlier embed added, from any version of Retake, so a build
+script can embed every build without checking first.
 
-Fails (3) if no identity and profile can sign it for development on devices: the app's own, or
-those given instead.
-Fails (1) if the app already contains TheInsideJob, as a framework or linked into an executable,
-naming where: Retake supplies its own, and two copies in one app can't both run. Leave it out of the
-builds you record with.
+Fails (3) if no identity and profile can sign it for development on devices: the app's own, or those
+given instead. Fails (1) if the app already contains TheInsideJob, as a framework or linked into an
+executable, naming where: Retake supplies its own, and two copies in one app can't both run. Leave
+it out of the builds you record with.
 
 #### Compatibility with an embedded app
 
-An app embedded by one Retake can be recorded by another, so upgrading Retake doesn't mean
-embedding every build again, when two things agree:
+An app embedded by one Retake can be recorded by another, so upgrading Retake doesn't mean embedding
+every build again, when two things agree:
 
 - **The support library's contract version**, a number that changes only when what Retake and its
   library expect of each other changes: the environment it reads, how defaults and files are
   delivered, how it reports at launch.
 - **The Button Heist version** embedded, which must be the one this Retake's client is built
-  against. Builds between releases carry a hash of The Button Heist's contract in their version,
-  so equal versions mean the same commands and wire format.
+  against. Builds between releases carry a hash of The Button Heist's contract in their version, so
+  equal versions mean the same commands and wire format.
 
-`record`, `compose` and `doctor` check both at launch: the contract version from what
-the support library reports, and The Button Heist's version at its own handshake, which refuses a
-mismatch before any command runs. They stop (3) when either differs, saying to embed the app again. An upgrade of Retake
-that changes neither works with apps already on devices.
+`record`, `compose` and `doctor` check both at launch: the contract version from what the support
+library reports, and The Button Heist's version at its own handshake, which refuses a mismatch
+before any command runs. They stop (3) when either differs, saying to embed the app again. An
+upgrade of Retake that changes neither works with apps already on devices.
 
 A build script that installs the app itself, on several devices:
 
@@ -304,9 +302,9 @@ retake install [--app <path>]
                [--device <device>] [--identity <identity>] [--profile <path>]
 ```
 
-Builds the app if asked to, embeds Retake in it as [`embed`](#retake-embed) does, and installs it
-on the device. It's needed once per build of the app, not before each recording. The build itself
-isn't changed: Retake embeds into a copy, in `RetakeOutput/build/`.
+Builds the app if asked to, embeds Retake in it as [`embed`](#retake-embed) does, and installs it on the device.
+It's needed once per build of the app, not before each recording. The build itself isn't changed:
+Retake embeds into a copy, in `RetakeOutput/build/`.
 
 Where the app comes from, the first that applies:
 
@@ -322,12 +320,11 @@ Where the app comes from, the first that applies:
    "build": { "command": "scripts/build-for-retake.sh", "app": "build/Debug-iphoneos/MyApp.app" }
    ```
 
-   The first builds with `xcodebuild`, as `--scheme` does; `workspace` or `xcodeproj` is needed
-   only when the directory holds more than one. The second is for projects one `xcodebuild` call
-   can't build: generated projects (Tuist, XcodeGen), fastlane, Bazel, or anything with its own
-   steps. Retake runs `command` with `/bin/sh` in the project's directory, passing the device's
-   UDID in `RETAKE_DEVICE_UDID`, and fails (1) if it exits non-zero or `app` doesn't exist
-   afterwards.
+   The first builds with `xcodebuild`, as `--scheme` does; `workspace` or `xcodeproj` is needed only
+   when the directory holds more than one. The second is for projects one `xcodebuild` call can't
+   build: generated projects (Tuist, XcodeGen), fastlane, Bazel, or anything with its own steps.
+   Retake runs `command` with `/bin/sh` in the project's directory, passing the device's UDID in
+   `RETAKE_DEVICE_UDID`, and fails (1) if it exits non-zero or `app` doesn't exist afterwards.
 
 With none of these, fails (2).
 
@@ -337,23 +334,23 @@ builds, and finds the `.app` from the build's settings. Signing is the project's
 configuration works, so long as it's development-signed for the device; `Debug` is the default
 because it usually is.
 
-It builds with the compiler's optimisation on, whatever the configuration says (Swift at `-O`, C
-and Objective-C at `-Os`), since a preview should show the app running as fast as it does for
-its users, and a Debug build at `-Onone` can stutter where a release wouldn't. The configuration
-is otherwise the same, so `#if DEBUG` code, and the launch flags a set turns on, still work.
-`--no-optimize` (or `"optimize": false` in `build`) builds as the configuration says instead. A
-`command` build is the project's own, and is left as it is.
+It builds with the compiler's optimisation on, whatever the configuration says (Swift at `-O`, C and
+Objective-C at `-Os`), since a preview should show the app running as fast as it does for its users,
+and a Debug build at `-Onone` can stutter where a release wouldn't. The configuration is otherwise
+the same, so `#if DEBUG` code, and the launch flags a set turns on, still work. `--no-optimize` (or
+`"optimize": false` in `build`) builds as the configuration says instead. A `command` build is the
+project's own, and is left as it is.
 
-**A device the profile doesn't include.** When the build or the embedded app can't be signed for
-the device, typically because it isn't registered on your team, Retake fails (3) and says so,
-naming the device's UDID. It never registers devices or changes profiles on its own. With
+**A device the profile doesn't include.** When the build or the embedded app can't be signed for the
+device, typically because it isn't registered on your team, Retake fails (3) and says so, naming the
+device's UDID. It never registers devices or changes profiles on its own. With
 `--allow-provisioning-updates` (or `"allowProvisioningUpdates": true` in `build`), it passes
 `-allowProvisioningUpdates` to `xcodebuild`, which lets Xcode register the device and update
-profiles on your team. That's only possible when Retake runs `xcodebuild`; for `--app` and
-`command` builds, register the device in Xcode or your own build.
+profiles on your team. That's only possible when Retake runs `xcodebuild`; for `--app` and `command`
+builds, register the device in Xcode or your own build.
 
-Fails (3) if no identity and profile can sign it for development on the device: the build's own,
-or those given instead.
+Fails (3) if no identity and profile can sign it for development on the device: the build's own, or
+those given instead.
 
 ### `retake compose`
 
@@ -362,10 +359,10 @@ retake compose <scene> [--set <set>] [--device <device>] [--json]
 ```
 
 Writes a scene a step at a time, on the device. Launches the app on the scene's set, or for a new
-scene, `--set` (`retake.json`'s `defaultSet` when not given); plays the steps the scene already
-has, without their holds; and prints what's on screen: each element's label, value, identifier,
-traits, frame and activation point, in screen points. Then it takes actions, one a line, each an
-action's name and its options:
+scene, `--set` (`retake.json`'s `defaultSet` when not given); plays the steps the scene already has,
+without their holds; and prints what's on screen: each element's label, value, identifier, traits,
+frame and activation point, in screen points. Then it takes actions, one a line, each an action's
+name and its options:
 
 ```
 > tap --label "New Note" --id new-note --hold 0.8
@@ -376,8 +373,8 @@ action's name and its options:
 
 A step runs as soon as it's given. One that runs is added to `scenes/<type>/<scene>.json`, and
 what's on screen after it is printed; one that doesn't is left out, saying why, and the scene
-carries on from wherever the app is. Each step's action takes the options its step does in a
-scene file, and every one also takes `--id <name>` and `--hold <seconds>`, both optional:
+carries on from wherever the app is. Each step's action takes the options its step does in a scene
+file, and every one also takes `--id <name>` and `--hold <seconds>`, both optional:
 
 | Action | Required | Optional |
 | --- | --- | --- |
@@ -407,8 +404,8 @@ the scene rather than the app, and add no step:
 
 At a terminal, an action given without an option it needs asks for it, saying which options are
 optional and what they default to. Read from a pipe, as when a script or an agent drives it, the
-action fails instead, naming what's missing, and nothing is asked. With `--json`, each reply is
-one line of JSON, for a program to read: `{"ok": true, "step": {…}, "screen": […]}` after a step,
+action fails instead, naming what's missing, and nothing is asked. With `--json`, each reply is one
+line of JSON, for a program to read: `{"ok": true, "step": {…}, "screen": […]}` after a step,
 `{"ok": false, "error": "…"}` when one doesn't run or an action is wrong, and `{"ok": true,
 "screen": […]}` for `inspect`, the screen as each element's `label`, `value`, `identifier`,
 `traits`, `frame` and `activationPoint`.
@@ -443,34 +440,32 @@ scene chosen already has a take, `record` says so and records nothing.
 For each scene, in order:
 
 1. Stops the app, and copies the set's files to the device; its defaults go with the launch.
-2. Launches the app with the set's environment and arguments. Before
-   the app's code runs, Retake's support library builds the take's data from the set's `state`
-   (`clean`, `cloned` or `live`; see the README) and deletes earlier takes' copies.
-   If the support library doesn't report in, or reports an
-   [incompatible](#compatibility-with-an-embedded-app) contract or Button Heist version, the scene
-   fails (3) before its first step, saying to `retake embed` or `retake install` the app again.
-3. Plays the setup steps, then records the lead-in, the steps with their holds, and the tail.
-   After each step, and when each `waitFor` is satisfied, records the elements on screen in the
-   step log.
-4. Writes `RetakeOutput/takes/<type>/<scene>/<n>.mov` and its step log `<n>.json`, `<n>` being
-   one more than the scene's last take.
+2. Launches the app with the set's environment and arguments. Before the app's code runs, Retake's
+   support library builds the take's data from the set's `state` (`clean`, `cloned` or `live`; see
+   the README) and deletes earlier takes' copies. If the support library doesn't report in, or
+   reports an [incompatible](#compatibility-with-an-embedded-app) contract or Button Heist version, the scene fails (3) before its first
+   step, saying to `retake embed` or `retake install` the app again.
+3. Plays the setup steps, then records the lead-in, the steps with their holds, and the tail. After
+   each step, and when each `waitFor` is satisfied, records the elements on screen in the step log.
+4. Writes `RetakeOutput/takes/<type>/<scene>/<n>.mov` and its step log `<n>.json`, `<n>` being one
+   more than the scene's last take.
 
 After the last scene, when any take was `clean` or `cloned`, launches the app once more to delete
-the take's copy of its data and the staged set files from the device, as
-[`clean --on-device`](#retake-clean) does, so none is left behind.
+the take's copy of its data and the staged set files from the device, as [`clean --on-device`](#retake-clean) does,
+so none is left behind.
 
-A take whose step fails is kept, marked failed, for its footage to show what went wrong; it can't
-be pinned by an edit. Recording carries on with the next scene unless `--stop-on-failure` is given,
-and a summary at the end lists each scene's new take or failure.
+A take whose step fails is kept, marked failed, for its footage to show what went wrong; it can't be
+pinned by an edit. Recording carries on with the next scene unless `--stop-on-failure` is given, and
+a summary at the end lists each scene's new take or failure.
 
 Existing takes are never changed.
 
 **`--dry-run`** plays the scenes chosen as `record` would, without recording them, for trying a
 scene out while writing it: it launches on each scene's set, plays its setup and steps with their
 holds, prints each step as it plays, and deletes the take's copy of the app's data from the device
-at the end. It writes nothing, and fails (1) at the first step that doesn't run, naming it.
-`--from <step>`, with one scene, skips to a step (numbered from 1), playing the steps before it
-without their holds.
+at the end. It writes nothing, and fails (1) at the first step that doesn't run, naming it. `--from
+<step>`, with one scene, skips to a step (numbered from 1), playing the steps before it without
+their holds.
 
 ### `retake takes`
 
@@ -503,15 +498,14 @@ Deletes every take and every rendered video, or with `--takes` or `--videos` onl
 device types unless `--type` names one. Asks first, unless `--yes`.
 
 `--on-device` deletes, instead, what Retake leaves in the app's container on the device: takes'
-copies of the app's data, and staged set files. `record` does this at the end of a run,
-so it's for one that was interrupted. Only the app can delete files in its container, so this
-launches it in a mode that deletes them and quits before any of the app's own code runs; iOS then
-opens the app again, as from the home screen, and Retake closes it. It never touches the app's real
-data, nor takes or videos on the Mac.
+copies of the app's data, and staged set files. `record` does this at the end of a run, so it's for
+one that was interrupted. Only the app can delete files in its container, so this launches it in a
+mode that deletes them and quits before any of the app's own code runs; iOS then opens the app
+again, as from the home screen, and Retake closes it. It never touches the app's real data, nor
+takes or videos on the Mac.
 
 Edits' pins are left as they are, now pointing at takes that don't exist, so `cut` fails until
-they're recorded and conformed again. `retake clean` then `retake record` starts everything
-over.
+they're recorded and conformed again. `retake clean` then `retake record` starts everything over.
 
 ### `retake conform`
 
@@ -541,22 +535,21 @@ retake cut <edit>... [--type <type>] [--draft] [--open]
 retake cut --all [--type <type>] [--draft]
 ```
 
-Renders each edit, for each device type it names (or only `--type`'s), from the takes it pins,
-to `RetakeOutput/videos/<type>/<video>/`:
+Renders each edit, for each device type it names (or only `--type`'s), from the takes it pins, to
+`RetakeOutput/videos/<type>/<video>/`:
 
 - `<video>-<type>-master.mov`, ProRes, and
 - `<video>-<type>.mp4`, H.264 at the size and frame rate App Store Connect specifies for the type.
 
 `--draft` renders a quick, smaller H.264 alone, for checking timing. `--open` opens the result.
 
-Warns, and carries on, when the edit's takes were recorded on more than one build of the app,
-device or iOS version, or Button Heist, naming the takes on each; the video's
-[metadata](#a-videos-fields) lists all of them.
+Warns, and carries on, when the edit's takes were recorded on more than one build of the app, device
+or iOS version, or Button Heist, naming the takes on each; the video's [metadata](#a-videos-fields) lists all of them.
 
-Fails (1) if a pinned take is missing or failed, an anchor doesn't resolve, an element a
-spotlight or blur names isn't in the take's step log at that moment, one device type's takes come
-from devices with different screens (naming the takes on each), or the result is outside App Store
-Connect's limits for a preview, such as its length.
+Fails (1) if a pinned take is missing or failed, an anchor doesn't resolve, an element a spotlight
+or blur names isn't in the take's step log at that moment, one device type's takes come from devices
+with different screens (naming the takes on each), or the result is outside App Store Connect's
+limits for a preview, such as its length.
 
 ### `retake status`
 
@@ -578,9 +571,9 @@ Reports; never fails on what it finds.
 retake info <movie>... [--json]
 ```
 
-Prints the [metadata](#movie-metadata) Retake wrote into each movie: a take, a master, or an
-`.mp4`. Works on any of them wherever they've been moved to, outside a project as well as in one.
-Fails (1) for a movie Retake didn't write.
+Prints the [metadata](#movie-metadata) Retake wrote into each movie: a take, a master, or an `.mp4`. Works on any of
+them wherever they've been moved to, outside a project as well as in one. Fails (1) for a movie
+Retake didn't write.
 
 ### `retake check`
 
@@ -607,8 +600,8 @@ Checks the project's files, or the files named, against the schemas, then what a
 - that step ids are unique in a scene, aren't numbers, and aren't `start` or `end`;
 - that a scene of the same name on each device type an edit names has the same step ids;
 - with takes recorded, that every anchor resolves in the takes the edit pins, and every element a
-  spotlight or blur names is in the step log at that moment, as `cut` will check. `--offline`
-  skips this.
+  spotlight or blur names is in the step log at that moment, as `cut` will check. `--offline` skips
+  this.
 
 Needs no device and changes nothing. Prints every problem, not just the first, and fails (1) if
 there's any. Made for CI and pre-commit hooks, and for an agent checking an edit it changed;
@@ -621,8 +614,8 @@ retake schema [retake | set | scene | edit] [--output <dir>]
 ```
 
 Prints the schema for one kind of file, or with `--output` writes all of them there, as
-`<kind>.schema.json`. They are the same schemas the files' `"$schema"` URLs name, for this
-version of Retake.
+`<kind>.schema.json`. They are the same schemas the files' `"$schema"` URLs name, for this version
+of Retake.
 
 ### `retake version`
 
@@ -636,21 +629,21 @@ and commit, which ends in `-dirty` when the clone had uncommitted changes.
 
 ## Schemas
 
-Each kind of file Retake reads has a [JSON Schema](https://json-schema.org) (draft 2020-12):
-`retake.json`, sets, scenes and edits. They're published with each release, at a URL that names
-the version, `https://justinseanmartin.github.io/Retake/schemas/<version>/<kind>.schema.json`, and
-`retake schema` prints them.
+Each kind of file Retake reads has a [JSON Schema](https://json-schema.org) (draft 2020-12): `retake.json`, sets, scenes and
+edits. They're published with each release, at a URL that names the version,
+`https://justinseanmartin.github.io/Retake/schemas/<version>/<kind>.schema.json`, and `retake
+schema` prints them.
 
 - **They are generated, not written.** Retake's Swift types for the files are the only source of
   truth: each field's description, type, range and default are written once, on the type, and the
-  schemas and the [reference](reference/) are generated from them. A test fails if the checked-in
-  schemas or reference differ from what the types generate, and every JSON example in the README and
-  these docs is validated against the schemas.
+  schemas and the [reference](reference/) are generated from them. A test fails if the checked-in schemas or
+  reference differ from what the types generate, and every JSON example in the README and these docs
+  is validated against the schemas.
 - **They are strict.** Every object rejects keys it doesn't define, the same as Retake's own
   reading, so an editor marks a misspelled key rather than leaving it to be ignored.
-- **They change with Retake.** A release that changes what a file may say changes the schema
-  version in its URL. Retake reads only its own version's shape: a file written for an older one
-  that no longer fits fails with the field to change.
+- **They change with Retake.** A release that changes what a file may say changes the schema version
+  in its URL. Retake reads only its own version's shape: a file written for an older one that no
+  longer fits fails with the field to change.
 
 ## Files Retake writes
 
@@ -668,11 +661,11 @@ the version, `https://justinseanmartin.github.io/Retake/schemas/<version>/<kind>
 
 ## Movie metadata
 
-Every movie Retake writes records how it was made. Takes and masters are QuickTime movies, and
-carry the fields below as QuickTime metadata, which `ffprobe` and AVFoundation read. MP4 has no
-place for custom fields that AVFoundation will write, so the `.mp4` carries the same record as JSON
-in its description (ISO user data, which AVFoundation reads and `ffprobe` doesn't), with the
-software field beside it. `retake info` reads both.
+Every movie Retake writes records how it was made. Takes and masters are QuickTime movies, and carry
+the fields below as QuickTime metadata, which `ffprobe` and AVFoundation read. MP4 has no place for
+custom fields that AVFoundation will write, so the `.mp4` carries the same record as JSON in its
+description (ISO user data, which AVFoundation reads and `ffprobe` doesn't), with the software field
+beside it. `retake info` reads both.
 
 Nothing personal is written: not the device's name, nor its UDID.
 
@@ -724,8 +717,8 @@ handles one shape. Entries are in the order the video first shows them, and each
 belong together, such as a version with its build. `retake.takes` says which take used which.
 
 `cut` warns when the takes span more than one entry in any of them — different builds of the app,
-different devices or iOS versions, or different Button Heists — and names the takes on each.
-`retake status` and `retake info` show the same.
+different devices or iOS versions, or different Button Heists — and names the takes on each. `retake
+status` and `retake info` show the same.
 
 The `.mp4`'s description holds all of a video's fields as one JSON object. Here, one take was
 recorded on a later build than the other:

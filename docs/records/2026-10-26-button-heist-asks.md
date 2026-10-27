@@ -2,12 +2,12 @@
 
 Status: **resolved** (2026-10-26). Requests for The Button Heist, collected while building Retake's
 proofs of concept and shared with its maintainer, who answered all but the last in 0.7.0 and 0.7.1
-(released 2026-10-24 and 2026-10-26); the last was closed without being sent, as Retake doesn't
-need it. Each says what would help, why, and what we found. Retake relies on what they changed (a
-version that names the contract, refusing a mismatch at the handshake, injection as a supported
-way to use TheInsideJob, and a public Swift client), so this record is where to start if any of it
-changes. Retake now pins the 0.7.1 release; what that showed is in
-[the proofs of concept](2026-10-26-proofs-of-concept.md), under "Proof of concept 1 again".
+(released 2026-10-24 and 2026-10-26); the last was closed without being sent, as Retake doesn't need
+it. Each says what would help, why, and what we found. Retake relies on what they changed (a version
+that names the contract, refusing a mismatch at the handshake, injection as a supported way to use
+TheInsideJob, and a public Swift client), so this record is where to start if any of it changes.
+Retake now pins the 0.7.1 release; what that showed is in [the proofs of concept](2026-10-26-proofs-of-concept.md), under "Proof of
+concept 1 again".
 
 | Ask | Status |
 | --- | --- |
@@ -37,24 +37,23 @@ breaking change, that the handshake also compares.
 whether they do between releases: main reports `0.6.38`, like the `v0.6.38` tag, while its commands
 (`191a6a85` folded `one_finger_tap` and the rest into `action`) and wire format (`5ab16a57` added a
 required `source` field to interface elements) have changed. A `9e56a7dc` client and a `d6257101`
-app both report `0.6.38` and pass the handshake. Then every reply fails to decode ("Failed to
-decode server message"), yet the app still carries out each command: in our test, three taps the
-client never saw succeed all landed. A tool that doesn't check for itself plays its whole script
-blind.
+app both report `0.6.38` and pass the handshake. Then every reply fails to decode ("Failed to decode
+server message"), yet the app still carries out each command: in our test, three taps the client
+never saw succeed all landed. A tool that doesn't check for itself plays its whole script blind.
 
 A version that changes with the contract makes incompatible builds refuse each other at the
-handshake, for every client, however the app was built: linked from source through SwiftPM, a
-local checkout, a vendored framework, or injected.
+handshake, for every client, however the app was built: linked from source through SwiftPM, a local
+checkout, a vendored framework, or injected.
 
-**Done** in #1479 and #1485. Builds between releases report the release with a 12-character
-contract hash (`0.7.1-d53fb59edbf3`), CI requires the hash to change with the commands or the wire
-format, and a mismatch is refused at the handshake with `protocolMismatch` before any command runs.
+**Done** in #1479 and #1485. Builds between releases report the release with a 12-character contract
+hash (`0.7.1-d53fb59edbf3`), CI requires the hash to change with the commands or the wire format,
+and a mismatch is refused at the handshake with `protocolMismatch` before any command runs.
 
 ## 2. Published Debug device frameworks per release
 
 **Ask.** Publish TheInsideJob, built Debug for iOS devices, with each release, next to the CLI and
-MCP tarballs: for example `theinsidejob-<version>-iphoneos-debug.zip`, holding one dynamic
-framework with its dependencies and resource bundles inside.
+MCP tarballs: for example `theinsidejob-<version>-iphoneos-debug.zip`, holding one dynamic framework
+with its dependencies and resource bundles inside.
 
 **Why.** Retake, and anyone injecting TheInsideJob rather than linking it, could download the
 framework for a version instead of building The Button Heist. Building from source would then be
@@ -80,14 +79,14 @@ Builds between releases have no published bundle.
 supported way to use it, alongside linking it: keep the `+load` auto-start, and the `INSIDEJOB_*`
 environment configuration it relies on, working for an injected copy.
 
-**Why.** It needs nothing from the app's project, so TheInsideJob can't reach an App Store build
-by accident. Tested on iOS 26.6.2: the injected framework started itself, took the port and token
-from `INSIDEJOB_PORT` and `INSIDEJOB_TOKEN`, and drove the app over the USB tunnel, including
-synthetic touches.
+**Why.** It needs nothing from the app's project, so TheInsideJob can't reach an App Store build by
+accident. Tested on iOS 26.6.2: the injected framework started itself, took the port and token from
+`INSIDEJOB_PORT` and `INSIDEJOB_TOKEN`, and drove the app over the USB tunnel, including synthetic
+touches.
 
-**Done** in #1478 and #1483. `docs/PREBUILT-IOS.md`, "Inject into a development app", documents
-the steps Retake takes, and the integration CI covers an unlinked host, injection at launch, and
-the public Swift client.
+**Done** in #1478 and #1483. `docs/PREBUILT-IOS.md`, "Inject into a development app", documents the
+steps Retake takes, and the integration CI covers an unlinked host, injection at launch, and the
+public Swift client.
 
 ## 4. Building The Button Heist's Tuist project on Xcode 27.1
 
@@ -127,12 +126,12 @@ the device's timing, and `captureInterface()` reads the current screen without d
 
 - **The USB tunnel counts as a network connection.** With `INSIDEJOB_SCOPE=simulator,usb`, a
   connection from the Mac over a device's USB tunnel (`devicectl`'s tunnel address, such as
-  `fda8:…::1`) was rejected as "network connections are not allowed"; it took `network` in the scope.
-  If `usb` is meant to admit it, that looks like a bug; if not, the docs could say so.
+  `fda8:…::1`) was rejected as "network connections are not allowed"; it took `network` in the
+  scope. If `usb` is meant to admit it, that looks like a bug; if not, the docs could say so.
 - **A direct address works only from a config file.** `EnvironmentConfig.resolve(deviceFilter:)`
   takes `[address]:port` as a direct target only for loopback; anything else becomes a discovery
-  query and fails with "No devices found". A config file's target with the same address connects.
-  A public way to pass a direct target and token would save writing a temporary config file.
+  query and fails with "No devices found". A config file's target with the same address connects. A
+  public way to pass a direct target and token would save writing a temporary config file.
 
 **Both fixed** in #1480. The default `simulator,usb` scope now admits the CoreDevice tunnel
 (recognized by its address pair, which the code notes to revisit if CoreDevice's addressing
@@ -151,9 +150,9 @@ static const char buttonHeistBuild[] = "buttonheist-build:v1;version=0.6.38;comm
 
 **Why it's only a nice-to-have.** With (1), a tool can tell compatible builds apart. What a stamp
 adds is the exact commit, for a tool's records, when nothing else says it: an app built by someone
-else's script, or linking The Button Heist from a local checkout or a vendored framework. For an
-app that pins it as a Swift package, the commit in `Package.resolved` is enough. Today the
-framework's `Info.plist` has a generic `1.0` (`1`), and a static link leaves no framework at all.
+else's script, or linking The Button Heist from a local checkout or a vendored framework. For an app
+that pins it as a Swift package, the commit in `Package.resolved` is enough. Today the framework's
+`Info.plist` has a generic `1.0` (`1`), and a static link leaves no framework at all.
 
 **Closed, not sent.** The release bundle's `VERSION` file names the version, but nothing in the
 framework itself does, not even its `Info.plist`. Retake wouldn't use it: a take records the version
