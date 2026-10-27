@@ -722,17 +722,21 @@ schema` prints them.
 
 ## Files Retake writes
 
-Paths in the project are relative to its folder, `Retake/` unless [`init`](#retake-init) was told otherwise.
+Retake writes in four places: the project, its output directory, the app's container on the device,
+and its own cache, outside any project. Paths in the project are relative to its folder, `Retake/`
+unless [`init`](#retake-init) was told otherwise.
 
 **In the project.** Nothing but these commands changes a project's own files:
 
 | Path | What |
 | --- | --- |
-| `retake.json`, `sets/`, `scenes/iphone/`, `scenes/ipad/`, `edits/`, `.gitignore` | Created by `init`. |
+| `retake.json`, `sets/`, `scenes/iphone/`, `scenes/ipad/`, `edits/` | Created by `init`. |
+| `.gitignore` | Created by `init`, or added to, naming the output directory. An output directory outside the project's folder goes in the current directory's `.gitignore` instead. |
 | `scenes/<type>/*.json` | Written by `compose`. |
 | `edits/*.json` | Rewritten by `conform`. |
 
-**In the output directory**, `output/` unless [moved](#the-output-directory), and gitignored:
+**In the output directory**, `output/` unless [moved](#the-output-directory), and gitignored. What's worth keeping, and
+nothing that's rewritten wholesale:
 
 | Path | What |
 | --- | --- |
@@ -745,16 +749,33 @@ Paths in the project are relative to its folder, `Retake/` unless [`init`](#reta
 
 | Path | What |
 | --- | --- |
-| `tmp/RetakeSet/`, `tmp/RetakeTakes/` | The set's files, staged for launch, and the take's copy of the app's data, deleted at the end of the run (or by `clean --on-device`). A `live` take writes into the app's real data instead. |
+| `tmp/RetakeSet/` | The set's files, staged for launch, and consumed by the launch that lays them out. |
+| `tmp/RetakeTakes/` | Each take's copy of the app's data, for `clean` and `cloned` sets, deleted by the next launch, and at the end of a run (or by `clean --on-device`). A `live` take writes into the app's real data instead. |
+| `tmp/RetakeLaunch/report.json` | What Retake's support library reports at launch, which Retake reads back to check it; replaced by each launch. |
+
+**In Retake's cache**, `~/Library/Caches/retake/`, each person's own and for every project, never in
+a repository:
+
+| Path | What |
+| --- | --- |
+| `builds/<project>/DerivedData/` | The app as `install` builds it with `xcodebuild`. |
+| `builds/<project>/installed/` | The copy `install` embeds Retake in and installs, replaced each time. |
+| `devices.json` | Device aliases, from `devices add`, `devices remove` and `init`. |
+| `insidejob/<version>/` | TheInsideJob for the Button Heist version Retake is built against, for a Retake built from source (`scripts/fetch-insidejob.sh`); a release carries its own. |
+| `support/<contract>/` | Retake's support library, by its contract version, for a Retake built from source; a release carries its own. |
+| `screen-capture-released` | When Retake last let go of a device's screen, so the next command waits out the 8 seconds macOS takes to offer it again. |
+
+`<project>` is named for the project's folder and the folder holding it, with a hash of the
+project's path, such as `Notes-Retake-8a9e87f7`, so two projects, or two clones of one, never share
+a build. Everything here but `devices.json` can be made again: clearing the cache costs a full build
+at the next `install`, and forgets device aliases, which `devices add` names again.
 
 **Elsewhere:**
 
 | Path | What |
 | --- | --- |
 | The `.app` given to `embed` | Changed in place, unless `--output` says otherwise. |
-| `~/Library/Caches/retake/builds/<project>/` | The app as `install` builds it, and the copy it embeds Retake in. |
-| `~/Library/Caches/retake/devices.json` | Device aliases, from `devices add` and `remove`, and `init`. |
-| `~/Library/Caches/retake/` | The rest Retake can make again: TheInsideJob and the support library it embeds, and when it last used a device's screen. |
+| `$TMPDIR/retake-*` | What one command works with: the app's console during a run, `devicectl`'s answers, the launch report copied back, and an archive `check` unpacks. A run's console is kept for when a launch fails, whose last lines the error quotes, and is left for the system to clear. |
 
 ## Movie metadata
 
