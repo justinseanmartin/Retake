@@ -239,7 +239,8 @@ On a physical device, nothing outside the app can grant permissions in advance (
 
 ## Scenes: the walk through the app
 
-A scene is a set and the steps played on it:
+A scene is a set and the steps played on it. Its `set` is the project's `defaultSet` unless it
+names one:
 
 ```json
 {
@@ -250,7 +251,7 @@ A scene is a set and the steps played on it:
   "tail": 2,
   "steps": [
     { "id": "new-note", "tap": { "label": "New Note" }, "hold": 1.2 },
-    { "type": { "text": "Groceries\n" } },
+    { "type": { "text": "Groceries\n", "into": { "value": "Title" } } },
     { "tap": { "x": 195, "y": 410 } },
     { "id": "reorder", "drag": { "from": { "x": 120, "y": 590 }, "to": { "x": 260, "y": 500 }, "duration": 0.8 } },
     { "id": "synced", "waitFor": { "label": "Synced" } },
@@ -259,14 +260,25 @@ A scene is a set and the steps played on it:
 }
 ```
 
-Each step does one thing. `tap` touches a point, or an element by its accessibility label; a tap by
-point is drawn in the video, and a tap by label isn't. `drag` is a straight one-finger drag between
-two points. `type` types text key by key on the on-screen keyboard, where `\n` presses return.
+Each step does one thing. `tap` touches a point, or an element; a tap by point is drawn in the
+video, and a tap on an element isn't. `drag` is a straight one-finger drag between two points,
+over `duration` seconds, 0.5 unless given. `type` types text key by key on the on-screen keyboard,
+where `\n` presses return, into the element `into` names, or the field already being typed in.
 `activate` is an accessibility activation, with no touch, for getting somewhere off camera.
 `orientation` turns the device with no hand on it, and ends when the app has turned. `waitFor` waits
-until an element with the label is on screen. `inspect` prints what's on screen, for finding targets
-while writing a scene. A step's `hold` is the pause after it, so the take has room to breathe; the
-edit trims what it doesn't need.
+until an element is on screen, or with `"gone": true` until it isn't, for up to `timeout` seconds,
+10 unless given, and the step fails if it doesn't happen. `inspect` prints what's on screen, for
+finding targets while writing a scene. A step's `hold` is the pause after it, 0 unless given, so the
+take has room to breathe; the edit trims what it doesn't need. A step can be only a `hold`, a pause.
+
+A step names an element as VoiceOver knows it: by its `label`, its `value` (a text field's
+placeholder or what's typed in it, as the field has no label of its own), or its `identifier` (an
+`accessibilityIdentifier` the app sets), any of them together. When several elements match,
+`occurrence` picks one, counted from 1 in the order VoiceOver reads the screen.
+
+A tap or a drag that lands while something is still moving, such as a sheet rising, can miss what
+it was aimed at, so a step that follows one that presents or dismisses something should wait for
+it: a `waitFor` on what arrives, or on what leaves with `"gone": true`.
 
 The step log records when an `orientation` step's frames changed shape, for the edit to
 [show the turn](#turns), and when a `waitFor`'s element appeared, so an edit can cut on what the
@@ -281,9 +293,9 @@ A scene starts in its `orientation`, `portrait` unless it says otherwise; Retake
 to it before launching the app, so a take never starts the way the last one ended.
 
 `setup` steps play before recording starts. `leadIn` and `tail` record a little before the first
-step and after the last, so the edit has frames to cut in and out on. `"recordsLaunch": true`
-starts recording before the app launches, to catch its launch screen. A scene's `environment` adds
-to its set's, for a flag only that take needs.
+step and after the last, 1 second each unless given, so the edit has frames to cut in and out on.
+`"recordsLaunch": true` starts recording before the app launches, to catch its launch screen. A
+scene's `environment` adds to its set's, for a flag only that take needs.
 
 Points are in the device's screen points, so scenes are written per device type: `scenes/iphone/`
 and `scenes/ipad/`. A scene of the same name on each type, with the same steps and ids, is what lets
