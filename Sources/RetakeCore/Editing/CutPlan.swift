@@ -34,6 +34,9 @@ public struct CutPlan: Equatable, Sendable {
         public var duration: Double
         /// How long it cross-fades in over the clip before; 0 for a cut.
         public var crossfade: Double
+        /// How it shows the device turning, and how long it blurs each turn, if it does.
+        public var turns: Edit.Turns = .letterboxed
+        public var turnBlur: Double? = nil
 
         public var end: Double { start + duration }
 
@@ -79,7 +82,10 @@ public struct CutPlan: Equatable, Sendable {
                 )
             }
             let start = (placements.last?.end ?? 0) - crossfade
-            placements.append(Placement(take: clip.take, from: from, to: to, speed: clip.speed, start: start, duration: duration, crossfade: crossfade))
+            placements.append(Placement(
+                take: clip.take, from: from, to: to, speed: clip.speed, start: start, duration: duration, crossfade: crossfade,
+                turns: clip.turns ?? video.turns, turnBlur: (clip.turnBlur ?? video.turnBlur)?.duration,
+            ))
         }
         return CutPlan(placements: placements)
     }
@@ -116,4 +122,62 @@ public struct ClipFraming: Equatable, Sendable {
 
     /// The footage's frame on the canvas.
     public var canvasFrame: CGRect { cropRect.applying(transform) }
+
+    /// A frame turned `degrees` clockwise (0, 90 or -90) to fit a file `stored` in size, framed on
+    /// `canvas` as `turns` says: with `letterboxed`, turned back upright, the app's window found in
+    /// it (its portrait shape at the top, or its landscape shape at the left, as `aspect` gives
+    /// them), filling the canvas when upright in portrait and fitted whole between bands when
+    /// landscape; with `device`, left as stored, the window cropped where it lies and filling the
+    /// canvas, as a camera fixed to the device would see it.
+    public static func framing(
+        _ canvas: CGSize, stored: CGSize, turned degrees: Int, aspect: SetFile.AspectChoice?, turns: Edit.Turns,
+    ) -> ClipFraming {
+        let upright = degrees == 0 ? stored : CGSize(width: stored.height, height: stored.width)
+        let landscape = upright.width > upright.height
+        let window: CGRect
+        if landscape, let shape = aspect?.landscapeShape {
+            window = CGRect(x: 0, y: 0, width: min(upright.width, (upright.height * shape.width / shape.height).rounded()), height: upright.height)
+        } else {
+            window = Self.window(in: upright, aspect: landscape ? nil : aspect?.portrait)
+        }
+        // From the upright frame to the stored one, and back.
+        let toStored = quarterTurn(degrees, of: upright)
+        let toUpright = toStored.inverted()
+        let crop = window.applying(toStored).standardized
+
+        switch (turns, landscape) {
+        case (.device, _), (.letterboxed, false) where degrees == 0:
+            let scale = max(canvas.width / crop.width, canvas.height / crop.height)
+            let shown = CGSize(width: canvas.width / scale, height: canvas.height / scale)
+            let origin = CGPoint(x: crop.minX + (crop.width - shown.width) / 2, y: crop.minY + (crop.height - shown.height) / 2)
+            return ClipFraming(
+                cropRect: CGRect(origin: origin, size: shown),
+                transform: CGAffineTransform(translationX: -origin.x, y: -origin.y).concatenating(CGAffineTransform(scaleX: scale, y: scale)),
+            )
+        default:
+            // Upright, the window fills the canvas in portrait, or fits it whole in landscape.
+            let scale = landscape
+                ? min(canvas.width / window.width, canvas.height / window.height)
+                : max(canvas.width / window.width, canvas.height / window.height)
+            let placed = CGSize(width: window.width * scale, height: window.height * scale)
+            let offset = CGPoint(x: (canvas.width - placed.width) / 2, y: (canvas.height - placed.height) / 2)
+            return ClipFraming(
+                cropRect: crop,
+                transform: toUpright
+                    .concatenating(CGAffineTransform(translationX: -window.minX, y: -window.minY))
+                    .concatenating(CGAffineTransform(scaleX: scale, y: scale))
+                    .concatenating(CGAffineTransform(translationX: offset.x, y: offset.y)),
+            )
+        }
+    }
+
+    /// The transform that turns a frame of `size` a quarter clockwise (90) or anticlockwise (-90), or
+    /// not at all, keeping it in the positive quadrant, with y running down, as frames do.
+    static func quarterTurn(_ degrees: Int, of size: CGSize) -> CGAffineTransform {
+        switch degrees {
+        case 90: CGAffineTransform(a: 0, b: 1, c: -1, d: 0, tx: size.height, ty: 0)
+        case -90: CGAffineTransform(a: 0, b: -1, c: 1, d: 0, tx: 0, ty: size.width)
+        default: .identity
+        }
+    }
 }

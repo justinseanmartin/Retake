@@ -59,6 +59,59 @@ struct CutPlanTests {
     }
 }
 
+/// Turned frames, framed upright between bands, or as the device held them.
+struct TurnFramingTests {
+    let canvas = PreviewSpec.of(.ipad).size
+    let stored = CGSize(width: 1200, height: 1718)
+    let aspect = SetFile.AspectChoice(portrait: .init(width: 3, height: 4), landscape: .init(width: 4, height: 3))
+
+    func lands(_ framing: ClipFraming, _ point: CGPoint) -> CGPoint {
+        let placed = point.applying(framing.transform)
+        return CGPoint(x: placed.x.rounded(), y: placed.y.rounded())
+    }
+
+    @Test func aTurnedFrameIsTurnedBackUprightAndLetterboxed() {
+        // Turned a quarter clockwise to fit: the upright frame's top left is the stored top right.
+        // Upright, the 4:3 window at the left, 1600×1200, fits the canvas as 1200×900, centred.
+        let clockwise = ClipFraming.framing(canvas, stored: stored, turned: 90, aspect: aspect, turns: .letterboxed)
+        #expect(clockwise.cropRect == CGRect(x: 0, y: 0, width: 1200, height: 1600))
+        #expect(lands(clockwise, CGPoint(x: 1200, y: 0)) == CGPoint(x: 0, y: 350), "the window's top left")
+        #expect(lands(clockwise, CGPoint(x: 0, y: 1600)) == CGPoint(x: 1200, y: 1250), "its bottom right")
+
+        // Turned anticlockwise: the upright top left is the stored bottom left.
+        let anticlockwise = ClipFraming.framing(canvas, stored: stored, turned: -90, aspect: aspect, turns: .letterboxed)
+        #expect(anticlockwise.cropRect == CGRect(x: 0, y: 118, width: 1200, height: 1600))
+        #expect(lands(anticlockwise, CGPoint(x: 0, y: 1718)) == CGPoint(x: 0, y: 350))
+        #expect(lands(anticlockwise, CGPoint(x: 1200, y: 118)) == CGPoint(x: 1200, y: 1250))
+    }
+
+    @Test func asTheDeviceHeldItTheWindowIsCroppedWhereItLiesAndFillsTheCanvas() {
+        let held = ClipFraming.framing(canvas, stored: stored, turned: 90, aspect: aspect, turns: .device)
+        #expect(held.cropRect == CGRect(x: 0, y: 0, width: 1200, height: 1600))
+        #expect(lands(held, .zero) == .zero && lands(held, CGPoint(x: 1200, y: 1600)) == CGPoint(x: 1200, y: 1600), "not turned")
+    }
+
+    @Test func anUprightFrameIsFramedAsBefore() {
+        let upright = ClipFraming.framing(canvas, stored: stored, turned: 0, aspect: aspect, turns: .letterboxed)
+        #expect(upright == .filling(canvas, capture: stored, aspect: aspect.portrait))
+    }
+
+    @Test func aClipPlaysEachShapeInForceFromItsFromToItsTo() {
+        let shapes = [
+            TakeWriter.ShapeChange(at: 0, width: 1200, height: 1718, turn: 0),
+            .init(at: 2, width: 1718, height: 1200, turn: 90),
+            .init(at: 4, width: 1200, height: 1718, turn: 0),
+        ]
+        let placement = CutPlan.Placement(take: "a", from: 1, to: 3, speed: 1, start: 0, duration: 2, crossfade: 0)
+        #expect(EditComposition.stretches(of: placement, shapes: shapes).map { [$0.at, Double($0.turn)] } == [[1, 0], [2, 90]])
+        var later = placement
+        later.from = 2.5
+        later.to = 5
+        #expect(EditComposition.stretches(of: later, shapes: shapes).map { [$0.at, Double($0.turn)] } == [[2.5, 90], [4, 0]])
+        #expect(EditComposition.stretches(of: placement, shapes: []).map(\.turn) == [0], "a take with no shapes logged")
+    }
+}
+
 /// The composition, from small generated movies: two takes, one red on top and one green, so which
 /// clip shows is a matter of colour.
 struct EditCompositionTests {
@@ -128,5 +181,20 @@ struct EditCompositionTests {
         #expect(green.1 > green.0 + 150, "the second, alone")
         let between = try await colour(of: composition, at: 0.875)
         #expect(between.0 > green.0 + 40 && between.1 > red.1 + 40, "half way through the cross-fade, some of each")
+    }
+
+    @Test func aTurnInAClipChangesItsFramingThereAndIsBlurredAroundIt() async throws {
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let movies = ["red": try await movie("red", red: 255, green: 0, blue: 0)]
+        var log = TakeLogReadingTests.log()
+        log.shapes = [.init(at: 0, width: 60, height: 80, turn: 0), .init(at: 1, width: 80, height: 60, turn: 90)]
+        var placement = CutPlan.Placement(take: "red", from: 0.5, to: 1.5, speed: 2, start: 0, duration: 0.5, crossfade: 0)
+        placement.turnBlur = 0.2
+        let composition = try await EditComposition.make(
+            CutPlan(placements: [placement]), movies: movies, logs: ["red": log], spec: PreviewSpec(width: 60, height: 80, framesPerSecond: 30), background: .black,
+        )
+        #expect(composition.framings[0].map(\.at) == [0, 0.25], "the turn, half a second into the take's stretch, at twice its speed")
+        #expect(composition.turnBlurs.count == 1)
+        #expect(abs(composition.turnBlurs[0].lowerBound - 0.15) < 1e-9 && abs(composition.turnBlurs[0].upperBound - 0.35) < 1e-9)
     }
 }
