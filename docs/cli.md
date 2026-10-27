@@ -421,14 +421,15 @@ options:
 ```
 > tap --label "New Note" --id new-note --hold 0.8
 > type --text "Groceries\n" --value "Title"
-> wait --label "Synced"
+> waitFor --label "Synced"
 > inspect
 ```
 
 A step runs as soon as it's given. One that runs is added to `scenes/<type>/<scene>.json`, and
 what's on screen after it is printed; one that doesn't is left out, saying why, and the scene
-carries on from wherever the app is. Each step's action takes the options its step does in a scene
-file, and every one also takes `--id <name>` and `--hold <seconds>`, both optional:
+carries on from wherever the app is. Each step's action is named as its step is in a scene file, and
+takes the options its step does there; every one but `hold` also takes `--id <name>` and `--hold
+<seconds>`, both optional, and `hold` takes `--id`:
 
 | Action | Required | Optional |
 | --- | --- | --- |
@@ -436,11 +437,12 @@ file, and every one also takes `--id <name>` and `--hold <seconds>`, both option
 | `drag` | `--from <x>,<y> --to <x>,<y>` | `--duration <seconds>` (0.5) |
 | `type` | `--text <text>`, where `\n` presses return | An element to type into (the field already being typed in) |
 | `activate` | An element | |
-| `wait` | An element | `--gone`, `--timeout <seconds>` (10) |
-| `turn` | `--to portrait`, `portrait-upside-down`, `landscape-left` or `landscape-right` | |
-| `pause` | `--seconds <seconds>` | |
+| `orientation` | `--to portrait`, `portrait-upside-down`, `landscape-left` or `landscape-right` | |
+| `waitFor` | An element | `--gone`, `--timeout <seconds>` (10) |
+| `hold` | `--seconds <seconds>` | |
 
-`--hold` is the scene's `defaultHold` when it isn't given.
+`hold` adds a step that's only a pause, as `{ "hold": 2 }` does in a file. A step's `--hold` is the
+scene's `defaultHold` when it isn't given.
 
 An element is any of `--label <text>`, `--value <text>` and `--identifier <text>`, at least one,
 with `--occurrence <n>` (from 1, optional) to pick one of several that match. Other actions act on
@@ -449,8 +451,7 @@ the scene rather than the app, and add no step:
 | Action | Required | Optional | Does |
 | --- | --- | --- | --- |
 | `inspect` | | An element | Prints what's on screen again, or only the elements that match, each with the `--occurrence` that picks it. |
-| `hold` | `--seconds <seconds>` | | Sets the last step's hold. |
-| `id` | `--name <name>` | | Names the last step, for edits to anchor to. |
+| `set` | `--hold <seconds>` or `--id <name>`, or both | | Changes the last step's hold, or its id, for edits to anchor to. |
 | `undo` | | How many steps, `<n>` (1) | Drops the last step, or the last `<n>`, then launches the app again and replays the rest. |
 | `replay` | | | Launches the app again and replays every step, dropping none. |
 | `steps` | | | Lists the scene's steps. |
