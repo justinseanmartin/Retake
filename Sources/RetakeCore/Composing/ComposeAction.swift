@@ -5,12 +5,15 @@ import Foundation
 public enum ComposeAction: Equatable, Sendable {
     /// A step to run, and add to the scene when it runs.
     case step(Step)
-    /// Print what's on screen.
-    case inspect
+    /// Print what's on screen, or only the elements that match.
+    case inspect(ElementTarget?)
     /// Set the last step's hold, or its id.
     case hold(Double)
     case id(String)
-    case undo
+    /// Drop the last steps, as many as given, then launch again and replay the rest.
+    case undo(Int)
+    /// Launch again and replay every step.
+    case replay
     case steps
     case help(String?)
     case quit
@@ -38,8 +41,12 @@ public enum ComposeAction: Equatable, Sendable {
         guard let spec = ComposeActionSpec.all.first(where: { $0.name == name }) else {
             throw .wrong("There's no action \"\(name)\"; `help` lists them.")
         }
-        // `help tap` names the action without an option, as a person would type it.
+        // `help tap` and `undo 3` give their one option bare, as a person would type it.
         if name == "help", words.count == 2, !words[1].hasPrefix("--") { return .help(words[1]) }
+        if name == "undo", words.count == 2, !words[1].hasPrefix("--") {
+            guard let count = Int(words[1]), count >= 1 else { throw .wrong("undo takes how many steps to drop, from 1, not \"\(words[1])\".") }
+            return .undo(count)
+        }
         let given = try options(Array(words.dropFirst()), for: spec)
         return try spec.build(given)
     }
@@ -304,7 +311,12 @@ extension ComposeActionSpec {
         ) { given throws(ComposeAction.Problem) in
             .step(Step(nil, hold: try number(given["seconds"]!, "--seconds", above: 0)))
         },
-        ComposeActionSpec(name: "inspect", summary: "Prints what's on screen. Adds no step.", options: [], required: [], isStep: false) { _ in .inspect },
+        ComposeActionSpec(
+            name: "inspect", summary: "Prints what's on screen, or only the elements that match, numbered as --occurrence counts them.",
+            options: Array(ElementOptions.options.prefix(3)), required: [], isStep: false,
+        ) { given throws(ComposeAction.Problem) in
+            .inspect(try ElementOptions.target(given))
+        },
         ComposeActionSpec(
             name: "hold", summary: "Sets the last step's hold, the pause after it.",
             options: [.option("seconds", "<seconds>", "how long")], required: ["seconds"], isStep: false,
@@ -317,7 +329,11 @@ extension ComposeActionSpec {
         ) { given throws(ComposeAction.Problem) in
             .id(given["name"]!)
         },
-        ComposeActionSpec(name: "undo", summary: "Drops the last step, then launches the app again and replays the rest.", options: [], required: [], isStep: false) { _ in .undo },
+        ComposeActionSpec(
+            name: "undo", summary: "Drops the last step, or with a number, `undo 3`, that many; then launches the app again and replays the rest.",
+            options: [], required: [], isStep: false,
+        ) { _ in .undo(1) },
+        ComposeActionSpec(name: "replay", summary: "Launches the app again and replays every step, dropping none.", options: [], required: [], isStep: false) { _ in .replay },
         ComposeActionSpec(name: "steps", summary: "Lists the scene's steps.", options: [], required: [], isStep: false) { _ in .steps },
         ComposeActionSpec(
             name: "help", summary: "Lists the actions, or one action's options.",

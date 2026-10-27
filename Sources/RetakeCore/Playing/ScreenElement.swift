@@ -51,3 +51,13 @@ public struct ScreenElement: Equatable, Sendable {
         return parts.joined(separator: "  ")
     }
 }
+
+extension ElementTarget {
+    /// Whether `element` is one this names: every field given equal to the element's, as The Button
+    /// Heist matches them, leaving `occurrence` aside, which picks among those that match.
+    public func matches(_ element: ScreenElement) -> Bool {
+        (label == nil || label == element.label)
+            && (value == nil || value == element.value)
+            && (identifier == nil || identifier == element.identifier)
+    }
+}

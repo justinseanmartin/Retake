@@ -17,11 +17,14 @@ public enum Composer {
     public enum Reply: Sendable {
         /// What's on screen: after launching, or for `inspect`.
         case screen([ScreenElement])
+        /// The elements `inspect` was asked for, in the order VoiceOver reads them, so the first is
+        /// `--occurrence 1`.
+        case matches([ScreenElement])
         /// A step that ran and was added, its number, and the screen after it.
         case added(Step, number: Int, [ScreenElement])
         /// The last step, changed by `hold` or `id`.
         case changed(Step, number: Int)
-        /// The scene's steps, for `steps`, or replayed after `undo`.
+        /// The scene's steps, for `steps`, or replayed after `undo` or `replay`.
         case steps([Step])
         case help(String)
         /// A step that didn't run, or an action that was wrong; nothing was added.
@@ -68,7 +71,7 @@ public enum Composer {
             try await AppSession.run("compose-\(name)", in: project, set: set, scene: launch, on: device, report: report, cleanUp: false) { driver, _ throws(RetakeError) in
                 state.ending = try await session(name, state: state, on: driver, input: input, reply: reply)
             }
-            if state.ending != .undo { break }
+            if state.ending != .relaunch { break }
         }
         if set.state != .live {
             do {
@@ -79,7 +82,7 @@ public enum Composer {
         }
     }
 
-    enum Ending { case quit, undo }
+    enum Ending { case quit, relaunch }
 
     /// The scene as it's composed, across relaunches.
     final class State: @unchecked Sendable {
@@ -96,9 +99,16 @@ public enum Composer {
     /// One launch's worth: replays the scene's steps, shows the screen, then runs actions until
     /// one ends it.
     @ButtonHeistActor
-    static func session(_ name: String, state: State, on driver: some AppDriver, input: some ComposeInput, reply: @escaping @Sendable (Reply) -> Void) async throws(RetakeError) -> Ending {
-        // Holds are for takes; composing doesn't wait them out.
-        let player = Player(pause: { _ in })
+    static func session(
+        _ name: String,
+        state: State,
+        on driver: some AppDriver,
+        input: some ComposeInput,
+        player: Player = Player(),
+        reply: @escaping @Sendable (Reply) -> Void,
+    ) async throws(RetakeError) -> Ending {
+        // A replay waits out each step's hold, as a take does, since a step can need the app to have
+        // settled after the one before. A step given now runs as soon as it's given.
         var orientation = state.scene.orientation
         if !state.document.steps.isEmpty {
             var replay = state.scene
@@ -142,8 +152,9 @@ public enum Composer {
                 state.document.steps.append(step)
                 try state.document.write()
                 reply(.added(step, number: number, try await driver.elements()))
-            case .inspect:
-                reply(.screen(try await driver.elements()))
+            case .inspect(let target):
+                let elements = try await driver.elements()
+                reply(target.map { target in .matches(elements.filter(target.matches)) } ?? .screen(elements))
             case .hold(let seconds):
                 guard var last = state.document.steps.last else { reply(.failed("There's no step yet to hold after.")); continue }
                 last.hold = seconds
@@ -156,11 +167,15 @@ public enum Composer {
                 }
                 last.id = id
                 try replaceLast(with: last, in: state, reply: reply)
-            case .undo:
-                guard !state.document.steps.isEmpty else { reply(.failed("There's no step to undo.")); continue }
-                state.document.steps.removeLast()
+            case .undo(let count):
+                let steps = state.document.steps.count
+                guard steps > 0 else { reply(.failed("There's no step to undo.")); continue }
+                guard count <= steps else { reply(.failed("There \(steps == 1 ? "is 1 step" : "are \(steps) steps") to undo, not \(count).")); continue }
+                state.document.steps.removeLast(count)
                 try state.document.write()
-                return .undo
+                return .relaunch
+            case .replay:
+                return .relaunch
             case .steps:
                 reply(.steps(state.document.steps))
             case .help(let action):

@@ -9,7 +9,7 @@ struct Compose: AsyncParsableCommand {
             Launches the app on the scene's set, replays its steps, prints what's on screen, then \
             takes actions, one a line: a step's action with its options, such as tap --label "New \
             Note", which runs at once and is added to the scene when it runs, or one that acts on \
-            the scene, such as inspect, undo or quit. `help` lists them. Reads standard input, so a \
+            the scene, such as inspect, undo, replay or quit. `help` lists them. Reads standard input, so a \
             script or an agent can drive it; --json answers each line with a line of JSON.
             """,
     )
@@ -62,6 +62,9 @@ enum ComposeOutput {
         case .screen(let elements):
             print("On screen, \(elements.count) element\(elements.count == 1 ? "" : "s"):")
             for element in elements { print("  \(element.line)") }
+        case .matches(let elements):
+            if elements.isEmpty { print("Nothing on screen matches.") }
+            for (index, element) in elements.enumerated() { print("  --occurrence \(index + 1)  \(element.line)") }
         case .added(let step, let number, let elements):
             print("✓ step \(number)\(step.id.map { " (\($0))" } ?? ""): \(step.line)")
             print("On screen, \(elements.count) element\(elements.count == 1 ? "" : "s"):")
@@ -85,6 +88,13 @@ enum ComposeOutput {
         switch reply {
         case .screen(let elements):
             fields = [.init(key: "ok", value: .bool(true)), .init(key: "screen", value: .array(elements.map(\.json)))]
+        case .matches(let elements):
+            let numbered = elements.enumerated().map { index, element -> JSONValue in
+                guard case .object(var object) = element.json else { return element.json }
+                object.entries.append(.init(key: "occurrence", value: .number(Double(index + 1))))
+                return .object(object)
+            }
+            fields = [.init(key: "ok", value: .bool(true)), .init(key: "screen", value: .array(numbered))]
         case .added(let step, let number, let elements):
             fields = [
                 .init(key: "ok", value: .bool(true)), .init(key: "number", value: .number(Double(number))),

@@ -19,10 +19,14 @@ struct ComposeActionTests {
     }
 
     @Test func actionsOnTheSceneAddNoStep() throws {
-        #expect(try parse("inspect") == .inspect)
+        #expect(try parse("inspect") == .inspect(nil))
+        #expect(try parse(#"inspect --label "Delete""#) == .inspect(ElementTarget(label: "Delete")))
         #expect(try parse("hold --seconds 1.5") == .hold(1.5))
         #expect(try parse("id --name synced") == .id("synced"))
-        #expect(try parse("undo") == .undo && parse("steps") == .steps && parse("quit") == .quit)
+        #expect(try parse("undo") == .undo(1) && parse("undo 3") == .undo(3) && parse("replay") == .replay)
+        #expect(try parse("steps") == .steps && parse("quit") == .quit)
+        #expect(throws: ComposeAction.Problem.self) { try parse("undo 0") }
+        #expect(throws: ComposeAction.Problem.self) { try parse("inspect --occurrence 2") }
         #expect(try parse("help") == .help(nil) && parse("help wait") == .help("wait"))
     }
 
@@ -63,7 +67,7 @@ struct ComposeActionTests {
         let tap = try #require(ComposeActionSpec.all.first { $0.name == "tap" }).usage
         #expect(tap.contains("an element (--label, --value or --identifier, one at least), or a point (--x <x> --y <y>)"))
         #expect(!tap.contains("--x <x>  in screen points"), "x and y are in what's required, not listed again")
-        #expect(ComposeActionSpec.overview.split(separator: "\n").contains { $0.hasPrefix("  inspect ") && $0.hasSuffix("Prints what's on screen. Adds no step.") })
+        #expect(ComposeActionSpec.overview.split(separator: "\n").contains { $0.hasPrefix("  inspect ") && $0.hasSuffix("numbered as --occurrence counts them.") })
     }
 }
 
@@ -122,12 +126,16 @@ final class Replies: @unchecked Sendable {
 struct ComposerSessionTests {
     let url = FileManager.default.temporaryDirectory.appending(path: "retake-compose-\(UUID().uuidString)/a.json")
 
-    func session(_ lines: [String], answers: [String] = [], driver: FakeDriver = FakeDriver(), steps: [Step] = []) async throws -> (Composer.Ending, Composer.State, Replies) {
+    func session(
+        _ lines: [String], answers: [String] = [], driver: FakeDriver = FakeDriver(), steps: [Step] = [], time: FakeTime = FakeTime(),
+    ) async throws -> (Composer.Ending, Composer.State, Replies) {
         var document = SceneDocument(url: url, scene: nil, text: nil, newOn: "base")
         document.steps = steps
         let state = Composer.State(document: document, scene: SceneFile(set: "base", steps: []))
         let replies = Replies()
-        let ending = try await Composer.session("a", state: state, on: driver, input: ScriptedInput(lines, answers: answers)) { replies.all.append($0) }
+        let ending = try await Composer.session("a", state: state, on: driver, input: ScriptedInput(lines, answers: answers), player: time.player()) {
+            replies.all.append($0)
+        }
         return (ending, state, replies)
     }
 
@@ -143,10 +151,39 @@ struct ComposerSessionTests {
         #expect(written.contains(#"{ "tap": { "label": "New Note" }, "hold": 2, "id": "new-note" }"#))
     }
 
-    @Test func undoDropsTheLastStepAndEndsTheLaunchForAReplay() async throws {
+    @Test func undoDropsTheLastStepsAndEndsTheLaunchForAReplay() async throws {
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
-        let (ending, state, _) = try await session(["undo", "steps"], steps: [Step(nil, hold: 1), Step(.tapElement(ElementTarget(label: "A")))])
-        #expect(ending == .undo && state.document.steps == [Step(nil, hold: 1)])
+        let steps = [Step(nil, hold: 1), Step(.tapElement(ElementTarget(label: "A"))), Step(.tapElement(ElementTarget(label: "B")))]
+        let (ending, state, _) = try await session(["undo", "steps"], steps: steps)
+        #expect(ending == .relaunch && state.document.steps == Array(steps.prefix(2)))
+        let (_, two, replies) = try await session(["undo 4", "undo 2"], steps: steps)
+        #expect(replies.failures == ["There are 3 steps to undo, not 4."])
+        #expect(two.document.steps == [Step(nil, hold: 1)])
+    }
+
+    @Test func replayRelaunchesDroppingNothing() async throws {
+        let steps = [Step(.tapElement(ElementTarget(label: "A")))]
+        let (ending, state, _) = try await session(["replay"], steps: steps)
+        #expect(ending == .relaunch && state.document.steps == steps)
+    }
+
+    @Test func aReplayWaitsOutEachStepsHoldButAStepGivenNowDoesnt() async throws {
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let time = FakeTime()
+        let steps = [Step(.tapElement(ElementTarget(label: "A")), hold: 1.5), Step(nil, hold: 0.5)]
+        _ = try await session([#"tap --label "B" --hold 2"#, "quit"], steps: steps, time: time)
+        #expect(time.pauses == [1.5, 0.5])
+    }
+
+    @Test func inspectWithAnElementListsOnlyItsMatchesInOrder() async throws {
+        let driver = FakeDriver()
+        let delete = { (row: String) in ScreenElement(label: "Delete", value: row) }
+        driver.screens = [[delete("Groceries"), ScreenElement(label: "New Note"), delete("Book club")]]
+        let (_, _, replies) = try await session([#"inspect --label "Delete""#, #"inspect --label "Delete" --value "Book club""#, "inspect"], driver: driver)
+        let matches = replies.all.compactMap { reply -> [ScreenElement]? in
+            if case .matches(let elements) = reply { elements } else { nil }
+        }
+        #expect(matches == [[delete("Groceries"), delete("Book club")], [delete("Book club")]])
     }
 
     @Test func anIDMustBeOneAStepCanHave() async throws {
