@@ -15,6 +15,12 @@ public struct RetakeVersion: Codable, Equatable, Sendable {
     public var version: String
     public var buttonHeist: ButtonHeist
 
+    /// The version this Retake's schemas are published under: its release, without a pre-release
+    /// suffix, so `0.0.1-dev` reads files written for `0.0.1`.
+    public var schemaVersion: String {
+        String(version.prefix { $0 != "-" })
+    }
+
     public static let current = RetakeVersion(
         version: "0.0.1-dev",
         buttonHeist: ButtonHeist(version: buttonHeistVersion.description, commit: nil),
