@@ -91,7 +91,7 @@ public struct Devicectl: DeviceControl {
     }
 
     /// Runs `devicectl` with `arguments`, returning the JSON it writes.
-    func run(_ arguments: [String]) throws(RetakeError) -> Data {
+    public func run(_ arguments: [String]) throws(RetakeError) -> Data {
         let output = FileManager.default.temporaryDirectory.appending(path: "retake-devicectl-\(UUID().uuidString).json")
         defer { try? FileManager.default.removeItem(at: output) }
         let result: Subprocess.Result

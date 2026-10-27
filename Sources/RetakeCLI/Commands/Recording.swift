@@ -203,7 +203,15 @@ struct Clean: AsyncParsableCommand {
     }
 
     func run() async throws {
-        _ = try project.locate()
-        throw RetakeError.notImplemented(onDevice ? "clean --on-device" : "clean")
+        let located = try project.locate()
+        guard onDevice else { throw RetakeError.notImplemented("clean") }
+        let directory = try DeviceDirectory.current()
+        let target = try directory.resolve(device.choice(
+            configuration: located.settings.device.map { ($0, located.configuration) },
+            connected: directory.recordable.map(\.udid),
+        ))
+        let bundleID = try Installer.bundleID(for: located)
+        try Launcher.cleanUp(bundleID: bundleID, on: target)
+        print("Deleted takes' copies of \(bundleID)'s data, and staged set files, from \(target.name).")
     }
 }

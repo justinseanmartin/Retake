@@ -15,6 +15,11 @@ public struct SetFile: Equatable, Sendable {
         /// The file or folder in the project it's copied from, relative to the project's directory.
         public var source: String
 
+        public init(destination: String, source: String) {
+            self.destination = destination
+            self.source = source
+        }
+
         public var isFolder: Bool { destination.hasSuffix("/") }
     }
 

@@ -49,5 +49,10 @@ let package = Package(
             name: "RetakeCoreTests",
             dependencies: ["RetakeCore"],
         ),
+        // Checks only a device can make, run with RETAKE_TEST_DEVICE naming one, and skipped otherwise.
+        .testTarget(
+            name: "RetakeDeviceTests",
+            dependencies: ["RetakeCore"],
+        ),
     ],
 )
