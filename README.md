@@ -237,8 +237,11 @@ geometry won't follow; one that reads the screen once at launch and then its geo
 
 ### Things a set can't control
 
-On a physical device, nothing outside the app can grant permissions in advance (a scene taps "Allow"
-on the prompt instead), change the clock, or fill the photo library.
+On a physical device, nothing outside the app can grant permissions in advance, change the clock, or
+fill the photo library, and a scene can't answer a permission prompt either (see
+[what a scene can't reach](#what-a-scene-cant-reach)). A permission granted by hand stays granted, whatever a set's `state`,
+since iOS keeps it apart from the app's files and defaults; so grant what a scene needs once, before
+recording.
 
 ## Scenes: the walk through the app
 
@@ -328,6 +331,24 @@ step and after the last, 1 second each unless given, so the edit has frames to c
 Points are in the device's screen points, so scenes are written per device type: `scenes/iphone/`
 and `scenes/ipad/`. A scene of the same name on each type, with the same steps and ids, is what lets
 one edit cut both.
+
+### What a scene can't reach
+
+The Button Heist acts from inside the app, so a scene sees and touches only what the app itself
+draws. What another process shows is out of its reach:
+
+- **The system's alerts**: permission prompts (location, notifications, camera, tracking and the
+  rest), and other alerts iOS shows over the app.
+- **Share sheets, and other system screens shown inside the app**, such as composing mail or picking
+  a document.
+- **`SFSafariViewController`**, and the pages a `WKWebView` shows.
+- **Notifications, Control Center, the home screen and other apps.**
+
+A step naming one fails, as if it weren't on screen. Keep them out of takes: grant a permission by
+hand before recording, as it then stays granted; and where a preview should show one, have the app
+show a stand-in of its own under a launch flag the set turns on. The recording still captures
+whatever is on screen, so a system alert that appears unasked is in the take. The Button Heist's
+[scope and limits](https://github.com/TheButtonHeist/TheButtonHeist/blob/v0.7.1/docs/SCOPE-AND-LIMITS.md) say more.
 
 ## Takes: footage and a step log
 
