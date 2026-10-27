@@ -21,7 +21,7 @@ extension EditFile {
             return devices
         }
         let takes = root.optional("takes") { readTakes($0, $1, reader) } ?? [:]
-        root.know("$schema", "music", "touchSound", "takeAudioVolume", "background", "turns", "turnBlur", "clips")
+        root.know("$schema", "music", "tapSound", "takeAudioVolume", "background", "turns", "turnBlur", "clips")
         for type in DeviceType.allCases {
             guard let override = root.value(type.rawValue) else { continue }
             if let devices, !devices.contains(type) {
@@ -92,7 +92,7 @@ extension EditFile {
             let fadeOut = object.optional("fadeOut") { reader.number($0, at: $1, .atLeast(0)) } ?? 0
             return file.map { Edit.Music(file: $0, volume: volume, fadeOut: fadeOut) }
         }
-        let touchSound = root.optional("touchSound") { readSound($0, $1, reader) }
+        let tapSound = root.optional("tapSound") { readSound($0, $1, reader) }
         let takeAudioVolume = root.optional("takeAudioVolume") { reader.number($0, at: $1, .atLeast(0)) } ?? 1
         let background = root.optional("background") { readColor($0, $1, reader) } ?? .black
         let turns = root.optional("turns") { reader.choice($0, at: $1, as: Edit.Turns.self) } ?? .letterboxed
@@ -105,7 +105,7 @@ extension EditFile {
         if let clips { checkClips(clips, root.object["clips"], at: root.path("clips"), reader) }
         guard reader.problems.count == problemsBefore, let clips else { return nil }
         return Edit(
-            music: music, touchSound: touchSound, takeAudioVolume: takeAudioVolume, background: background,
+            music: music, tapSound: tapSound, takeAudioVolume: takeAudioVolume, background: background,
             turns: turns, turnBlur: turnBlur, clips: clips,
         )
     }

@@ -154,7 +154,7 @@ public struct ProjectValidator {
             }
             guard let video = edit.videos[type] else { continue }
             if let music = video.music { checkFile(music.file, at: JSONPath.root.appending("music").appending("file"), for: type) }
-            if let sound = video.touchSound { checkFile(sound.file, at: JSONPath.root.appending("touchSound").appending("file"), for: type) }
+            if let sound = video.tapSound { checkFile(sound.file, at: JSONPath.root.appending("tapSound").appending("file"), for: type) }
             let clipIDs = Dictionary(video.clips.enumerated().compactMap { index, clip in clip.id.map { ($0, index) } }, uniquingKeysWith: { first, _ in first })
             for (index, clip) in video.clips.enumerated() {
                 let at = JSONPath.root.appending("clips").appending(index)

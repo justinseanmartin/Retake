@@ -40,7 +40,7 @@ public struct EditFile: Equatable, Sendable {
 /// One device type's video, as an edit cuts it.
 public struct Edit: Equatable, Sendable {
     public var music: Music?
-    public var touchSound: Sound?
+    public var tapSound: Sound?
     /// The level of the take's own sound, where a clip plays it.
     public var takeAudioVolume: Double
     /// The colour of letterbox bands and of the corners a turn uncovers.
@@ -51,7 +51,7 @@ public struct Edit: Equatable, Sendable {
 
     public init(
         music: Music? = nil,
-        touchSound: Sound? = nil,
+        tapSound: Sound? = nil,
         takeAudioVolume: Double = 1,
         background: Color = .black,
         turns: Turns = .letterboxed,
@@ -59,7 +59,7 @@ public struct Edit: Equatable, Sendable {
         clips: [Clip],
     ) {
         self.music = music
-        self.touchSound = touchSound
+        self.tapSound = tapSound
         self.takeAudioVolume = takeAudioVolume
         self.background = background
         self.turns = turns
@@ -81,7 +81,7 @@ public struct Edit: Equatable, Sendable {
         public var fadeOut: Double
     }
 
-    /// A sound file and its level: the touch sound, or the sound a clip's effect plays.
+    /// A sound file and its level: the tap sound, or the sound a clip's effect plays.
     public struct Sound: Equatable, Sendable {
         public var file: String
         public var volume: Double

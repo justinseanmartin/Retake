@@ -23,7 +23,7 @@ struct EditFileTests {
             "ipad": { "create-note": 2, "share-note": 2 }
           },
           "music": { "file": "audio/theme.m4a", "volume": 0.6, "fadeOut": 1.5 },
-          "touchSound": { "file": "audio/tap.m4a", "volume": 0.5 },
+          "tapSound": { "file": "audio/tap.m4a", "volume": 0.5 },
           "background": "#F4F1EA",
           "clips": [
             {
