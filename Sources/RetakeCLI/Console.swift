@@ -31,6 +31,14 @@ enum Prompt {
         return choices.first { $0 == answer }
     }
 
+    /// Whether the answer to a yes-or-no `question` is yes; no when it's left empty, or no one can
+    /// be asked.
+    static func confirm(_ question: String) -> Bool {
+        guard isInteractive else { return false }
+        FileHandle.standardError.write(Data("\(question) [y/N] ".utf8))
+        return ["y", "yes"].contains(readLine()?.trimmingCharacters(in: .whitespaces).lowercased() ?? "")
+    }
+
     /// An answer to `question`, `suggestion` when it's left empty, and nil when it's `-` or no one
     /// can be asked.
     static func answer(_ question: String, suggesting suggestion: String) -> String? {

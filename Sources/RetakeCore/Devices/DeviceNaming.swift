@@ -83,4 +83,10 @@ public enum DeviceNaming {
         while aliases["\(type)\(number)"] != nil { number += 1 }
         return "\(type)\(number)"
     }
+
+    /// The devices `init` offers to name once asked for another: unnamed ones connected since,
+    /// leaving out those it has offered already, named or skipped.
+    public static func newlyConnected(in directory: DeviceDirectory, besides offered: Set<String>) -> [Device] {
+        unnamed(in: directory).filter { !offered.contains($0.udid) }
+    }
 }

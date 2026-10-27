@@ -9,7 +9,7 @@ struct Init: AsyncParsableCommand {
             Creates retake.json and beside it the folders sets/, scenes/iphone/, scenes/ipad/ and \
             edits/, in Retake/ unless --config or RETAKE_CONFIG names the file to create, and \
             gitignores the output directory and devices.json. At a terminal, offers to name each device \
-            connected. Fails (2) if the configuration file already exists.
+            connected, then any others connected while it waits. Fails (2) if the configuration file already exists.
             """,
     )
 
@@ -87,7 +87,27 @@ struct Init: AsyncParsableCommand {
     /// stops `init`: a device can always be named later with `devices add`.
     private func nameDevices(in project: Project) {
         guard var directory = try? DeviceDirectory.current(project) else { return }
-        for device in DeviceNaming.unnamed(in: directory) {
+        var offered = Set<String>()
+        offer(DeviceNaming.unnamed(in: directory), in: project, directory: &directory, offered: &offered)
+        while Prompt.confirm("Is there another device to name?") {
+            print("Connect it by USB, unlocked and trusting this Mac; waiting up to a minute...")
+            var found: [Device] = []
+            for _ in 0..<60 {
+                guard let now = try? DeviceDirectory.current(project) else { break }
+                directory.devices = now.devices
+                found = DeviceNaming.newlyConnected(in: directory, besides: offered)
+                if !found.isEmpty { break }
+                Thread.sleep(forTimeInterval: 1)
+            }
+            if found.isEmpty { Console.note("No new iPhone or iPad was connected by USB.") }
+            offer(found, in: project, directory: &directory, offered: &offered)
+        }
+    }
+
+    /// Offers to name each of `devices`, saving each alias as it's made.
+    private func offer(_ devices: [Device], in project: Project, directory: inout DeviceDirectory, offered: inout Set<String>) {
+        for device in devices {
+            offered.insert(device.udid)
             guard let suggestion = DeviceNaming.suggestedName(for: device, besides: directory.aliases),
                   let name = Prompt.answer("Call \(device.name)\((device.marketingName ?? device.model).map { " (\($0))" } ?? "")", suggesting: suggestion)
             else { continue }

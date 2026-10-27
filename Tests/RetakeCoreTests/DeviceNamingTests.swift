@@ -31,6 +31,8 @@ struct DeviceNamingTests {
         #expect(DeviceNaming.unnamed(in: directory).map(\.udid) == [otherIPad.udid, iphone.udid])
         #expect(DeviceNaming.suggestedName(for: otherIPad, besides: directory.aliases) == "ipad2")
         #expect(DeviceNaming.suggestedName(for: iphone, besides: directory.aliases) == "iphone")
+        // Asked for another, the iPhone it was offered and skipped isn't offered again.
+        #expect(DeviceNaming.newlyConnected(in: directory, besides: [iphone.udid]).map(\.udid) == [otherIPad.udid])
     }
 
     @Test func theOnlyConnectedDeviceIsNamedWithItsCaptureIdentity() throws {
