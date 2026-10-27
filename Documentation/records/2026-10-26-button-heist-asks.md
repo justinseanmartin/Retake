@@ -25,6 +25,7 @@ sent yet.
 | [8. Timed drags in a plan](#8-timed-drags-in-a-plan) | Open, not sent. Retake uses the tooling SPI meanwhile. |
 | [9. A public failure code for a thrown error](#9-a-public-failure-code-for-a-thrown-error) | Open, not sent. Retake reads `FenceError`'s cases meanwhile. |
 | [10. The screen's size, or a turn, through the public client](#10-the-screens-size-or-a-turn-through-the-public-client) | Open, not sent. Retake watches element frames meanwhile. |
+| [11. A touch on an app's own sheet, on iOS 27](#11-a-touch-on-an-apps-own-sheet-on-ios-27) | Open, not sent. Found 2026-10-27; not yet narrowed down. |
 
 **Context.** Retake records App Store preview videos by driving an app with The Button Heist on a
 USB-connected device. Rather than asking apps to link TheInsideJob, Retake builds it as one Debug
@@ -241,3 +242,30 @@ report the screen's size in points either.
 after 5 s (`Player.turn`). On the iPad, turning the example to landscape and back ended in 0.76–1.31
 s, once its two-column layout had settled. It can be fooled by a screen whose elements don't move
 when it turns, and costs a capture every 0.1 s; knowing the bounds would make it exact.
+
+## 11. A touch on an app's own sheet, on iOS 27
+
+**Ask.** Find out why a synthesized touch on a button in an app's own sheet closes the sheet,
+instead of pressing the button, on an iPhone on iOS 27.2, and fix it if it's The Button Heist's.
+
+**What we found.** Retake's example app presents a SwiftUI sheet of its own (`.sheet` with a
+`.medium` detent) holding a "Send to Alex" button. On an iPhone 17e (`iPhone18,5`) on iOS 27.2, with
+The Button Heist 0.7.1's framework injected, two seconds after the sheet was presented,
+`captureInterface()` listed the button at frame (137, 585, 115×33), activation point (195, 601).
+Then:
+
+- a tap on the element (`TapTarget(selection: .element(.label("Send to Alex")))`) reported success,
+  and the sheet closed, with the button's action never run;
+- a tap by point at (195, 601), the button's own activation point, did the same;
+- an accessibility activation of the element ran its action: the sheet showed "Sent".
+
+The same scene's tap on the same button, after the sheet had settled, worked on an iPad Pro 11-inch
+(3rd generation) on iOS 26.6.2. The sheet is the app's own, in its process, so it isn't the
+out-of-process boundary `docs/SCOPE-AND-LIMITS.md` describes. A touch that closes a medium sheet is
+what a touch outside it does, so the touch may be delivered to a window or view other than the one
+the frame came from; whether it's iOS 27's sheets, or iPhone sheets, isn't known yet. An iPad on iOS
+27 would tell them apart.
+
+**What Retake does meanwhile.** Nothing: a scene tapping a button in a sheet on iOS 27 fails at the
+step after it. `activate` presses the button, with no touch drawn, where a scene can do without the
+touch.
