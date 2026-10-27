@@ -212,8 +212,10 @@ the app `install` builds (see [Finding the app](#finding-the-app)).
 
 At a terminal, it then offers to name each device connected by USB, as [`devices add`](#retake-devices) does, once
 through: it suggests the device's type, `iphone` or `ipad`, as its alias (`ipad2` when `ipad` is
-taken), which an empty answer takes, and `-` skips the device. A device connected later is named
-with `devices add`. Without a terminal, nothing is asked.
+taken), which an empty answer takes, and `-` skips the device. Then it asks whether there's another
+device to name; if there is, it waits for it to be connected by USB and offers to name it, and asks
+again, until the answer is no. A device can be named later with `devices add`. Without a terminal,
+nothing is asked.
 
 Ends by saying how commands will [find the project](#finding-the-project). In `Retake/`, they find it from the current
 directory and from inside `Retake/`, and a project moved or renamed later needs `--config` or
