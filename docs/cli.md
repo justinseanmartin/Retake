@@ -227,10 +227,11 @@ current directory would already find a project, so `init` run inside one doesn't
 ### `retake doctor`
 
 ```
-retake doctor [--device <device>]
+retake doctor [--device <device>] [--json]
 ```
 
-Checks, in order, and reports each as passed, warned or failed:
+Checks, in order, and reports each as passed, warned or failed, or skipped when it needs one that
+failed, such as the app's installation when there's no device:
 
 1. Xcode, `devicectl` and `codesign` are available.
 2. The device is connected by USB, paired, and offered for screen capture.
@@ -238,9 +239,12 @@ Checks, in order, and reports each as passed, warned or failed:
    bundle ID and the device.
 4. The app is installed on the device, with Retake embedded (by `retake install` or `retake embed`).
 5. The app launches, Retake's support library and The Button Heist's server answer, and both are
-   [compatible](#compatibility-with-an-embedded-app) with this Retake.
+   [compatible](#compatibility-with-an-embedded-app) with this Retake. It launches on the project's `defaultSet`, or with none, on
+   nothing but Retake's own `clean` state, and cleans up after itself as `record` does.
 
-Exits 0 when everything passed, otherwise with the status of the first failure.
+A check warns when it can't say, such as which provisioning profile covers the app before Retake
+knows its bundle ID. Exits 0 when nothing failed, otherwise with the status of the first failure.
+With `--json`, prints the checks as a list, each with its `check`, `outcome` and `detail`.
 
 ### `retake devices`
 
