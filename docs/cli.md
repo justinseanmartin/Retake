@@ -210,6 +210,10 @@ Asks for the scheme when it isn't given and can't be found in an Xcode project i
 directory. Writes `bundleID` only when `--bundle-id` gives one; otherwise the bundle ID comes from
 the app `install` builds (see [Finding the app](#finding-the-app)).
 
+At a terminal, it then offers to name each device connected by USB, as [`devices add`](#retake-devices) does, once
+through: it suggests the device's type, `iphone` or `ipad`, as its alias, and an empty answer skips
+it. A device connected later is named with `devices add`. Without a terminal, nothing is asked.
+
 Ends by saying how commands will [find the project](#finding-the-project). In `Retake/`, they find it from the current
 directory and from inside `Retake/`, and a project moved or renamed later needs `--config` or
 `RETAKE_CONFIG`. Anywhere else, every command needs one of them, so `init` prints the `mise.toml`
