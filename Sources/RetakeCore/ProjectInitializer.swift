@@ -36,9 +36,8 @@ public enum ProjectInitializer {
 
     /// Creates `configuration`, and beside it `sets/`, `scenes/iphone/`, `scenes/ipad/` and
     /// `edits/`, as docs/cli.md, "retake init", says. `output`, when given, is written as the
-    /// project's `output`. The output directory and `devices.json` are added to the project's
-    /// `.gitignore`, or an output directory outside the project to `currentDirectory`'s when it's
-    /// below it. The scheme is `scheme` when given, else the only one the current directory's Xcode
+    /// project's `output`. The output directory is added to the project's `.gitignore`, or one
+    /// outside the project to `currentDirectory`'s when it's below it. The scheme is `scheme` when given, else the only one the current directory's Xcode
     /// project has, else `ask`'s choice among several; with none, the project has no `build`, and
     /// `install` needs `--scheme` or `--app` until one is added.
     public static func initialize(
@@ -125,13 +124,11 @@ public enum ProjectInitializer {
             }
             try Data(JSONWriter.write(settings.json).utf8).write(to: configuration)
             let outputs = outputDirectory ?? root.appending(path: Project.defaultOutputDirectoryName, directoryHint: .isDirectory)
-            var ignoredHere = ["/\(Project.devicesFileName)"]
             if isInside(outputs, root) {
-                ignoredHere.append("/\(relativePath(of: outputs, from: root))/")
+                try ignore(["/\(relativePath(of: outputs, from: root))/"], in: root, fileManager: fileManager)
             } else if isInside(outputs, current) {
                 try ignore(["/\(relativePath(of: outputs, from: current))/"], in: current, fileManager: fileManager)
             }
-            try ignore(ignoredHere, in: root, fileManager: fileManager)
         } catch {
             throw RetakeError(.failed, "Couldn't create the project in \(root.path): \(error.localizedDescription)")
         }

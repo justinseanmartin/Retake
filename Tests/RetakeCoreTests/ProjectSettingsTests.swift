@@ -168,7 +168,7 @@ struct ProjectInitializerTests {
         #expect(project.root.path == directory.appending(path: "Retake").path)
         // xcodebuild runs in the project's folder, which holds no Xcode project of its own.
         #expect(project.settings.build == .scheme(.init(scheme: "Notes", container: .project("../Notes.xcodeproj"))))
-        #expect(file("Retake/.gitignore") == "/devices.json\n/output/\n")
+        #expect(file("Retake/.gitignore") == "/output/\n")
         #expect(file(".gitignore") == nil)
     }
 
@@ -212,26 +212,26 @@ struct ProjectInitializerTests {
 
     @Test func gitignoreGainsEachEntryOnce() throws {
         try folder("Retake")
-        try Data("output/".utf8).write(to: directory.appending(path: "Retake/.gitignore"))
+        try Data("build/\noutput".utf8).write(to: directory.appending(path: "Retake/.gitignore"))
         try initialize(scheme: "Notes")
-        #expect(file("Retake/.gitignore") == "output/\n/devices.json\n")
+        #expect(file("Retake/.gitignore") == "build/\noutput", "output is there already, without its slashes")
     }
 
     @Test func anOutputDirectoryIsWrittenRelativeToTheProjectAndIgnoredWhereItLives() throws {
         let inside = try initialize("Inside/retake.json", output: directory.appending(path: "Inside/takes-here"), scheme: "Notes")
         #expect(inside.settings.output == "takes-here")
-        #expect(file("Inside/.gitignore") == "/devices.json\n/takes-here/\n")
+        #expect(file("Inside/.gitignore") == "/takes-here/\n")
 
         let elsewhere = try initialize("Elsewhere/retake.json", output: directory.appending(path: "build/retake"), scheme: "Notes")
         #expect(elsewhere.settings.output == "../build/retake")
-        #expect(file("Elsewhere/.gitignore") == "/devices.json\n")
+        #expect(file("Elsewhere/.gitignore") == nil)
         #expect(file(".gitignore") == "/build/retake/\n")
         let project = try Project.locate(configuration: directory.appending(path: "Elsewhere/retake.json"), currentDirectory: directory)
         #expect(project.output.path == directory.appending(path: "build/retake").path)
 
         let outside = URL(filePath: "/Volumes/Scratch/retake", directoryHint: .isDirectory)
         #expect(try initialize("Outside/retake.json", output: outside, scheme: "Notes").settings.output == "/Volumes/Scratch/retake")
-        #expect(file("Outside/.gitignore") == "/devices.json\n")
+        #expect(file("Outside/.gitignore") == nil)
     }
 
     @Test func unnamedTheProjectGoesInRetakeButNotInsideOneCommandsWouldFind() throws {

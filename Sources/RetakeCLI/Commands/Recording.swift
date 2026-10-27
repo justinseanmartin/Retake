@@ -29,7 +29,7 @@ struct Compose: AsyncParsableCommand {
 
     func run() async throws {
         let located = try project.locate()
-        let directory = try DeviceDirectory.current(located)
+        let directory = try DeviceDirectory.current()
         let target = try directory.resolve(device.choice(
             configuration: located.settings.device.map { ($0, located.configuration) },
             connected: directory.recordable.map(\.udid),
@@ -230,7 +230,7 @@ struct Record: AsyncParsableCommand {
 
     func run() async throws {
         let located = try project.locate()
-        let directory = try DeviceDirectory.current(located)
+        let directory = try DeviceDirectory.current()
         let target = try directory.resolve(device.choice(
             configuration: located.settings.device.map { ($0, located.configuration) },
             connected: directory.recordable.map(\.udid),
@@ -323,7 +323,7 @@ struct Takes: AsyncParsableCommand {
         let located = try project.locate()
         var types = type.map { [$0] } ?? DeviceType.allCases
         if device.named() != nil {
-            let directory = try DeviceDirectory.current(located)
+            let directory = try DeviceDirectory.current()
             let target = try directory.resolve(device.choice(configuration: nil, connected: directory.recordable.map(\.udid)))
             guard let deviceType = target.type else {
                 throw RetakeError(.environment, "Retake can't tell whether \(target.name) is an iPhone or an iPad.")
@@ -469,7 +469,7 @@ struct Clean: AsyncParsableCommand {
             print("Deleted.")
             return
         }
-        let directory = try DeviceDirectory.current(located)
+        let directory = try DeviceDirectory.current()
         let target = try directory.resolve(device.choice(
             configuration: located.settings.device.map { ($0, located.configuration) },
             connected: directory.recordable.map(\.udid),

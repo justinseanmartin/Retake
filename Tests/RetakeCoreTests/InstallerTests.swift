@@ -69,10 +69,20 @@ struct InstallerTests {
     @Test func theBundleIDIsTheProjectsOrTheInstalledApps() throws {
         #expect(try Installer.bundleID(for: project(ProjectSettings(bundleID: "com.example.named"))) == "com.example.named")
         #expect(throws: RetakeError.self) { try Installer.bundleID(for: project()) }
-        let installed = Installer.installedFolder(project()).appending(path: "Notes.app")
-        try FileManager.default.createDirectory(at: installed, withIntermediateDirectories: true)
-        try PropertyListSerialization.data(fromPropertyList: ["CFBundleIdentifier": "com.example.installed"], format: .xml, options: 0)
-            .write(to: installed.appending(path: "Info.plist"))
+        try Installer.recordInstalled(bundleID: "com.example.installed", in: project())
         #expect(try Installer.bundleID(for: project()) == "com.example.installed")
+        try Data(#"{ "bundleId": "x" }"#.utf8).write(to: Installer.installedRecord(project()))
+        #expect(throws: RetakeError.self, "a record that isn't one") { try Installer.bundleID(for: project()) }
+    }
+
+    @Test func buildsAreKeptOutsideTheProjectInAFolderOfItsOwn() {
+        let cache = URL(filePath: "/caches/retake", directoryHint: .isDirectory)
+        let notes = Project(configuration: URL(filePath: "/work/Notes/Retake/retake.json"))
+        let other = Project(configuration: URL(filePath: "/clone/Notes/Retake/retake.json"))
+        let folder = Installer.buildFolder(notes, cache: cache)
+        #expect(folder.path.hasPrefix("/caches/retake/builds/Notes-Retake-"))
+        #expect(folder != Installer.buildFolder(other, cache: cache), "another clone of the same project")
+        #expect(folder == Installer.buildFolder(notes, cache: cache), "the same each time")
+        #expect(Installer.installedFolder(notes, cache: cache).path == folder.appending(path: "installed").path)
     }
 }

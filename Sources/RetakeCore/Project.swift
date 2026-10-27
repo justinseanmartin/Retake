@@ -8,8 +8,6 @@ public struct Project: Sendable, Equatable {
     public static let defaultFolderName = "Retake"
     /// Where takes, cuts and builds go unless the command or the configuration file says otherwise.
     public static let defaultOutputDirectoryName = "output"
-    /// Device aliases, beside the configuration file, and gitignored.
-    public static let devicesFileName = "devices.json"
 
     /// The project's configuration file. Everything else in the project, and every relative path
     /// the file gives, is found relative to the directory holding it.
@@ -51,9 +49,6 @@ public struct Project: Sendable, Equatable {
     public func cuts(for type: DeviceType) -> URL {
         output.appending(path: "cuts/\(type.rawValue)", directoryHint: .isDirectory)
     }
-
-    /// The device aliases, which `devices add` keeps; see README.md, "Devices".
-    public var devicesFile: URL { root.appending(path: Project.devicesFileName) }
 
     /// The configuration file a command finds unnamed: `retake.json` in the current directory, else
     /// `Retake/retake.json`, whichever exists first; nil when neither does.

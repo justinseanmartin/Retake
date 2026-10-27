@@ -25,7 +25,6 @@ struct ProjectTests {
         try Data("{}".utf8).write(to: folder.appending(path: "retake.json"))
         let fromAbove = try Project.locate(configuration: nil, currentDirectory: root)
         #expect(fromAbove.root.path == folder.path)
-        #expect(fromAbove.devicesFile.path == folder.appending(path: "devices.json").path)
         let fromInside = try Project.locate(configuration: nil, currentDirectory: folder)
         #expect(fromInside.configuration == fromAbove.configuration)
     }

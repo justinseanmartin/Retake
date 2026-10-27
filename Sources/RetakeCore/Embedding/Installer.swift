@@ -27,32 +27,56 @@ public enum Installer {
         }
     }
 
-    /// Where `install` keeps its builds: `RetakeOutput/build/`.
-    public static func buildFolder(_ project: Project) -> URL {
-        project.output.appending(path: "build", directoryHint: .isDirectory)
+    /// Where `install` keeps its builds: the project's folder in `~/Library/Caches/retake/builds/`,
+    /// outside the project, since a build rewrites thousands of files each time.
+    public static func buildFolder(_ project: Project, cache: URL = RetakeCache.root) -> URL {
+        RetakeCache.builds(for: project, in: cache)
     }
 
-    /// Where the embedded copy it installs goes, for "Finding the app" to read its bundle ID from.
-    public static func installedFolder(_ project: Project) -> URL {
-        buildFolder(project).appending(path: "installed", directoryHint: .isDirectory)
+    /// Where the embedded copy it installs goes, replaced each time.
+    public static func installedFolder(_ project: Project, cache: URL = RetakeCache.root) -> URL {
+        buildFolder(project, cache: cache).appending(path: "installed", directoryHint: .isDirectory)
     }
 
-    /// The app `install` last embedded and installed, in the output directory.
-    public static func installedApp(_ project: Project) -> AppBundle? {
-        let folder = installedFolder(project)
-        let apps = ((try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []).filter { $0.hasSuffix(".app") }
-        return apps.sorted().first.map { AppBundle(url: folder.appending(path: $0, directoryHint: .isDirectory)) }
+    /// The output directory's record of the app `install` last embedded, for "Finding the app".
+    public static func installedRecord(_ project: Project) -> URL {
+        project.output.appending(path: "installed.json")
+    }
+
+    /// Records the bundle ID of the app `install` embedded, in the output directory.
+    public static func recordInstalled(bundleID: String, in project: Project) throws(RetakeError) {
+        let record = installedRecord(project)
+        do {
+            try FileManager.default.createDirectory(at: project.output, withIntermediateDirectories: true)
+            try Data(JSONWriter.write(.object(JSONObject([.init(key: "bundleID", value: .string(bundleID))]))).utf8).write(to: record, options: .atomic)
+        } catch {
+            throw RetakeError(.failed, "Couldn't write \(project.displayPath(record)): \(error.localizedDescription)")
+        }
+    }
+
+    /// The bundle ID `install` last recorded, if it has, read strictly; a record that isn't one fails (1).
+    static func installedBundleID(_ project: Project) throws(RetakeError) -> String? {
+        let record = installedRecord(project)
+        guard let data = FileManager.default.contents(atPath: record.path) else { return nil }
+        let reader = JSONReader(file: project.displayPath(record))
+        guard let value = reader.parse(String(decoding: data, as: UTF8.self)), var object = reader.object(value, at: .root) else {
+            throw RetakeError(.failed, reader.problems.map(\.description).joined(separator: "\n"))
+        }
+        let id = object.required("bundleID", reader.nonEmptyString)
+        object.finish()
+        guard reader.problems.isEmpty else { throw RetakeError(.failed, reader.problems.map(\.description).joined(separator: "\n")) }
+        return id
     }
 
     /// The app's bundle ID, as docs/cli.md, "Finding the app", gives it: the configuration file's
     /// `bundleID`, else the one `install` last embedded; misuse (2) with neither.
     public static func bundleID(for project: Project) throws(RetakeError) -> String {
         if let id = project.settings.bundleID { return id }
-        if let id = installedApp(project)?.bundleID { return id }
+        if let id = try installedBundleID(project) { return id }
         throw RetakeError(
             .usage,
             "Retake doesn't know the app's bundle ID: give \"bundleID\" in \(project.configuration.lastPathComponent), or run `retake install`, "
-                + "whose app in \(project.displayPath(installedFolder(project))) it reads it from.",
+                + "which records it in \(project.displayPath(installedRecord(project))).",
         )
     }
 

@@ -1,8 +1,9 @@
 import Foundation
 
 /// A name a person gives one of their devices, standing for both its identities: its UDID, for
-/// installing and launching, and its screen-capture device, for recording. Kept in the project's
-/// `devices.json`, which `init` gitignores, since devices belong to people. See README.md, "Devices".
+/// installing and launching, and its screen-capture device, for recording. Kept for every project in
+/// `~/Library/Caches/retake/devices.json`, never in a repository, since devices belong to people.
+/// See README.md, "Devices".
 public struct DeviceAlias: Equatable, Sendable {
     public var name: String
     public var udid: String
@@ -34,6 +35,9 @@ public struct DeviceAliases: Equatable, Sendable {
     public subscript(name: String) -> DeviceAlias? {
         aliases.first { $0.name == name }
     }
+
+    /// `~/Library/Caches/retake/devices.json`.
+    public static var defaultFile: URL { RetakeCache.root.appending(path: "devices.json") }
 
     /// The aliases in `file`, none when it doesn't exist yet.
     public static func load(from file: URL) throws(RetakeError) -> DeviceAliases {
