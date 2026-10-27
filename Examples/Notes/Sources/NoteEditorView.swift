@@ -70,6 +70,7 @@ struct ShareView: View {
             } else {
                 Button("Send to Alex") { sent = true }
                     .buttonStyle(.borderedProminent)
+                    .accessibilityHint("Sends the note to Alex")
             }
         }
         .padding()
