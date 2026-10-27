@@ -275,7 +275,42 @@ struct Install: AsyncParsableCommand {
     }
 
     func run() async throws {
-        _ = try project.locate()
-        throw RetakeError.notImplemented("install")
+        let located = try project.locate()
+        let current = URL(filePath: FileManager.default.currentDirectoryPath, directoryHint: .isDirectory)
+        func given(_ path: String) -> URL { URL(filePath: path, relativeTo: current).standardizedFileURL }
+        let directory = try DeviceDirectory.current()
+        let target = try directory.resolve(device.choice(
+            configuration: located.settings.device.map { ($0, located.configuration) },
+            connected: directory.recordable.map(\.udid),
+        ))
+        let scheme = self.scheme.map { scheme in
+            ProjectSettings.SchemeBuild(
+                scheme: scheme,
+                container: workspace.map { .workspace(given($0).path) } ?? xcodeproj.map { .project(given($0).path) },
+                configuration: configuration,
+                allowProvisioningUpdates: allowProvisioningUpdates,
+            )
+        }
+        let source = try Installer.source(app: app.map(given), scheme: scheme, project: located)
+        switch source {
+        case .scheme(let build, _): print("Building \(build.scheme) for \(target.name)...")
+        case .command(let build, _): print("Running \(build.command)...")
+        case .app: break
+        }
+        let built = try Installer.app(from: source, for: target, project: located, allowProvisioningUpdates: allowProvisioningUpdates)
+
+        let folder = Installer.installedFolder(located)
+        try? FileManager.default.removeItem(at: folder)
+        let result = try Embedder.embed(
+            built,
+            output: folder.appending(path: built.lastPathComponent, directoryHint: .isDirectory),
+            signing: signing.overrides(),
+            framework: try InsideJobFramework.locate(),
+            support: try SupportLibrary.locate(),
+        )
+        print("Installing \(built.lastPathComponent) on \(target.name)...")
+        try Installer.install(result.app, on: target)
+        let bundleID = AppBundle(url: result.app).bundleID ?? "the app"
+        print("Installed \(bundleID), with Retake embedded, on \(target.name).")
     }
 }
