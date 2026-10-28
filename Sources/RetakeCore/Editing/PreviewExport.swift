@@ -100,6 +100,7 @@ public enum PreviewExport {
         if let audioOut { reader.add(audioOut) }
 
         try? FileManager.default.removeItem(at: url)
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
         writer.metadata = metadata
         let videoIn = AVAssetWriterInput(mediaType: .video, outputSettings: [
@@ -117,20 +118,22 @@ public enum PreviewExport {
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA, kCVPixelBufferWidthKey as String: width, kCVPixelBufferHeightKey as String: height,
         ])
         writer.add(videoIn)
-        let audioIn = audioOut.map { _ in
-            AVAssetWriterInput(mediaType: .audio, outputSettings: [
-                AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: 48000, AVNumberOfChannelsKey: 2, AVEncoderBitRateKey: 256_000,
-            ])
-        }
-        if let audioIn { writer.add(audioIn) }
+        // A video with no sound of its own still gets a stereo track, silent, as App Store Connect's
+        // audio requirements expect one.
+        let audioIn = AVAssetWriterInput(mediaType: .audio, outputSettings: [
+            AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: 48000, AVNumberOfChannelsKey: 2, AVEncoderBitRateKey: 256_000,
+        ])
+        writer.add(audioIn)
+        let duration = try await asset.load(.duration).seconds
 
         guard reader.startReading() else { throw RetakeError(.failed, "Couldn't read the master: \(String(describing: reader.error))") }
         guard writer.startWriting() else { throw RetakeError(.failed, "Couldn't write the preview: \(String(describing: writer.error))") }
         writer.startSession(atSourceTime: .zero)
 
         let painter = FramePainter(blurs: blurs, canvasHeight: size.height, scale: scale, adaptor: adaptor)
-        let copiers = [Copier(output: videoOut, input: videoIn, label: "video", painter: painter)]
-            + (audioOut.flatMap { output in audioIn.map { Copier(output: output, input: $0, label: "audio", painter: nil) } }.map { [$0] } ?? [])
+        let sound = try audioOut.map { Copier(output: $0, input: audioIn, label: "audio", painter: nil) }
+            ?? Copier(silence: Self.silence(seconds: duration), input: audioIn)
+        let copiers = [Copier(output: videoOut, input: videoIn, label: "video", painter: painter), sound]
         await withTaskGroup(of: Void.self) { group in
             for copier in copiers { group.addTask { await copier.run() } }
         }
@@ -141,26 +144,73 @@ public enum PreviewExport {
     }
 }
 
-/// Copies one track's samples from the reader to the writer on its own queue, the only place either
-/// is touched once copying starts, the picture's through the painter.
+extension PreviewExport {
+    /// Stereo silence at 48 kHz, `seconds` long, in buffers of 1024 frames.
+    static func silence(seconds: Double) throws -> [CMSampleBuffer] {
+        var description = AudioStreamBasicDescription(
+            mSampleRate: 48000, mFormatID: kAudioFormatLinearPCM, mFormatFlags: kLinearPCMFormatFlagIsSignedInteger | kLinearPCMFormatFlagIsPacked,
+            mBytesPerPacket: 4, mFramesPerPacket: 1, mBytesPerFrame: 4, mChannelsPerFrame: 2, mBitsPerChannel: 16, mReserved: 0,
+        )
+        var format: CMAudioFormatDescription?
+        CMAudioFormatDescriptionCreate(allocator: nil, asbd: &description, layoutSize: 0, layout: nil, magicCookieSize: 0, magicCookie: nil, extensions: nil, formatDescriptionOut: &format)
+        guard let format else { throw RetakeError(.failed, "Couldn't make a silent sound track.") }
+        let total = Int(seconds * 48000)
+        return try stride(from: 0, to: total, by: 1024).map { start in
+            let frames = min(1024, total - start)
+            var block: CMBlockBuffer?
+            CMBlockBufferCreateWithMemoryBlock(
+                allocator: nil, memoryBlock: nil, blockLength: frames * 4, blockAllocator: nil, customBlockSource: nil,
+                offsetToData: 0, dataLength: frames * 4, flags: kCMBlockBufferAssureMemoryNowFlag, blockBufferOut: &block,
+            )
+            guard let block, CMBlockBufferFillDataBytes(with: 0, blockBuffer: block, offsetIntoDestination: 0, dataLength: frames * 4) == noErr else {
+                throw RetakeError(.failed, "Couldn't make a silent sound track.")
+            }
+            var sample: CMSampleBuffer?
+            CMAudioSampleBufferCreateReadyWithPacketDescriptions(
+                allocator: nil, dataBuffer: block, formatDescription: format, sampleCount: frames,
+                presentationTimeStamp: CMTime(value: CMTimeValue(start), timescale: 48000), packetDescriptions: nil, sampleBufferOut: &sample,
+            )
+            guard let sample else { throw RetakeError(.failed, "Couldn't make a silent sound track.") }
+            return sample
+        }
+    }
+}
+
+/// Copies one track's samples to the writer on its own queue, the only place either is touched
+/// once copying starts: from the reader, the picture's through the painter, or from silence made
+/// up front.
 private final class Copier: @unchecked Sendable {
-    let output: AVAssetReaderTrackOutput
+    let output: AVAssetReaderTrackOutput?
+    var silence: [CMSampleBuffer]
     let input: AVAssetWriterInput
     let queue: DispatchQueue
     let painter: FramePainter?
 
     init(output: AVAssetReaderTrackOutput, input: AVAssetWriterInput, label: String, painter: FramePainter?) {
         self.output = output
+        silence = []
         self.input = input
         queue = DispatchQueue(label: "PreviewExport.\(label)")
         self.painter = painter
+    }
+
+    init(silence: [CMSampleBuffer], input: AVAssetWriterInput) {
+        output = nil
+        self.silence = silence.reversed()
+        self.input = input
+        queue = DispatchQueue(label: "PreviewExport.silence")
+        painter = nil
+    }
+
+    func next() -> CMSampleBuffer? {
+        output.map { $0.copyNextSampleBuffer() } ?? silence.popLast()
     }
 
     func run() async {
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             input.requestMediaDataWhenReady(on: queue) { [self] in
                 while input.isReadyForMoreMediaData {
-                    guard let sample = output.copyNextSampleBuffer() else {
+                    guard let sample = next() else {
                         input.markAsFinished()
                         continuation.resume()
                         return

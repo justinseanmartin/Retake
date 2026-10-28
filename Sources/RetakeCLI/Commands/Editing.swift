@@ -1,4 +1,5 @@
 import ArgumentParser
+import Foundation
 import RetakeCore
 
 struct Conform: AsyncParsableCommand {
@@ -32,8 +33,9 @@ struct Cut: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Renders videos.",
         discussion: """
-            Renders each edit, for each device type it names, to a ProRes master and an .mp4 for App \
-            Store Connect in RetakeOutput/videos/<type>/<video>/.
+            Renders each edit, for each device type it names, from the takes it pins, to a ProRes \
+            master and an .mp4 for App Store Connect in the output directory's cuts/<type>/<edit>/; \
+            with --draft, a quick, smaller .mp4 alone.
             """,
     )
 
@@ -46,7 +48,7 @@ struct Cut: AsyncParsableCommand {
     @Option(help: ArgumentHelp("Only this device type's video.", valueName: "type"))
     var type: DeviceType?
 
-    @Flag(help: "Render a quick, smaller H.264 alone, for checking timing.")
+    @Flag(help: "Render a quick, smaller H.264 alone: for checking timing, or for sharing where the full size isn't needed.")
     var draft = false
 
     @Flag(help: "Open the result.")
@@ -67,8 +69,43 @@ struct Cut: AsyncParsableCommand {
     }
 
     func run() async throws {
-        _ = try project.locate()
-        throw RetakeError.notImplemented("cut")
+        let located = try project.locate()
+        let files = ProjectFiles(project: located)
+        let names = all ? files.names(in: located.edits) : edits
+        if let missing = names.first(where: { !FileManager.default.fileExists(atPath: files.editURL($0).path) }) {
+            throw RetakeError(.usage, "There's no edit \"\(missing)\" (\(located.displayPath(files.editURL(missing)))).")
+        }
+        var worst = ExitStatus.done
+        var written: [URL] = []
+        for name in names {
+            let report = ProjectFiles.Report()
+            guard let edit = files.readEdit(name, into: report) else {
+                Swift.print("✖ \(name): \(report.error.message)")
+                worst = max(worst, .failed)
+                continue
+            }
+            let types = edit.devices.filter { type == nil || $0 == type }
+            if types.isEmpty, let type {
+                Swift.print("✖ \(name) isn't cut for \(type.rawValue).")
+                worst = max(worst, .usage)
+            }
+            for deviceType in types {
+                do {
+                    let result = try await Cutter.cut(name, for: deviceType, in: located, draft: draft) { Swift.print($0) }
+                    for warning in result.warnings { Console.warn(warning) }
+                    let shown = result.files.map(located.displayPath).joined(separator: " and ")
+                    Swift.print("✓ \(name) (\(deviceType.rawValue)): \(String(format: "%.1f", result.duration)) s, in \(shown)")
+                    written += result.files.filter { $0.pathExtension == "mp4" }
+                } catch {
+                    Swift.print("✖ \(name) (\(deviceType.rawValue)): \(error.message)")
+                    worst = max(worst, error.status)
+                }
+            }
+        }
+        if open, !written.isEmpty {
+            _ = try? Subprocess.run("/usr/bin/open", written.map(\.path))
+        }
+        if worst != .done { throw ExitCode(worst.rawValue) }
     }
 }
 
