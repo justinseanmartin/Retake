@@ -2,7 +2,7 @@ import Foundation
 
 /// What `retake validate` checks: every file read strictly, then what a schema can't say, across
 /// the files, and unless `offline`, what only the takes can: that each edit's anchors resolve in
-/// the takes it pins, and the elements it names are on screen there. See docs/cli.md, "retake
+/// the takes it pins, and the elements it names are on screen there. See Documentation/cli.md, "retake
 /// validate".
 public struct ProjectValidator {
     public let files: ProjectFiles

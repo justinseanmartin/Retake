@@ -3,7 +3,7 @@ import Foundation
 import RetakeCore
 
 /// A flag's value, or when the flag isn't given, its environment variable's, with which variable it
-/// came from; empty counts as unset. See docs/cli.md, "Environment variables".
+/// came from; empty counts as unset. See Documentation/cli.md, "Environment variables".
 func flagOrEnvironment(
     _ flag: String?,
     _ variable: String,
@@ -23,7 +23,7 @@ func path(_ value: String, isDirectory: Bool, in currentDirectory: String) -> UR
     )
 }
 
-/// `--config <path>`, with `RETAKE_CONFIG` standing in when it isn't given; see docs/cli.md,
+/// `--config <path>`, with `RETAKE_CONFIG` standing in when it isn't given; see Documentation/cli.md,
 /// "Finding the project".
 struct ConfigOption: ParsableArguments {
     static let environmentVariable = "RETAKE_CONFIG"
@@ -77,7 +77,7 @@ struct ConfigOption: ParsableArguments {
 }
 
 /// `--config <path>` and `--output-dir <dir>`, for commands that run in a project, with
-/// `RETAKE_CONFIG` and `RETAKE_OUTPUT_DIR` standing in when they aren't given; see docs/cli.md,
+/// `RETAKE_CONFIG` and `RETAKE_OUTPUT_DIR` standing in when they aren't given; see Documentation/cli.md,
 /// "Finding the project".
 struct ProjectOptions: ParsableArguments {
     static let outputDirEnvironmentVariable = "RETAKE_OUTPUT_DIR"
@@ -108,7 +108,7 @@ struct ProjectOptions: ParsableArguments {
     }
 }
 
-/// `--device <device>`, with `RETAKE_DEVICE` standing in when it isn't given; see docs/cli.md,
+/// `--device <device>`, with `RETAKE_DEVICE` standing in when it isn't given; see Documentation/cli.md,
 /// "Choosing a device".
 struct DeviceOptions: ParsableArguments {
     static let environmentVariable = "RETAKE_DEVICE"
@@ -144,7 +144,7 @@ struct DeviceOptions: ParsableArguments {
 
 /// `--identity <identity>` and `--profile <path>`, which re-sign an app with something other than
 /// what it was signed with, with `RETAKE_SIGNING_IDENTITY` and `RETAKE_PROVISIONING_PROFILE`
-/// standing in when they aren't given; see docs/cli.md, "retake embed".
+/// standing in when they aren't given; see Documentation/cli.md, "retake embed".
 struct SigningOptions: ParsableArguments {
     static let identityEnvironmentVariable = "RETAKE_SIGNING_IDENTITY"
     static let profileEnvironmentVariable = "RETAKE_PROVISIONING_PROFILE"
@@ -181,7 +181,7 @@ struct SigningOptions: ParsableArguments {
     }
 }
 
-/// `--json`, for commands that report something; see docs/cli.md, "Output".
+/// `--json`, for commands that report something; see Documentation/cli.md, "Output".
 struct OutputOptions: ParsableArguments {
     @Flag(help: "Print a stable, machine-readable form instead.")
     var json = false

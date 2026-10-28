@@ -16,7 +16,7 @@ public struct InsideJobFramework: Equatable, Sendable {
 
     /// Where a framework is looked for, in order: beside the `retake` binary, as a release
     /// carries it (`share/retake/`); the clone's build, for a Retake built from a clone; and the
-    /// cache `scripts/fetch-insidejob.sh` fills.
+    /// cache `Scripts/fetch-insidejob.sh` fills.
     public static func candidates(executable: URL, cache: URL = defaultCache, builtFromClone: Bool = isBuiltFromClone) -> [URL] {
         let share = executable.deletingLastPathComponent().deletingLastPathComponent()
             .appending(path: "share/retake/TheInsideJob.xcframework", directoryHint: .isDirectory)
@@ -41,7 +41,7 @@ public struct InsideJobFramework: Equatable, Sendable {
                 throw RetakeError(
                     .environment,
                     "\(bundle.path) is TheInsideJob \(version), but this Retake is built against \(expectedVersion); "
-                        + "run scripts/fetch-insidejob.sh to replace it.",
+                        + "run Scripts/fetch-insidejob.sh to replace it.",
                 )
             }
             guard FileManager.default.fileExists(atPath: framework.deviceFramework.path) else {
@@ -52,8 +52,8 @@ public struct InsideJobFramework: Equatable, Sendable {
         throw RetakeError(
             .environment,
             builtFromClone
-                ? "There's no TheInsideJob built from the clone yet; run scripts/fetch-insidejob.sh with RETAKE_BUTTONHEIST_PATH set."
-                : "TheInsideJob \(expectedVersion) isn't here yet; run scripts/fetch-insidejob.sh to download it.",
+                ? "There's no TheInsideJob built from the clone yet; run Scripts/fetch-insidejob.sh with RETAKE_BUTTONHEIST_PATH set."
+                : "TheInsideJob \(expectedVersion) isn't here yet; run Scripts/fetch-insidejob.sh to download it.",
         )
     }
 
@@ -70,7 +70,7 @@ public struct InsideJobFramework: Equatable, Sendable {
         #endif
     }
 
-    /// The clone the framework was built from, as `scripts/fetch-insidejob.sh` recorded it.
+    /// The clone the framework was built from, as `Scripts/fetch-insidejob.sh` recorded it.
     public struct Clone: Equatable, Sendable {
         public var path: String
         /// Its commit, ending in `-dirty` when it had uncommitted changes.

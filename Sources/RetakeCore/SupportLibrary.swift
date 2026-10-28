@@ -14,7 +14,7 @@ public struct SupportLibrary: Equatable, Sendable {
     public var file: URL
 
     /// Where it's looked for, in order: beside the `retake` binary, as a release carries it
-    /// (`share/retake/`), then where `scripts/build-support.sh` builds it.
+    /// (`share/retake/`), then where `Scripts/build-support.sh` builds it.
     public static func candidates(executable: URL, cache: URL = defaultCache) -> [URL] {
         let share = executable.deletingLastPathComponent().deletingLastPathComponent()
             .appending(path: "share/retake/\(fileName)")
@@ -27,7 +27,7 @@ public struct SupportLibrary: Equatable, Sendable {
         cache: URL = defaultCache,
     ) throws(RetakeError) -> SupportLibrary {
         guard let file = candidates(executable: executable, cache: cache).first(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
-            throw RetakeError(.environment, "Retake's support library isn't built yet; run scripts/build-support.sh.")
+            throw RetakeError(.environment, "Retake's support library isn't built yet; run Scripts/build-support.sh.")
         }
         return SupportLibrary(file: file)
     }
@@ -92,7 +92,7 @@ public struct LaunchReport: Equatable, Sendable {
     }
 
     /// That the report is the take's own, from a library speaking this Retake's contract; otherwise
-    /// an environment problem (3), since the app needs embedding again, as docs/cli.md,
+    /// an environment problem (3), since the app needs embedding again, as Documentation/cli.md,
     /// "Compatibility with an embedded app", says.
     public func check(take expected: String) throws(RetakeError) {
         guard contract == SupportLibrary.contractVersion else {

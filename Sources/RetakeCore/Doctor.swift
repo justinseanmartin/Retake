@@ -3,7 +3,7 @@ import Foundation
 
 /// What `retake doctor` decides from what it finds: each check's outcome, the signing it needs, and
 /// how the run ends. Finding things out is the command's; deciding is here, so it can be tested.
-/// See docs/cli.md, "retake doctor".
+/// See Documentation/cli.md, "retake doctor".
 public enum Doctor {
     public enum Outcome: String, Sendable {
         case passed, warned, failed, skipped

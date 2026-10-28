@@ -1,7 +1,7 @@
 import ButtonHeist
 import Foundation
 
-/// Recording one take of a scene: its movie and its step log. See docs/cli.md, "retake record",
+/// Recording one take of a scene: its movie and its step log. See Documentation/cli.md, "retake record",
 /// steps 1 to 4.
 public enum TakeRecording {
     /// Where a take is written, and what it's of.

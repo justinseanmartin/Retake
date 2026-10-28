@@ -4,7 +4,7 @@ import Foundation
 import RetakeCore
 import Testing
 
-/// The command line's shape and exit statuses, against docs/cli.md.
+/// The command line's shape and exit statuses, against Documentation/cli.md.
 struct CommandLineTests {
     @Test(arguments: [
         ["init", "--bundle-id", "com.example.notes", "--scheme", "Notes"],

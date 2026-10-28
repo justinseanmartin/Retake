@@ -1,4 +1,4 @@
-/// How a command ended, as its exit status; see docs/cli.md, "Exit status".
+/// How a command ended, as its exit status; see Documentation/cli.md, "Exit status".
 public enum ExitStatus: Int32, Comparable, Sendable {
     /// Done.
     case done = 0

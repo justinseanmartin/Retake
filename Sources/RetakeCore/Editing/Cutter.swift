@@ -2,7 +2,7 @@ import AVFoundation
 import Foundation
 
 /// What `retake cut` does for one edit and one device type: reads the takes it pins, checks them,
-/// plans the cut, composes it with its overlays and sound, and exports it. See docs/cli.md,
+/// plans the cut, composes it with its overlays and sound, and exports it. See Documentation/cli.md,
 /// "retake cut".
 public enum Cutter {
     public struct Result: Sendable {

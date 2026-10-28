@@ -1,6 +1,6 @@
 import Foundation
 
-/// What `retake init` does: creates a project, as docs/cli.md, "retake init", says.
+/// What `retake init` does: creates a project, as Documentation/cli.md, "retake init", says.
 public enum ProjectInitializer {
     /// Finds an Xcode workspace's or project's schemes, behind a seam so tests needn't run Xcode.
     public protocol SchemeLister {
@@ -35,7 +35,7 @@ public enum ProjectInitializer {
     }
 
     /// Creates `configuration`, and beside it `sets/`, `scenes/iphone/`, `scenes/ipad/` and
-    /// `edits/`, as docs/cli.md, "retake init", says. `output`, when given, is written as the
+    /// `edits/`, as Documentation/cli.md, "retake init", says. `output`, when given, is written as the
     /// project's `output`. The output directory is added to the project's `.gitignore`, or one
     /// outside the project to `currentDirectory`'s when it's below it. The scheme is `scheme` when given, else the only one the current directory's Xcode
     /// project has, else `ask`'s choice among several; with none, the project has no `build`, and

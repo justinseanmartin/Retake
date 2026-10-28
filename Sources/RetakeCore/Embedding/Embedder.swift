@@ -1,7 +1,7 @@
 import Foundation
 
 /// What `retake embed` does: adds TheInsideJob and Retake's support library to a built,
-/// development-signed app, records what it added, and re-signs it. See docs/cli.md, "retake embed".
+/// development-signed app, records what it added, and re-signs it. See Documentation/cli.md, "retake embed".
 public enum Embedder {
     public struct Result: Equatable, Sendable {
         /// The embedded app: the one given, or the copy `--output` named.

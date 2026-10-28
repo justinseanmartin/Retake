@@ -17,7 +17,7 @@ public protocol AppDriver: AnyObject {
 }
 
 /// Plays a scene's setup and steps, one plan per step, with each step's hold after it. See
-/// docs/cli.md, "retake record".
+/// Documentation/cli.md, "retake record".
 public struct Player: Sendable {
     /// What playing a step is reported as, for printing.
     public enum Event: Sendable {

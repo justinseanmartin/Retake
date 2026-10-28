@@ -2,7 +2,7 @@
 // DYLD_INSERT_LIBRARIES, to set up a take before any of the app's own code runs. What Retake and
 // the library expect of each other is versioned by RETAKE_SUPPORT_CONTRACT, which changes only
 // when that does: the environment below, how defaults and files are delivered, how it reports.
-// docs/cli.md, "Compatibility with an embedded app", says how the two are checked against each
+// Documentation/cli.md, "Compatibility with an embedded app", says how the two are checked against each
 // other; Sources/RetakeCore/SupportLibrary.swift holds the same number, and a test keeps them equal.
 //
 // The launch environment Retake sets:

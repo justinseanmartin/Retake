@@ -1,5 +1,5 @@
 // The tooling SPI is only for what 0.7.1's public client can't do yet; see
-// docs/records/2026-10-26-button-heist-asks.md, "Asks for after 0.7.1".
+// Documentation/records/2026-10-26-button-heist-asks.md, "Asks for after 0.7.1".
 @_spi(ButtonHeistTooling) import ButtonHeist
 import Foundation
 import ThePlans

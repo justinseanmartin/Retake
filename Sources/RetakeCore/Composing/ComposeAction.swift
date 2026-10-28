@@ -1,7 +1,7 @@
 import Foundation
 
 /// One line given to `compose`: an action and its options, such as `tap --label "New Note"`. See
-/// docs/cli.md, "retake compose".
+/// Documentation/cli.md, "retake compose".
 public enum ComposeAction: Equatable, Sendable {
     /// A step to run, and add to the scene when it runs.
     case step(Step)

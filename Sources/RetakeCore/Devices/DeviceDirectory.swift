@@ -27,7 +27,7 @@ public struct DeviceDirectory: Sendable {
     }
 
     /// What a device's name in a command stands for: an alias, a UDID, or a device's name, in that
-    /// order, as docs/cli.md, "Choosing a device", gives them.
+    /// order, as Documentation/cli.md, "Choosing a device", gives them.
     public enum Match: Equatable, Sendable {
         case alias(DeviceAlias, connected: Device?)
         case device(Device)

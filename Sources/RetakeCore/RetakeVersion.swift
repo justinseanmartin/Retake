@@ -30,13 +30,13 @@ public struct RetakeVersion: Codable, Equatable, Sendable {
     )
 
     /// This Retake's version, with the clone it was built from when it was: its path and commit, as
-    /// `scripts/fetch-insidejob.sh` recorded them when it built the clone's framework.
+    /// `Scripts/fetch-insidejob.sh` recorded them when it built the clone's framework.
     public static func withClone(cache: URL = InsideJobFramework.defaultCache) -> RetakeVersion {
         var version = current
         if InsideJobFramework.isBuiltFromClone {
             let clone = InsideJobFramework.clone(in: cache)
             version.buttonHeist.clonePath = clone?.path ?? "a local clone"
-            version.buttonHeist.commit = clone?.commit ?? "unknown; run scripts/fetch-insidejob.sh"
+            version.buttonHeist.commit = clone?.commit ?? "unknown; run Scripts/fetch-insidejob.sh"
         }
         return version
     }

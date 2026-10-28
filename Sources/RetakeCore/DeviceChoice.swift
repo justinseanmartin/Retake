@@ -1,6 +1,6 @@
 import Foundation
 
-/// The device a command uses, and what chose it; see docs/cli.md, "Choosing a device".
+/// The device a command uses, and what chose it; see Documentation/cli.md, "Choosing a device".
 public struct DeviceChoice: Equatable, Sendable {
     public enum Source: Equatable, Sendable {
         /// `--device`.

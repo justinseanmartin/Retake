@@ -207,7 +207,7 @@ s of wall time. Dropping the SPI for this needs either change above.
 client throws: for example making `DiagnosticFailure.init(_ error: Error)` public, or a public
 `failureDetails` on `FenceError`.
 
-**Why.** Retake turns a client error into an exit status (docs/cli.md, "Exit status"): a
+**Why.** Retake turns a client error into an exit status (Documentation/cli.md, "Exit status"): a
 `protocol.mismatch` at connect stops with 3 and says to embed the app again; an unreachable server
 (`connection.endpoint_unreachable`, `transport.*`) is retried for a few seconds, then is 3; an error
 inside a step fails the step (1). The mapping from an error to its code exists, but isn't public:

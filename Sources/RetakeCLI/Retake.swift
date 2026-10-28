@@ -2,7 +2,7 @@ import ArgumentParser
 import Foundation
 import RetakeCore
 
-/// `retake`: the root command. Its contract is docs/cli.md.
+/// `retake`: the root command. Its contract is Documentation/cli.md.
 public struct Retake: AsyncParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "retake",
@@ -32,7 +32,7 @@ public struct Retake: AsyncParsableCommand {
     public init() {}
 
     /// Runs the command `arguments` name (the process's own when nil) and exits with the status
-    /// docs/cli.md gives it, which differs from ArgumentParser's own for misuse (2, not 64).
+    /// Documentation/cli.md gives it, which differs from ArgumentParser's own for misuse (2, not 64).
     public static func runAndExit(_ arguments: [String]? = nil) async -> Never {
         let outcome = await run(arguments)
         // What the command printed comes before how it ended, though only standard error is unbuffered.

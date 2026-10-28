@@ -11,7 +11,7 @@ public protocol ComposeInput: Sendable {
     var isInteractive: Bool { get }
 }
 
-/// Writing a scene a step at a time on the device. See docs/cli.md, "retake compose".
+/// Writing a scene a step at a time on the device. See Documentation/cli.md, "retake compose".
 public enum Composer {
     /// What `compose` says back, after launching and after each action.
     public enum Reply: Sendable {

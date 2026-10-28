@@ -1,7 +1,7 @@
 import Foundation
 
 /// `retake record`: choosing the scenes, then recording a take of each, or with `--dry-run`, playing
-/// each without recording it. See docs/cli.md, "retake record".
+/// each without recording it. See Documentation/cli.md, "retake record".
 public enum RecordRun {
     /// A take on disk: its number, and whether it failed.
     public struct ExistingTake: Equatable, Sendable {
@@ -28,7 +28,7 @@ public enum RecordRun {
         (takes(of: scene, for: type, in: project).last?.number ?? 0) + 1
     }
 
-    /// The scenes to record, in order, as docs/cli.md's table says: those named; or every scene in
+    /// The scenes to record, in order, as Documentation/cli.md's table says: those named; or every scene in
     /// `scenes/<type>/`, or every one `edit` uses, either way only those with no take yet unless
     /// `force`. A failed take can't be pinned, so it isn't a take for this. Misuse (2) for a scene
     /// or edit that doesn't exist, or an edit not cut for this device type.

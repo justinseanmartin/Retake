@@ -1,7 +1,7 @@
 import Foundation
 
 /// A problem in one of a project's files: the file, the path to the field, and what's wrong, as
-/// docs/cli.md, "Reading the project's files", gives it:
+/// Documentation/cli.md, "Reading the project's files", gives it:
 /// `edits/video1.json: clips[3].from.fraction: 1.4 is outside -1 to 1`.
 public struct FileProblem: Error, Equatable, Sendable, CustomStringConvertible {
     public var file: String
@@ -278,7 +278,7 @@ public struct ObjectReader {
 
 // MARK: - The top of a file
 
-/// The schema a file's `"$schema"` names, by its URL, as docs/cli.md, "Schemas", gives it:
+/// The schema a file's `"$schema"` names, by its URL, as Documentation/cli.md, "Schemas", gives it:
 /// `https://justinseanmartin.github.io/Retake/schemas/<version>/<kind>.schema.json`.
 public struct SchemaReference: Equatable, Sendable {
     public static let base = "https://justinseanmartin.github.io/Retake/schemas/"

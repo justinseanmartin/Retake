@@ -2,7 +2,7 @@ import CoreGraphics
 import Foundation
 
 /// The size and frame rate of a device type's preview, as App Store Connect specifies them. See
-/// docs/cli.md, "retake cut".
+/// Documentation/cli.md, "retake cut".
 public struct PreviewSpec: Equatable, Sendable {
     public var width: Int
     public var height: Int

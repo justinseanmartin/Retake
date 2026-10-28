@@ -1,6 +1,6 @@
 import Foundation
 
-/// Takes and cuts on disk, as `takes` lists them and `clean` deletes them. See docs/cli.md,
+/// Takes and cuts on disk, as `takes` lists them and `clean` deletes them. See Documentation/cli.md,
 /// "retake takes" and "retake clean".
 public enum TakeStore {
     /// A take: its movie and step log, in `output/takes/<type>/<scene>/`, either of which may be

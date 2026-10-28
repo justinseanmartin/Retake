@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 
 /// `~/Library/Caches/retake/`: what each person's Retake keeps for itself, outside any project.
-/// See docs/cli.md, "Files Retake writes".
+/// See Documentation/cli.md, "Files Retake writes".
 public enum RetakeCache {
     public static var root: URL {
         FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appending(path: "retake", directoryHint: .isDirectory)

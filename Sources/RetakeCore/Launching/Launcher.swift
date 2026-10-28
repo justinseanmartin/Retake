@@ -37,7 +37,7 @@ public final class LaunchedApp: @unchecked Sendable {
 }
 
 /// Launching the app on a device for a take, and the launch that cleans up after a run. See
-/// docs/cli.md, "retake record", steps 1 and 2, and "retake clean".
+/// Documentation/cli.md, "retake record", steps 1 and 2, and "retake clean".
 public enum Launcher {
     /// How long to wait for the support library's report before deciding it didn't load.
     public static let reportTimeout = 15.0

@@ -2,7 +2,7 @@ import Foundation
 
 /// What `retake check` does: looks through an `.xcarchive`, `.ipa` or `.app` for TheInsideJob and
 /// Retake's support library, in its frameworks and its executables, its app extensions' included.
-/// See docs/cli.md, "retake check".
+/// See Documentation/cli.md, "retake check".
 public enum ArchiveCheck {
     /// Where each was found, relative to `url`; empty when neither is there.
     public static func check(_ url: URL, symbols: (URL) -> [String] = InsideJobDetector.definedSymbols) throws(RetakeError) -> [String] {

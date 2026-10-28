@@ -2,7 +2,7 @@ import AVFoundation
 import Foundation
 
 /// What Retake writes into each movie about how it was made, as QuickTime metadata, which
-/// AVFoundation and `ffprobe` read. See docs/cli.md, "Movie metadata".
+/// AVFoundation and `ffprobe` read. See Documentation/cli.md, "Movie metadata".
 public enum MovieMetadata {
     /// A take's fields, from its step log as far as it's known when recording starts: nothing
     /// about its steps, nor whether it failed. Nothing personal: not the device's name, nor its UDID.
@@ -32,7 +32,7 @@ public enum MovieMetadata {
 
     /// What a video records of how it was made: the Retake that rendered it, its edit and device
     /// type, and each of its takes, with the distinct app builds, devices and Button Heists among
-    /// them, in the order the video first shows them. See docs/cli.md, "A video's fields".
+    /// them, in the order the video first shows them. See Documentation/cli.md, "A video's fields".
     public struct Video: Equatable, Sendable {
         public var retake: String
         public var edit: String

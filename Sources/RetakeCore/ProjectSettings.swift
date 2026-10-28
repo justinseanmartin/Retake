@@ -4,15 +4,15 @@ import Foundation
 /// default device and set, and where output goes. Every field is optional.
 public struct ProjectSettings: Equatable, Sendable {
     /// The app's bundle ID; without it, the bundle ID comes from the app `install` last built (see
-    /// docs/cli.md, "Finding the app").
+    /// Documentation/cli.md, "Finding the app").
     public var bundleID: String?
     /// How `install` builds the app when it isn't given one.
     public var build: Build?
-    /// The device commands use when none is named; see docs/cli.md, "Choosing a device".
+    /// The device commands use when none is named; see Documentation/cli.md, "Choosing a device".
     public var device: String?
     /// The set a scene starts on when it names none, and `compose` writes a new scene on.
     public var defaultSet: String?
-    /// Where output goes, relative to the configuration file's directory; see docs/cli.md, "The
+    /// Where output goes, relative to the configuration file's directory; see Documentation/cli.md, "The
     /// output directory".
     public var output: String?
 
@@ -24,7 +24,7 @@ public struct ProjectSettings: Equatable, Sendable {
         self.output = output
     }
 
-    /// How `install` builds the app, in one of docs/cli.md's two forms.
+    /// How `install` builds the app, in one of Documentation/cli.md's two forms.
     public enum Build: Equatable, Sendable {
         /// Retake builds a scheme with `xcodebuild`.
         case scheme(SchemeBuild)

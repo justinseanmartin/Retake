@@ -2,7 +2,7 @@ import Foundation
 
 /// What `retake conform` does: pins an edit to the latest successful take of each scene it uses,
 /// turning any time still in plain seconds into an anchor against the take it was cut from, and
-/// checks every anchor resolves in the new takes before the edit is rewritten. See docs/cli.md,
+/// checks every anchor resolves in the new takes before the edit is rewritten. See Documentation/cli.md,
 /// "retake conform".
 public enum Conformer {
     public struct Result: Sendable {

@@ -1,7 +1,7 @@
 import Foundation
 
 /// What `retake install` does: gets the app, built if need be, embeds Retake in a copy of it, and
-/// installs that on the device. See docs/cli.md, "retake install".
+/// installs that on the device. See Documentation/cli.md, "retake install".
 public enum Installer {
     /// Where the app comes from, the first that applies: `--app`, `--scheme`, then `retake.json`'s
     /// `build`.
@@ -68,7 +68,7 @@ public enum Installer {
         return id
     }
 
-    /// The app's bundle ID, as docs/cli.md, "Finding the app", gives it: the configuration file's
+    /// The app's bundle ID, as Documentation/cli.md, "Finding the app", gives it: the configuration file's
     /// `bundleID`, else the one `install` last embedded; misuse (2) with neither.
     public static func bundleID(for project: Project) throws(RetakeError) -> String {
         if let id = project.settings.bundleID { return id }
