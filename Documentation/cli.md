@@ -831,6 +831,7 @@ only where the version can't say where the build came from: a local clone.
 | `retake.version` | The Retake that rendered it. |
 | `retake.edit` | The edit's name. |
 | `retake.device.type` | The device type this video was rendered for. |
+| `retake.app.bundle-id` | The app's bundle ID. |
 | `retake.app.versions` | JSON array: each distinct app version and build among the video's takes, as `{"version", "build"}`. |
 | `retake.devices` | JSON array: each distinct device among the takes, as `{"model", "marketingName", "os"}`. |
 | `retake.buttonheist.versions` | JSON array: each distinct Button Heist among the takes, as `{"version"}`, with `"commit"` for a take recorded by a Retake built from a local clone. |
