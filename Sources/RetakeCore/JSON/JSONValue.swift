@@ -47,3 +47,11 @@ public struct JSONObject: Equatable, Sendable {
 
     public var keys: [String] { entries.map(\.key) }
 }
+
+extension JSONValue: ExpressibleByStringLiteral, ExpressibleByBooleanLiteral, ExpressibleByIntegerLiteral, ExpressibleByFloatLiteral, ExpressibleByArrayLiteral {
+    public init(stringLiteral value: String) { self = .string(value) }
+    public init(booleanLiteral value: Bool) { self = .bool(value) }
+    public init(integerLiteral value: Int) { self = .number(Double(value)) }
+    public init(floatLiteral value: Double) { self = .number(value) }
+    public init(arrayLiteral elements: JSONValue...) { self = .array(elements) }
+}

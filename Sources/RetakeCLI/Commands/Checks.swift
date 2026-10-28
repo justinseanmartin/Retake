@@ -119,7 +119,21 @@ struct Schema: AsyncParsableCommand {
     }
 
     func run() async throws {
-        throw RetakeError.notImplemented("schema")
+        guard let output else {
+            if let kind, let schema = FileSchema.named(kind.rawValue) { print(schema.text, terminator: "") }
+            return
+        }
+        let folder = URL(filePath: output, directoryHint: .isDirectory)
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            for kind in FileSchema.kinds {
+                guard let schema = FileSchema.named(kind) else { continue }
+                try Data(schema.text.utf8).write(to: folder.appending(path: "\(kind).schema.json"), options: .atomic)
+            }
+        } catch {
+            throw RetakeError(.failed, "Couldn't write the schemas to \(output): \(error.localizedDescription)")
+        }
+        print("Wrote \(FileSchema.kinds.map { "\($0).schema.json" }.joined(separator: ", ")) to \(output).")
     }
 }
 

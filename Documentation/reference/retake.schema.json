@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.1/retake.schema.json",
+  "title": "retake.json",
+  "description": "A Retake project's configuration. Every field is optional.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "The URL of the schema the file is written against, for editors. Optional; a file is read against this Retake's schema whatever it names.",
+      "type": "string"
+    },
+    "bundleID": {
+      "description": "The app's bundle ID. Without it, the bundle ID comes from the app `retake install` last embedded.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*$",
+      "examples": ["com.example.notes"]
+    },
+    "build": {
+      "description": "How `retake install` builds the app when it isn't given one: a scheme, or a command of the project's own.",
+      "oneOf": [
+        {
+          "description": "Retake builds a scheme with xcodebuild, for iOS devices, with its build products in the project's build folder.",
+          "type": "object",
+          "properties": {
+            "scheme": {
+              "description": "The scheme to build.",
+              "type": "string",
+              "minLength": 1
+            },
+            "workspace": {
+              "description": "The workspace holding the scheme, needed only when the directory holds more than one. Relative to the directory holding retake.json.",
+              "type": "string",
+              "minLength": 1
+            },
+            "xcodeproj": {
+              "description": "The project holding the scheme, needed only when the directory holds more than one. Relative to the directory holding retake.json.",
+              "type": "string",
+              "minLength": 1
+            },
+            "configuration": {
+              "description": "The build configuration, which must be development-signed for the device.",
+              "type": "string",
+              "minLength": 1,
+              "default": "Debug"
+            },
+            "allowProvisioningUpdates": {
+              "description": "Lets xcodebuild register the device and update profiles on your team.",
+              "type": "boolean",
+              "default": false
+            },
+            "optimize": {
+              "description": "Builds with the compiler's optimisation on, Swift at -O and C at -Os, whatever the configuration says, so the app runs as fast as its users see it.",
+              "type": "boolean",
+              "default": true
+            }
+          },
+          "required": ["scheme"],
+          "additionalProperties": false
+        },
+        {
+          "description": "The project's own command builds the app: for builds one xcodebuild call can't make. It's run with /bin/sh in the project's directory, with the device's UDID in RETAKE_DEVICE_UDID.",
+          "type": "object",
+          "properties": {
+            "command": {
+              "description": "The command that builds the app.",
+              "type": "string",
+              "minLength": 1
+            },
+            "app": {
+              "description": "The .app the command leaves. Relative to the directory holding retake.json.",
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": ["command", "app"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "device": {
+      "description": "The device commands use when none is named: an alias, a UDID, or a device's name.",
+      "type": "string",
+      "minLength": 1
+    },
+    "defaultSet": {
+      "description": "The set a scene starts on when it names none, and the one `retake compose` gives a new scene.",
+      "type": "string",
+      "minLength": 1
+    },
+    "output": {
+      "description": "Where takes and cuts go. Relative to the directory holding retake.json.",
+      "type": "string",
+      "minLength": 1,
+      "default": "output"
+    }
+  },
+  "additionalProperties": false
+}
