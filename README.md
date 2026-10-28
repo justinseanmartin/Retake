@@ -90,8 +90,28 @@ retake install --scheme MyApp            # build Debug, embed Retake, and instal
 retake compose create-note               # write a scene a step at a time, on the device
 retake record --dry-run create-note      # play a scene without recording it
 retake record create-note share-note     # record takes
+retake conform video1                    # pin the edit to the latest takes
 retake cut video1                        # render the video, for each device type
 ```
+
+**The way to start is the example**, [`Examples/Notes`](Examples/Notes): a small notes app with no Retake code in
+it, and its `Retake/` project, ready to run. Its sets start the app on a first launch and on a
+returning user's notes; its scenes, for iPhone and iPad, walk through getting started, writing a
+note, syncing and sharing it; and its edit, `tour`, cuts them into a preview. Sign it with your own
+team first: copy `Config/Signing.example.xcconfig` to `Config/Signing.local.xcconfig`, which Git
+ignores, and give your team's ID and a bundle ID prefix. Then connect a device by USB, and from
+`Examples/Notes`:
+
+```sh
+retake doctor                            # checks Xcode, the device, signing and a launch
+retake install                           # builds the example, embeds Retake, installs it
+retake record --for tour                 # records the scenes the tour uses
+retake conform tour                      # pins the tour to those takes
+retake cut tour                          # renders it, for the device's type
+```
+
+Its integration test does all of that, from a copy of the project: `RETAKE_TEST_DEVICE=<device>
+swift test --filter EndToEnd`.
 
 ## Your app
 
