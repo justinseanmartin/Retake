@@ -21,6 +21,23 @@ public enum Cutter {
         project.cuts(for: type).appending(path: edit, directoryHint: .isDirectory)
     }
 
+    /// Selects the latest takes for one device type and writes the edit when that changes it.
+    /// Commands cutting several types do this for every type before rendering any of them, so a
+    /// later type's pins do not immediately make an earlier render look out of date.
+    public static func prepare(
+        _ name: String, for type: DeviceType, in project: Project, report: (String) -> Void = { _ in },
+    ) throws(RetakeError) {
+        let files = ProjectFiles(project: project)
+        let normalized = try CutPreparer.prepare(name, types: [type], in: project)
+        guard !normalized.changes.isEmpty else { return }
+        do {
+            try Data(normalized.text.utf8).write(to: files.editURL(name), options: .atomic)
+        } catch {
+            throw RetakeError(.failed, "Couldn't write \(project.displayPath(files.editURL(name))): \(error.localizedDescription)")
+        }
+        report("Updated \(project.displayPath(files.editURL(name))) to use the latest \(type.rawValue) takes.")
+    }
+
     /// Cuts `name`'s video for `type`. Fails (1) for an edit that can't be read, a pinned take
     /// missing or failed, takes from devices with different screens, an anchor or element that
     /// doesn't resolve, or, unless a draft, a video outside App Store Connect's limits; misuse (2)
@@ -29,15 +46,7 @@ public enum Cutter {
         _ name: String, for type: DeviceType, in project: Project, draft: Bool = false, report: (String) -> Void = { _ in },
     ) async throws(RetakeError) -> Result {
         let files = ProjectFiles(project: project)
-        let normalized = try CutPreparer.prepare(name, types: [type], in: project)
-        if !normalized.changes.isEmpty {
-            do {
-                try Data(normalized.text.utf8).write(to: files.editURL(name), options: .atomic)
-            } catch {
-                throw RetakeError(.failed, "Couldn't write \(project.displayPath(files.editURL(name))): \(error.localizedDescription)")
-            }
-            report("Updated \(project.displayPath(files.editURL(name))) to use the latest \(type.rawValue) takes.")
-        }
+        try prepare(name, for: type, in: project, report: report)
         let read = ProjectFiles.Report()
         guard let edit = files.readEdit(name, into: read) else { throw read.error }
         guard let video = edit.videos[type] else {

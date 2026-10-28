@@ -62,7 +62,17 @@ struct Cut: AsyncParsableCommand {
                 Swift.print("✖ \(name) isn't cut for \(type.rawValue).")
                 worst = max(worst, .usage)
             }
+            var prepared: [DeviceType] = []
             for deviceType in types {
+                do {
+                    try Cutter.prepare(name, for: deviceType, in: located) { Swift.print($0) }
+                    prepared.append(deviceType)
+                } catch {
+                    Swift.print("✖ \(name) (\(deviceType.rawValue)): \(error.message)")
+                    worst = max(worst, error.status)
+                }
+            }
+            for deviceType in prepared {
                 do {
                     let result = try await Cutter.cut(name, for: deviceType, in: located, draft: draft) { Swift.print($0) }
                     for warning in result.warnings { Console.warn(warning) }
