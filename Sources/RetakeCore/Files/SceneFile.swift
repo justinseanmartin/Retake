@@ -142,7 +142,10 @@ extension SceneFile {
         if let steps, steps.isEmpty, case .array(let values)? = object.value("steps"), values.isEmpty {
             reader.problem("needs at least one step", at: object.path("steps"))
         }
-        if let steps { checkIDs(steps, at: object.path("steps"), reader) }
+        // Steps that couldn't be read are left out, so the ids are checked once each has been.
+        if let steps, case .array(let values)? = object.value("steps"), steps.count == values.count {
+            checkIDs(steps, at: object.path("steps"), reader)
+        }
         object.finish()
         guard reader.problems.count == problemsBefore, let steps else { return nil }
         return SceneFile(

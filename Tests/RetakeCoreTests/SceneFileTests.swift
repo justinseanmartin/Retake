@@ -141,4 +141,9 @@ struct SceneFileTests {
             }
         }
     }
+
+    @Test func aStepThatCantBeReadDoesntShiftTheIDChecks() {
+        let read = steps(#"{"tap": {}}, {"hold": 1, "id": "a"}, {"hold": 1, "id": "a"}"#)
+        #expect(read.problems.count == 1 && read.problems[0].hasPrefix("scenes/ipad/create-note.json: steps[0].tap:"))
+    }
 }

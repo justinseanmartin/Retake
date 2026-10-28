@@ -177,4 +177,9 @@ struct EditFileTests {
         #expect(Color(hex: "#00000080")?.alpha == Double(0x80) / 255)
         #expect(Color(hex: "1F6FEB") == nil && Color(hex: "#12345") == nil && Color(hex: "#GGGGGG") == nil)
     }
+
+    @Test func aClipThatCantBeReadDoesntShiftTheChecksAcrossClips() {
+        let read = clips(#"{"take": "a", "from": 0}, {"id": "b", "take": "a", "from": 0, "to": 1, "crossfade": 0.4}"#, devices: #"["ipad"]"#)
+        #expect(read.problems == ["edits/video1.json: clips[0]: is missing \"to\""])
+    }
 }

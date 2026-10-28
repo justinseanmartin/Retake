@@ -102,7 +102,10 @@ extension EditFile {
             if case .array(let values) = value, values.isEmpty { reader.problem("needs at least one clip", at: path) }
             return clips
         }
-        if let clips { checkClips(clips, root.object["clips"], at: root.path("clips"), reader) }
+        // Clips that couldn't be read are left out, so the checks across them wait until each has.
+        if let clips, case .array(let values)? = root.object["clips"], clips.count == values.count {
+            checkClips(clips, root.object["clips"], at: root.path("clips"), reader)
+        }
         guard reader.problems.count == problemsBefore, let clips else { return nil }
         return Edit(
             music: music, tapSound: tapSound, takeAudioVolume: takeAudioVolume, background: background,
