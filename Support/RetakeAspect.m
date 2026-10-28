@@ -49,10 +49,20 @@ static void retakeLayoutSubviews(UIWindow *self, SEL _cmd) {
     ((void (*)(id, SEL))originalLayoutSubviews)(self, _cmd);
 }
 
+// Gives UIWindow its own implementation of `selector`, returning the one it had: a method of its own
+// is replaced, and an inherited one is added to UIWindow alone, since replacing UIView's would run
+// this for every view. Which UIWindow overrides varies with iOS: on 17, it inherits layoutSubviews.
+static IMP replaceInWindow(SEL selector, IMP replacement) {
+    Method method = class_getInstanceMethod(UIWindow.class, selector);
+    IMP inherited = method_getImplementation(method);
+    if (class_addMethod(UIWindow.class, selector, replacement, method_getTypeEncoding(method))) return inherited;
+    return method_setImplementation(method, replacement);
+}
+
 void RetakeSetUpAspect(NSDictionary<NSString *, NSString *> *environment) {
     portraitAspect = parseAspect(environment[@"RETAKE_ASPECT_PORTRAIT"] ?: @"");
     landscapeAspect = parseAspect(environment[@"RETAKE_ASPECT_LANDSCAPE"] ?: @"");
     if (portraitAspect <= 0 && landscapeAspect <= 0) return;
-    originalSetFrame = method_setImplementation(class_getInstanceMethod(UIWindow.class, @selector(setFrame:)), (IMP)retakeSetFrame);
-    originalLayoutSubviews = method_setImplementation(class_getInstanceMethod(UIWindow.class, @selector(layoutSubviews)), (IMP)retakeLayoutSubviews);
+    originalSetFrame = replaceInWindow(@selector(setFrame:), (IMP)retakeSetFrame);
+    originalLayoutSubviews = replaceInWindow(@selector(layoutSubviews), (IMP)retakeLayoutSubviews);
 }
