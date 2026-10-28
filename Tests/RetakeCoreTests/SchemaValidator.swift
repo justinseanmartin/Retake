@@ -11,6 +11,11 @@ struct SchemaValidator {
         problem(value, document, at: "")
     }
 
+    /// The first place the value doesn't fit a part of the document, such as one field's schema.
+    func problem(_ value: JSONValue, against schema: JSONValue) -> String? {
+        problem(value, schema, at: "")
+    }
+
     private func problem(_ value: JSONValue, _ schema: JSONValue, at path: String) -> String? {
         guard case .object(let schema) = schema else {
             return schema == .bool(false) ? "\(path): not allowed" : nil

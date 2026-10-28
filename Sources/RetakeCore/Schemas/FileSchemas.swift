@@ -313,7 +313,7 @@ extension EditFile {
                 .init("devices", .array("The device types it makes a video for.", of: .choice(nil, devices), minItems: 1, unique: true)),
                 .init("takes", .object(
                     "The take of each scene the edit is cut from, per device type, as `retake conform` pins them.",
-                    devices.map { .init($0, .dictionary(keys: nil, values: .integer(nil, atLeast: 1))) },
+                    devices.map { .init($0, .dictionary("Each scene's pinned \($0) take, by the scene's name: its number.", values: .integer(nil, atLeast: 1))) },
                 )),
                 .init("music", .ref("music")),
                 .init("tapSound", .ref("tap-sound")),

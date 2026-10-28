@@ -28,6 +28,7 @@
       "type": "object",
       "properties": {
         "iphone": {
+          "description": "Each scene's pinned iphone take, by the scene's name: its number.",
           "type": "object",
           "additionalProperties": {
             "type": "integer",
@@ -35,6 +36,7 @@
           }
         },
         "ipad": {
+          "description": "Each scene's pinned ipad take, by the scene's name: its number.",
           "type": "object",
           "additionalProperties": {
             "type": "integer",
