@@ -92,8 +92,13 @@ public struct AppBundle: Sendable {
     /// read, since what can't be read can't be cleared.
     public func executables() throws(RetakeError) -> [URL] {
         var found: [URL] = []
-        if FileManager.default.fileExists(atPath: infoPlist.path), let name = try readInfo().info["CFBundleExecutable"] as? String {
-            found.append(url.appending(path: name))
+        if FileManager.default.fileExists(atPath: infoPlist.path) {
+            do {
+                _ = try Data(contentsOf: infoPlist)
+            } catch {
+                throw Self.unreadable(infoPlist, because: error.localizedDescription)
+            }
+            if let name = try readInfo().info["CFBundleExecutable"] as? String { found.append(url.appending(path: name)) }
         }
         found += try Self.listing(url).filter { $0.hasSuffix(".debug.dylib") }.map { url.appending(path: $0) }
         for entry in try Self.listing(frameworks) {
@@ -115,8 +120,20 @@ public struct AppBundle: Sendable {
         do {
             return try FileManager.default.contentsOfDirectory(atPath: folder.path).sorted()
         } catch {
-            throw RetakeError(.failed, "Couldn't read \(folder.path), so what's in it can't be checked: \(error.localizedDescription)")
+            throw unreadable(folder, because: error.localizedDescription)
         }
+    }
+
+    /// A failure (1) for something there that can't be read, saying what to do about it: in an
+    /// Xcode script phase, which sets `SCRIPT_INPUT_FILE_COUNT`, the sandbox lets the phase read
+    /// only its inputs.
+    static func unreadable(_ path: URL, because reason: String, environment: [String: String] = ProcessInfo.processInfo.environment) -> RetakeError {
+        let fix = environment["SCRIPT_INPUT_FILE_COUNT"] != nil
+            ? "This looks like an Xcode build phase, whose script sandbox lets it read only its input files: add "
+                + "\(path.path) to the phase's Input Files, or turn the sandbox off for the target "
+                + "(ENABLE_USER_SCRIPT_SANDBOXING), or run `retake check` on the .xcarchive or .ipa once it's built, outside the build."
+            : "Make it readable, and run `retake check` again."
+        return RetakeError(.failed, "Couldn't read \(path.path) (\(reason)), so the app can't be cleared of TheInsideJob. \(fix)")
     }
 }
 
@@ -170,8 +187,15 @@ public enum InsideJobDetector {
 
     /// The symbols `executable` defines, from `nm`; a failure (1) when `nm` can't read them.
     public static func definedSymbols(_ executable: URL) throws(RetakeError) -> [String] {
-        guard let result = try? Subprocess.xcrun(["nm", "-U", "-j", executable.path]), result.status == 0 else {
-            throw RetakeError(.failed, "Couldn't read the symbols of \(executable.path), so it can't be checked for TheInsideJob.")
+        let result: Subprocess.Result
+        do {
+            result = try Subprocess.xcrun(["nm", "-U", "-j", executable.path])
+        } catch {
+            throw RetakeError(.environment, "Couldn't run nm to read \(executable.path)'s symbols: \(error.localizedDescription). It comes with Xcode.")
+        }
+        guard result.status == 0 else {
+            let reason = result.errorText.split(separator: "\n").last.map(String.init) ?? "nm exited \(result.status)"
+            throw AppBundle.unreadable(executable, because: reason)
         }
         return result.outputText.split(separator: "\n").map(String.init)
     }

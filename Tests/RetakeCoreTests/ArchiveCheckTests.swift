@@ -1,5 +1,5 @@
 import Foundation
-import RetakeCore
+@testable import RetakeCore
 import Testing
 
 struct ArchiveCheckTests {
@@ -64,6 +64,16 @@ struct ArchiveCheckTests {
         #expect(throws: RetakeError.self, "nm couldn't read an executable") {
             try check("Notes.app") { _ throws(RetakeError) in throw RetakeError(.failed, "unreadable") }
         }
+    }
+
+    @Test func whatCantBeReadSaysWhatToDo() {
+        let frameworks = URL(filePath: "/b/Notes.app/Frameworks")
+        let inPhase = AppBundle.unreadable(frameworks, because: "Operation not permitted", environment: ["SCRIPT_INPUT_FILE_COUNT": "1"])
+        #expect(inPhase.status == .failed)
+        #expect(inPhase.message.hasPrefix("Couldn't read /b/Notes.app/Frameworks (Operation not permitted), so the app can't be cleared of TheInsideJob."))
+        #expect(inPhase.message.contains("add /b/Notes.app/Frameworks to the phase's Input Files"))
+        let elsewhere = AppBundle.unreadable(frameworks, because: "Permission denied", environment: [:])
+        #expect(elsewhere.message.hasSuffix("Make it readable, and run `retake check` again."))
     }
 
     @Test func aStaticLinkIsCaughtByItsSymbols() throws {
