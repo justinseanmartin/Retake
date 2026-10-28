@@ -1,0 +1,209 @@
+import AVFoundation
+import CoreImage
+
+/// Renders a composition in two passes. What's drawn over the picture renders only through an
+/// export session, which can't set a bit rate, so the first pass writes a master, ProRes, with the
+/// overlays and the sound; the second re-encodes it to App Store Connect's specification for app
+/// previews, H.264 High Profile 4.0 at about 11 Mbps with 256 kbps stereo AAC at 48 kHz, drawing the
+/// blurs on each frame as it goes. A draft does the same, faster and smaller, keeping no master.
+public enum PreviewExport {
+    /// A rectangle of the canvas, top-down, blurred from `start` to `end` in the video.
+    public struct BlurRegion: Equatable, Sendable {
+        public var start: Double
+        public var end: Double
+        public var rect: CGRect
+        /// The Gaussian sigma, in canvas pixels.
+        public var sigma: Double
+        /// Whether the blur swells from none to `sigma` at the region's middle and back, as a turn's
+        /// does, rather than holding at `sigma`.
+        public var swells: Bool
+
+        public init(start: Double, end: Double, rect: CGRect, sigma: Double, swells: Bool = false) {
+            self.start = start
+            self.end = end
+            self.rect = rect
+            self.sigma = sigma
+            self.swells = swells
+        }
+
+        public func sigma(at time: Double) -> Double {
+            guard swells, end > start else { return sigma }
+            return sigma * sin(.pi * (time - start) / (end - start))
+        }
+    }
+
+    /// How strongly a turn is blurred at its middle, in canvas pixels, as the editor Retake grew
+    /// from did.
+    public static let turnBlurSigma = 18.0
+
+    /// The blurs of a cut: each turn's, over the whole canvas, swelling; and each the edit names,
+    /// over its rectangle.
+    public static func blurs(turns: [ClosedRange<Double>], overlays: Overlays, canvas: CGSize) -> [BlurRegion] {
+        turns.map { BlurRegion(start: $0.lowerBound, end: $0.upperBound, rect: CGRect(origin: .zero, size: canvas), sigma: turnBlurSigma, swells: true) }
+            + overlays.blurs.map { BlurRegion(start: $0.start, end: $0.end, rect: $0.rect, sigma: $0.radius) }
+    }
+
+    /// The first pass: `composition` with `layers` drawn over it and `audioMix`'s sound, to `url`,
+    /// as ProRes, or for a draft, H.264.
+    public static func master(
+        _ composition: EditComposition, audioMix: AVAudioMix?, layers: OverlayLayers?, metadata: [AVMetadataItem], to url: URL, draft: Bool = false,
+    ) async throws(RetakeError) {
+        let videoComposition = composition.videoComposition.mutableCopy() as! AVMutableVideoComposition
+        if let layers {
+            videoComposition.animationTool = AVVideoCompositionCoreAnimationTool(postProcessingAsVideoLayer: layers.video, in: layers.parent)
+        }
+        let preset = draft ? AVAssetExportPresetHighestQuality : AVAssetExportPresetAppleProRes422LPCM
+        guard let session = AVAssetExportSession(asset: composition.composition, presetName: preset) else {
+            throw RetakeError(.failed, "There's no export for \(draft ? "H.264" : "ProRes") here.")
+        }
+        session.videoComposition = videoComposition
+        session.audioMix = audioMix
+        // A take's sound sped up with its clip keeps its pitch.
+        session.audioTimePitchAlgorithm = .spectral
+        session.metadata = metadata
+        try? FileManager.default.removeItem(at: url)
+        do {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try await session.export(to: url, as: .mov)
+        } catch {
+            throw RetakeError(.failed, "Couldn't render \(url.lastPathComponent): \(error.localizedDescription)")
+        }
+    }
+
+    /// The second pass: the master re-encoded for App Store Connect, at `scale` of its size, with
+    /// `blurs` drawn, to `url`.
+    public static func preview(
+        from master: URL, to url: URL, spec: PreviewSpec, blurs: [BlurRegion], metadata: [AVMetadataItem], scale: Double = 1, bitRate: Int = 11_000_000,
+    ) async throws(RetakeError) {
+        do {
+            try await encode(from: master, to: url, spec: spec, blurs: blurs, metadata: metadata, scale: scale, bitRate: bitRate)
+        } catch let error as RetakeError {
+            throw error
+        } catch {
+            throw RetakeError(.failed, "Couldn't write \(url.lastPathComponent): \(error.localizedDescription)")
+        }
+    }
+
+    static func encode(from master: URL, to url: URL, spec: PreviewSpec, blurs: [BlurRegion], metadata: [AVMetadataItem], scale: Double, bitRate: Int) async throws {
+        let asset = AVURLAsset(url: master)
+        guard let video = try await asset.loadTracks(withMediaType: .video).first else { throw RetakeError(.failed, "The master has no picture.") }
+        let audio = try await asset.loadTracks(withMediaType: .audio).first
+        let size = try await video.load(.naturalSize)
+        let width = Int((size.width * scale / 2).rounded()) * 2, height = Int((size.height * scale / 2).rounded()) * 2
+
+        let reader = try AVAssetReader(asset: asset)
+        let videoOut = AVAssetReaderTrackOutput(track: video, outputSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA])
+        reader.add(videoOut)
+        let audioOut = audio.map {
+            AVAssetReaderTrackOutput(track: $0, outputSettings: [AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: 48000, AVNumberOfChannelsKey: 2])
+        }
+        if let audioOut { reader.add(audioOut) }
+
+        try? FileManager.default.removeItem(at: url)
+        let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
+        writer.metadata = metadata
+        let videoIn = AVAssetWriterInput(mediaType: .video, outputSettings: [
+            AVVideoCodecKey: AVVideoCodecType.h264,
+            AVVideoWidthKey: width,
+            AVVideoHeightKey: height,
+            AVVideoCompressionPropertiesKey: [
+                AVVideoAverageBitRateKey: bitRate,
+                AVVideoProfileLevelKey: AVVideoProfileLevelH264High40,
+                AVVideoExpectedSourceFrameRateKey: spec.framesPerSecond,
+                AVVideoMaxKeyFrameIntervalKey: spec.framesPerSecond,
+            ],
+        ])
+        let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoIn, sourcePixelBufferAttributes: [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA, kCVPixelBufferWidthKey as String: width, kCVPixelBufferHeightKey as String: height,
+        ])
+        writer.add(videoIn)
+        let audioIn = audioOut.map { _ in
+            AVAssetWriterInput(mediaType: .audio, outputSettings: [
+                AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: 48000, AVNumberOfChannelsKey: 2, AVEncoderBitRateKey: 256_000,
+            ])
+        }
+        if let audioIn { writer.add(audioIn) }
+
+        guard reader.startReading() else { throw RetakeError(.failed, "Couldn't read the master: \(String(describing: reader.error))") }
+        guard writer.startWriting() else { throw RetakeError(.failed, "Couldn't write the preview: \(String(describing: writer.error))") }
+        writer.startSession(atSourceTime: .zero)
+
+        let painter = FramePainter(blurs: blurs, canvasHeight: size.height, scale: scale, adaptor: adaptor)
+        let copiers = [Copier(output: videoOut, input: videoIn, label: "video", painter: painter)]
+            + (audioOut.flatMap { output in audioIn.map { Copier(output: output, input: $0, label: "audio", painter: nil) } }.map { [$0] } ?? [])
+        await withTaskGroup(of: Void.self) { group in
+            for copier in copiers { group.addTask { await copier.run() } }
+        }
+        await writer.finishWriting()
+        if writer.status != .completed {
+            throw RetakeError(.failed, "Couldn't write \(url.lastPathComponent): \(String(describing: writer.error))")
+        }
+    }
+}
+
+/// Copies one track's samples from the reader to the writer on its own queue, the only place either
+/// is touched once copying starts, the picture's through the painter.
+private final class Copier: @unchecked Sendable {
+    let output: AVAssetReaderTrackOutput
+    let input: AVAssetWriterInput
+    let queue: DispatchQueue
+    let painter: FramePainter?
+
+    init(output: AVAssetReaderTrackOutput, input: AVAssetWriterInput, label: String, painter: FramePainter?) {
+        self.output = output
+        self.input = input
+        queue = DispatchQueue(label: "PreviewExport.\(label)")
+        self.painter = painter
+    }
+
+    func run() async {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            input.requestMediaDataWhenReady(on: queue) { [self] in
+                while input.isReadyForMoreMediaData {
+                    guard let sample = output.copyNextSampleBuffer() else {
+                        input.markAsFinished()
+                        continuation.resume()
+                        return
+                    }
+                    if let painter { painter.append(sample) } else { input.append(sample) }
+                }
+            }
+        }
+    }
+}
+
+/// Draws each frame at the preview's size, with the blurs in force at its time, and appends it.
+private final class FramePainter: @unchecked Sendable {
+    let blurs: [PreviewExport.BlurRegion]
+    let canvasHeight: Double
+    let scale: Double
+    let adaptor: AVAssetWriterInputPixelBufferAdaptor
+    let context = CIContext()
+
+    init(blurs: [PreviewExport.BlurRegion], canvasHeight: Double, scale: Double, adaptor: AVAssetWriterInputPixelBufferAdaptor) {
+        self.blurs = blurs
+        self.canvasHeight = canvasHeight
+        self.scale = scale
+        self.adaptor = adaptor
+    }
+
+    func append(_ sample: CMSampleBuffer) {
+        guard let pixels = sample.imageBuffer, let pool = adaptor.pixelBufferPool else { return }
+        let time = sample.presentationTimeStamp.seconds
+        let frame = CIImage(cvPixelBuffer: pixels)
+        var result = frame
+        for region in blurs where time >= region.start && time < region.end {
+            let sigma = region.sigma(at: time)
+            guard sigma > 0.5 else { continue }
+            // Core Image's origin is at the bottom.
+            let rect = CGRect(x: region.rect.minX, y: canvasHeight - region.rect.maxY, width: region.rect.width, height: region.rect.height)
+            result = frame.clampedToExtent().applyingGaussianBlur(sigma: sigma).cropped(to: rect).composited(over: result)
+        }
+        if scale != 1 { result = result.transformed(by: CGAffineTransform(scaleX: scale, y: scale)) }
+        var output: CVPixelBuffer?
+        CVPixelBufferPoolCreatePixelBuffer(nil, pool, &output)
+        guard let output else { return }
+        context.render(result, to: output)
+        adaptor.append(output, withPresentationTime: sample.presentationTimeStamp)
+    }
+}
