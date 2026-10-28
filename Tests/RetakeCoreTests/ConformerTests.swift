@@ -3,7 +3,7 @@ import Foundation
 import Testing
 
 /// Pinning an edit to its scenes' latest takes.
-struct ConformerTests {
+struct CutPreparerTests {
     let root: URL
     let project: Project
 
@@ -48,7 +48,7 @@ struct ConformerTests {
             }
 
             """)
-        let result = try Conformer.conform("video", in: project)
+        let result = try CutPreparer.prepare("video", in: project)
         #expect(result.text == """
             {
               "devices": ["ipad"],
@@ -79,7 +79,7 @@ struct ConformerTests {
         try record(3, failure: "step 2 didn't run")
         try write("edits/video.json", #"{"devices": ["ipad"], "clips": [{"take": "walk", "from": 2.25, "to": 3}]}"#)
 
-        let result = try Conformer.conform("video", in: project)
+        let result = try CutPreparer.prepare("video", in: project)
 
         #expect(result.text == """
             {
@@ -106,7 +106,7 @@ struct ConformerTests {
         defer { try? FileManager.default.removeItem(at: root) }
         try record(1)
         try write("edits/video.json", #"{"devices": ["ipad"], "takes": {"ipad": {"walk": 1}}, "clips": [{"take": "walk", "from": {"step": "a"}, "to": {"step": "b"}}]}"#)
-        #expect(try Conformer.conform("video", in: project).changes.isEmpty)
+        #expect(try CutPreparer.prepare("video", in: project).changes.isEmpty)
     }
 
     @Test func onlyRetakesOwnSchemaIsBroughtUpToDate() throws {
@@ -114,7 +114,7 @@ struct ConformerTests {
         try record(1)
         func conformed(_ schema: String) throws -> JSONValue? {
             try write("edits/video.json", #"{"$schema": "\#(schema)", "devices": ["ipad"], "clips": [{"take": "walk", "from": {"step": "a"}, "to": {"step": "b"}}]}"#)
-            return try JSONParser.parse(Conformer.conform("video", in: project).text)[path: "$schema"]
+            return try JSONParser.parse(CutPreparer.prepare("video", in: project).text)[path: "$schema"]
         }
         let old = SchemaReference(version: "0.0.0", kind: "edit").url
         #expect(try conformed(old) == .string(SchemaReference.current("edit").url))
@@ -124,10 +124,10 @@ struct ConformerTests {
     @Test func nothingIsConformedWithoutATakeOrWithAnAnchorTheNewTakeCantHold() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try write("edits/video.json", #"{"devices": ["ipad"], "clips": [{"take": "walk", "from": {"step": "a"}, "to": {"step": "b", "offset": 2.5}}]}"#)
-        #expect(throws: RetakeError.self) { try Conformer.conform("video", in: project) }
+        #expect(throws: RetakeError.self) { try CutPreparer.prepare("video", in: project) }
         try record(1, duration: 4)
         do {
-            _ = try Conformer.conform("video", in: project)
+            _ = try CutPreparer.prepare("video", in: project)
             Issue.record("conformed onto a take too short for it")
         } catch {
             #expect(error.message == "In the new takes, nothing was written:\nclips[0].to (ipad): is 5.5 s into the take, outside it: it's 4 s long")

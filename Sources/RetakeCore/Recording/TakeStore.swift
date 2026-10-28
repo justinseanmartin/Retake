@@ -118,7 +118,7 @@ public enum TakeStore {
         /// Each edit's folder of cuts, for a device type.
         public var cuts: [URL]
 
-        /// The takes it deletes that an edit pins, which `cut` then can't cut until it's conformed.
+        /// The takes it deletes that an edit last cut from; its next cut selects another take.
         public var pinned: [Take] { takes.filter { !$0.pinnedBy.isEmpty } }
     }
 

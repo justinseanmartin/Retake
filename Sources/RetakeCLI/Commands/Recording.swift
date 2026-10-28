@@ -481,7 +481,7 @@ struct Clean: AsyncParsableCommand {
             for folder in cleaning.cuts { print("  \(project.displayPath(folder))") }
         }
         for take in cleaning.pinned {
-            Console.warn("\(take.name) (\(take.type.rawValue)) is pinned by \(take.pinnedBy.joined(separator: ", ")), which can't be cut until conformed onto another take.")
+            Console.warn("\(take.name) (\(take.type.rawValue)) was used by \(take.pinnedBy.joined(separator: ", ")); its next cut will select the latest successful take left.")
         }
     }
 }

@@ -1,5 +1,5 @@
 /// A JSON value, as Retake reads its files: objects keep their keys in the order the file gives
-/// them, so a file Retake rewrites (`conform`) keeps its shape.
+/// them, so an edit Retake rewrites before `cut` keeps its shape.
 public enum JSONValue: Equatable, Sendable {
     case null
     case bool(Bool)

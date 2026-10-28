@@ -1,7 +1,7 @@
 import Foundation
 
 /// A take's steps on its movie's clock, which an edit's anchors and elements resolve against, the
-/// same way for `cut`, `conform` and `validate`. See README.md, "Anchors: times that follow the app".
+/// same way while preparing and validating a `cut`. See README.md, "Anchors: times that follow the app".
 public struct TakeTimeline: Sendable {
     public let log: TakeLog
 

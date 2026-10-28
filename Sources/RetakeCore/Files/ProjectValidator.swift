@@ -236,33 +236,25 @@ public struct ProjectValidator {
 
     // MARK: - Against the takes
 
-    /// What `cut` will check of `video`, in the takes it pins that are recorded here: each clip's
+    /// What `cut` will check of `video`, in the latest successful takes recorded here: each clip's
     /// anchors resolving inside its take, in order; its captions', sounds', spotlight's and blurs'
     /// within the stretch the clip plays; and the elements a spotlight or blur names on screen as it
-    /// starts. Takes aren't in a repository, so a take that isn't pinned, isn't recorded here, or
-    /// failed only warns that what's cut from it isn't checked.
+    /// starts. Takes aren't in a repository, so a scene without a successful take only warns that
+    /// what's cut from it isn't checked.
     func checkTakes(
         of edit: EditFile, _ video: Edit, for type: DeviceType, problem: (JSONPath, String) -> Void, warning: (JSONPath, String) -> Void,
         reported: (JSONPath) -> Bool,
     ) {
-        let pins = Dictionary((edit.takes[type] ?? []).map { ($0.name, $0.value) }, uniquingKeysWith: { first, _ in first })
         var timelines: [String: TakeTimeline?] = [:]
         func pinned(_ scene: String, at path: JSONPath) -> TakeTimeline? {
             if let known = timelines[scene] { return known }
-            var found: TakeTimeline?
-            if let number = pins[scene] {
-                let take = TakeStore.takes(of: scene, for: [type], in: project).first { $0.number == number }
-                if let take, let log = take.recorded, log.failure == nil, take.problem == nil {
-                    found = TakeTimeline(log)
-                } else if let log = take?.recorded, let failure = log.failure {
-                    warning(path, "take \(number) of \(scene) for \(type.rawValue) failed (\(failure)), so it can't be cut from, and isn't checked")
-                } else if let take {
-                    warning(path, "take \(number) of \(scene) for \(type.rawValue) can't be read, so isn't checked: \(take.problem ?? "")")
-                } else {
-                    warning(path, "take \(number) of \(scene) for \(type.rawValue) isn't recorded here, so what's cut from it isn't checked")
-                }
+            let take = TakeStore.takes(of: scene, for: [type], in: project).last { !$0.failed }
+            let found: TakeTimeline?
+            if let log = take?.recorded {
+                found = TakeTimeline(log)
             } else {
-                warning(path, "the edit pins no \(type.rawValue) take of \(scene), so what's cut from it isn't checked; conform it")
+                found = nil
+                warning(path, "there's no successful \(type.rawValue) take of \(scene), so what's cut from it isn't checked; record it")
             }
             timelines[scene] = found
             return found

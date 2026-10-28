@@ -1,10 +1,10 @@
 import Foundation
 
-/// What `retake conform` does: pins an edit to the latest successful take of each scene it uses,
+/// Prepares an edit for `retake cut`: pins the latest successful take of each scene it uses,
 /// turning any time still in plain seconds into an anchor against the take it was cut from, and
 /// checks every anchor resolves in the new takes before the edit is rewritten. See Documentation/cli.md,
-/// "retake conform".
-public enum Conformer {
+/// the cut.
+public enum CutPreparer {
     public struct Result: Sendable {
         /// The edit's new text, laid out as before.
         public var text: String
@@ -12,11 +12,11 @@ public enum Conformer {
         public var changes: [String]
     }
 
-    /// The conformed edit `name`, for each of its device types, or only `types`. Fails (1), with
+    /// The normalized edit `name`, for each of its device types, or only `types`. Fails (1), with
     /// nothing to write, for an edit that can't be read, a scene with no successful take, a time in
     /// seconds whose take isn't here to turn it into an anchor, or an anchor or element that doesn't
     /// resolve in the new takes; misuse (2) for a type the edit doesn't name.
-    public static func conform(_ name: String, types requested: [DeviceType]? = nil, in project: Project) throws(RetakeError) -> Result {
+    public static func prepare(_ name: String, types requested: [DeviceType]? = nil, in project: Project) throws(RetakeError) -> Result {
         let files = ProjectFiles(project: project)
         let url = files.editURL(name)
         let report = ProjectFiles.Report()
@@ -34,8 +34,8 @@ public enum Conformer {
         let oldPins = edit.takes.mapValues { Dictionary($0.map { ($0.name, $0.value) }, uniquingKeysWith: { first, _ in first }) }
         func log(_ scene: String, _ type: DeviceType) -> TakeLog? {
             let takes = TakeStore.takes(of: scene, for: [type], in: project)
-            if let number = oldPins[type]?[scene] {
-                return takes.first { $0.number == number }?.recorded
+            if let number = oldPins[type]?[scene], let old = takes.first(where: { $0.number == number })?.recorded {
+                return old
             }
             return takes.last { !$0.failed }?.recorded
         }
@@ -49,6 +49,7 @@ public enum Conformer {
                 return .object(JSONObject(object.entries.map { entry in
                     let at = path.isEmpty ? entry.key : "\(path).\(entry.key)"
                     if let override = DeviceType(rawValue: entry.key) {
+                        guard types.contains(override) else { return entry }
                         return .init(key: entry.key, value: converted(entry.value, at: at, scene: scene, type: override))
                     }
                     guard ["from", "to", "at"].contains(entry.key), case .number(let seconds) = entry.value, let scene else {
@@ -114,17 +115,17 @@ public enum Conformer {
         // Every anchor and element resolves in the new takes, or nothing is written.
         let newText = JSONWriter.fitting(.object(root))
         let reader = JSONReader(file: project.displayPath(url))
-        guard let conformed = EditFile.read(newText, with: reader) else {
+        guard let prepared = EditFile.read(newText, with: reader) else {
             throw RetakeError(.failed, reader.problems.map(\.description).joined(separator: "\n"))
         }
         let validator = ProjectValidator(files: files, offline: false)
         var unresolved: [String] = []
         for type in types {
-            guard let video = conformed.videos[type] else { continue }
-            validator.checkTakes(of: conformed, video, for: type, problem: { path, message in
-                unresolved.append("\(conformed.source(of: path, for: type)) (\(type.rawValue)): \(message)")
+            guard let video = prepared.videos[type] else { continue }
+            validator.checkTakes(of: prepared, video, for: type, problem: { path, message in
+                unresolved.append("\(prepared.source(of: path, for: type)) (\(type.rawValue)): \(message)")
             }, warning: { path, message in
-                unresolved.append("\(conformed.source(of: path, for: type)) (\(type.rawValue)): \(message)")
+                unresolved.append("\(prepared.source(of: path, for: type)) (\(type.rawValue)): \(message)")
             }, reported: { _ in false })
         }
         guard unresolved.isEmpty else {

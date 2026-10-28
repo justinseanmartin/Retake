@@ -5,7 +5,7 @@ import Testing
 extension OnDevice {
     /// The example, as someone starting with Retake would take it: `retake` itself, from installing
     /// the app to cutting its tour, for the test device's type. It works on a copy of the example's
-    /// `Retake/` folder, since `conform` rewrites the edit, with its own output directory.
+    /// `Retake/` folder, since `cut` rewrites the edit, with its own output directory.
     @Suite struct EndToEndTests {
         /// The `retake` the tests were built with, beside their bundle.
         static var binary: URL? {
@@ -47,7 +47,7 @@ extension OnDevice {
             #expect(install.status == 0, "\(install.output)")
             environment["RETAKE_CONFIG"] = project.appending(path: "retake.json").path
 
-            for command in [["validate", "--offline"], ["record", "--for", "tour"], ["conform", "tour", "--type", type], ["validate"], ["cut", "tour", "--type", type]] {
+            for command in [["validate", "--offline"], ["record", "--for", "tour"], ["validate"], ["cut", "tour", "--type", type]] {
                 let run = try Self.retake(command, environment: environment)
                 try #require(run.status == 0, "retake \(command.joined(separator: " ")): \(run.output)")
             }

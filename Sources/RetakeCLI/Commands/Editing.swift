@@ -2,54 +2,11 @@ import ArgumentParser
 import Foundation
 import RetakeCore
 
-struct Conform: AsyncParsableCommand {
-    static let configuration = CommandConfiguration(
-        abstract: "Pins an edit to the latest takes of its scenes.",
-        discussion: """
-            Pins the latest successful take of each scene the edit uses; to cut from an earlier take, \
-            delete the takes after it with clean --takes. Checks every anchor resolves in the new \
-            takes, and rewrites the edit in place; fails (1), writing nothing, if one doesn't.
-            """,
-    )
-
-    @Argument(help: ArgumentHelp("The edit to conform.", valueName: "edit"))
-    var edit: String
-
-    @Option(help: ArgumentHelp("Only this device type's pins.", valueName: "type"))
-    var type: DeviceType?
-
-    @Flag(help: "Print the changes without writing them.")
-    var dryRun = false
-
-    @OptionGroup var project: ProjectOptions
-
-    func run() async throws {
-        let located = try project.locate()
-        let files = ProjectFiles(project: located)
-        guard FileManager.default.fileExists(atPath: files.editURL(edit).path) else {
-            throw RetakeError(.usage, "There's no edit \"\(edit)\" (\(located.displayPath(files.editURL(edit)))).")
-        }
-        let result = try Conformer.conform(edit, types: type.map { [$0] }, in: located)
-        if result.changes.isEmpty {
-            print("\(edit) already pins the latest takes.")
-            return
-        }
-        for change in result.changes { print("  \(change)") }
-        guard !dryRun else { return print("Nothing written (--dry-run).") }
-        do {
-            try Data(result.text.utf8).write(to: files.editURL(edit), options: .atomic)
-        } catch {
-            throw RetakeError(.failed, "Couldn't write \(located.displayPath(files.editURL(edit))): \(error.localizedDescription)")
-        }
-        print("Wrote \(located.displayPath(files.editURL(edit))).")
-    }
-}
-
 struct Cut: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Renders videos.",
         discussion: """
-            Renders each edit, for each device type it names, from the takes it pins, to a ProRes \
+            Renders each edit, for each device type it names, from the latest successful takes, to a ProRes \
             master and an .mp4 for App Store Connect in the output directory's cuts/<type>/<edit>/; \
             with --draft, a quick, smaller .mp4 alone.
             """,

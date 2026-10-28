@@ -48,21 +48,24 @@ struct CutterTests {
         }
     }
 
-    @Test func aTakeNotPinnedNotRecordedOrFailedIsntCut() async throws {
+    @Test func aTakeNotRecordedOrFailedIsntCut() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try edit("")
-        #expect(await failure() == "There's no successful ipad take of walk; record it, then run `retake conform video --type ipad`.")
+        #expect(await failure() == "There's no successful ipad take of walk to pin; record it.")
         try edit(#""walk": 1"#)
-        #expect(await failure() == "Take 1 of walk, which video pins for ipad, isn't recorded; record it, or conform the edit.")
+        #expect(await failure() == "There's no successful ipad take of walk to pin; record it.")
         try record("walk", 1, failure: "step 2 didn't run")
-        #expect(await failure() == "Take 1 of walk for ipad failed (step 2 didn't run), so it can't be cut from.")
+        #expect(await failure() == "There's no successful ipad take of walk to pin; record it.")
     }
 
-    @Test func anUnpinnedSuccessfulTakeIsConformedBeforeCutting() async throws {
+    @Test func anUnpinnedSuccessfulTakeIsSelectedBeforeCutting() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try record("walk", 1)
         try edit("")
-        #expect(await failure() == "video pins no ipad take of walk; run `retake conform video`.")
+        #expect(await failure() == "video's ipad video is 5 s long; App Store Connect takes 15 to 30 s.")
+        let text = try String(contentsOf: root.appending(path: "edits/video.json"), encoding: .utf8)
+        let json = try JSONParser.parse(text)
+        #expect(json[path: "takes"]?[path: "ipad"]?[path: "walk"] == .number(1))
     }
 
     @Test func takesFromDifferentScreensArentCutTogether() async throws {

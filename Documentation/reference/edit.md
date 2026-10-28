@@ -18,7 +18,7 @@ the one it overrides key by key; a list, or a single value, replaces it. At the 
 | `$schema` | string |  | The URL of the schema the file is written against, for editors. Optional; a file is read against this Retake's schema whatever it names. |
 | `intent` | string |  | What the video is there to show. Not read by the render. |
 | `devices` | list of `"iphone"` or `"ipad"`, at least 1, each once | required | The device types it makes a video for. |
-| `takes` | [object](#takes) |  | The take of each scene the edit is cut from, per device type, as `retake conform` pins them. |
+| `takes` | [object](#takes) |  | The take of each scene the edit was last cut from, per device type, as `retake cut` records them. |
 | `music` | [music](#music) |  |  |
 | `tapSound` | [tap-sound](#tap-sound) |  |  |
 | `takeAudioVolume` | number ≥ 0 | `1` | The level of the take's own sound, where a clip plays it. |
@@ -29,7 +29,7 @@ the one it overrides key by key; a list, or a single value, replaces it. At the 
 
 ### `takes`
 
-The take of each scene the edit is cut from, per device type, as `retake conform` pins them.
+The take of each scene the edit was last cut from, per device type, as `retake cut` records them.
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |

@@ -50,8 +50,8 @@ The full command reference is [Documentation/cli.md](Documentation/cli.md), and 
    `.mp4` for App Store Connect.
 
 An edit's times are anchored to the scene's steps, so one edit cuts the same video from any take of
-its scenes: after recording again, **`retake conform`** pins the new takes, and the same edit serves
-iPhone and iPad.
+its scenes. `retake cut` always selects the latest successful takes, and the same edit serves iPhone
+and iPad.
 
 ## Install
 
@@ -90,7 +90,6 @@ retake install --scheme MyApp            # build Debug, embed Retake, and instal
 retake compose create-note               # write a scene a step at a time, on the device
 retake record --dry-run create-note      # play a scene without recording it
 retake record create-note share-note     # record takes
-retake conform video1                    # pin the edit to the latest takes
 retake cut video1                        # render the video, for each device type
 ```
 
@@ -106,7 +105,6 @@ ignores, and give your team's ID and a bundle ID prefix. Then connect a device b
 retake doctor                            # checks Xcode, the device, signing and a launch
 retake install                           # builds the example, embeds Retake, installs it
 retake record --for tour                 # records the scenes the tour uses
-retake conform tour                      # pins the tour to those takes
 retake cut tour                          # renders it, for the device's type
 ```
 
@@ -451,8 +449,9 @@ every device type it names, from that type's takes of the same scenes:
 }
 ```
 
-`takes` pins the take of each scene the edit is cut from, per device type. Recording a scene again
-doesn't change any video until you pin the new take with `retake conform`.
+`takes` records the take of each scene the edit was last cut from, per device type. Every cut
+refreshes those pins to the latest successful takes. To cut from an earlier take, delete the takes
+after it with `retake clean --takes`.
 
 ### Anchors: times that follow the app
 
@@ -469,7 +468,8 @@ with the take's `start` and `end` standing in past the first and last steps. `ed
 step's other edge instead.
 
 An anchor has `offset` or `fraction`, not both; with neither, it's the step's start. A plain number
-of seconds from the take's start still works, and `conform` turns it into an anchor.
+of seconds from the take's start still works, and the first `cut` turns it into an anchor against
+the latest successful take.
 
 Since a take's steps are the same however long the app takes over them, an edit anchored to steps
 cuts the same moments from any take of its scenes: a newer take on the same device, or a take on a
@@ -702,7 +702,7 @@ is published at, which names Retake's version, such as
 `https://justinseanmartin.github.io/Retake/schemas/0.0.1/edit.schema.json`. Editors that read JSON
 Schema, VS Code among them, fetch it from there, and complete fields as you type, describe them on
 hover, and mark mistakes; nothing is copied into the project. Retake never adds the key, and `retake
-conform` keeps one up to date. `retake schema` prints the schemas, for tools and agents, or writes
+cut` keeps one up to date. `retake schema` prints the schemas, for tools and agents, or writes
 them to a directory for working offline.
 
 Retake reads the files strictly, against the same schemas: a key it doesn't know is an error, not

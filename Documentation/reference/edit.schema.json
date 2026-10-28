@@ -24,7 +24,7 @@
       "uniqueItems": true
     },
     "takes": {
-      "description": "The take of each scene the edit is cut from, per device type, as `retake conform` pins them.",
+      "description": "The take of each scene the edit was last cut from, per device type, as `retake cut` records them.",
       "type": "object",
       "properties": {
         "iphone": {
@@ -646,7 +646,7 @@
       "description": "A moment in a take: a step and where to go from it, or plain seconds from the take's start.",
       "oneOf": [
         {
-          "description": "Seconds from the take's start, which `retake conform` turns into a step anchor.",
+          "description": "Seconds from the take's start, which the first `retake cut` turns into a step anchor.",
           "type": "number",
           "minimum": 0
         },
@@ -1225,7 +1225,7 @@
       "description": "A moment in a take: a step and where to go from it, or plain seconds from the take's start.",
       "oneOf": [
         {
-          "description": "Seconds from the take's start, which `retake conform` turns into a step anchor.",
+          "description": "Seconds from the take's start, which the first `retake cut` turns into a step anchor.",
           "type": "number",
           "minimum": 0
         },

@@ -29,6 +29,15 @@ public enum Cutter {
         _ name: String, for type: DeviceType, in project: Project, draft: Bool = false, report: (String) -> Void = { _ in },
     ) async throws(RetakeError) -> Result {
         let files = ProjectFiles(project: project)
+        let normalized = try CutPreparer.prepare(name, types: [type], in: project)
+        if !normalized.changes.isEmpty {
+            do {
+                try Data(normalized.text.utf8).write(to: files.editURL(name), options: .atomic)
+            } catch {
+                throw RetakeError(.failed, "Couldn't write \(project.displayPath(files.editURL(name))): \(error.localizedDescription)")
+            }
+            report("Updated \(project.displayPath(files.editURL(name))) to use the latest \(type.rawValue) takes.")
+        }
         let read = ProjectFiles.Report()
         guard let edit = files.readEdit(name, into: read) else { throw read.error }
         guard let video = edit.videos[type] else {
@@ -41,15 +50,9 @@ public enum Cutter {
         let pins = Dictionary((edit.takes[type] ?? []).map { ($0.name, $0.value) }, uniquingKeysWith: { first, _ in first })
         var logs: [String: TakeLog] = [:], movies: [String: URL] = [:]
         for scene in scenes {
-            guard let number = pins[scene] else {
-                let takes = TakeStore.takes(of: scene, for: [type], in: project)
-                guard takes.contains(where: { !$0.failed }) else {
-                    throw RetakeError(.failed, "There's no successful \(type.rawValue) take of \(scene); record it, then run `retake conform \(name) --type \(type.rawValue)`.")
-                }
-                throw RetakeError(.failed, "\(name) pins no \(type.rawValue) take of \(scene); run `retake conform \(name)`.")
-            }
+            guard let number = pins[scene] else { throw RetakeError(.failed, "\(name) has no \(type.rawValue) take of \(scene) after selecting the latest takes.") }
             guard let take = TakeStore.takes(of: scene, for: [type], in: project).first(where: { $0.number == number }) else {
-                throw RetakeError(.failed, "Take \(number) of \(scene), which \(name) pins for \(type.rawValue), isn't recorded; record it, or conform the edit.")
+                throw RetakeError(.failed, "Take \(number) of \(scene), which \(name) selected for \(type.rawValue), isn't recorded; record \(scene) and retry the cut.")
             }
             guard let log = take.recorded, take.problem == nil else {
                 throw RetakeError(.failed, "Take \(number) of \(scene) for \(type.rawValue) can't be read: \(take.problem ?? "").")

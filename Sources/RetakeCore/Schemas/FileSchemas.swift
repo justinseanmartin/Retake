@@ -296,7 +296,7 @@ extension EditFile {
             ], required: ["duration"])),
             .init("anchor", .oneOf(
                 "A moment in a take: a step and where to go from it, or plain seconds from the take's start.",
-                [.number("Seconds from the take's start, which `retake conform` turns into a step anchor.", atLeast: 0), .ref("step-anchor")],
+                [.number("Seconds from the take's start, which the first `retake cut` turns into a step anchor.", atLeast: 0), .ref("step-anchor")],
             )),
             .init("step-anchor", stepAnchor),
             .init("caption-end", captionEnd),
@@ -312,7 +312,7 @@ extension EditFile {
                 .init("intent", .string("What the video is there to show. Not read by the render.")),
                 .init("devices", .array("The device types it makes a video for.", of: .choice(nil, devices), minItems: 1, unique: true)),
                 .init("takes", .object(
-                    "The take of each scene the edit is cut from, per device type, as `retake conform` pins them.",
+                    "The take of each scene the edit was last cut from, per device type, as `retake cut` records them.",
                     devices.map { .init($0, .dictionary("Each scene's pinned \($0) take, by the scene's name: its number.", values: .integer(nil, atLeast: 1))) },
                 )),
                 .init("music", .ref("music")),

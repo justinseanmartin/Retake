@@ -71,8 +71,7 @@ writes to it. An environment variable that's set but empty counts as not set, fo
 
 It holds the takes edits pin, so moving it somewhere temporary, such as `/tmp` or an agent's scratch
 directory, suits runs whose takes don't need to outlive it: a take recorded there is gone when the
-directory is cleared, and an edit pinned to it fails to `cut` until it's recorded and conformed
-again.
+directory is cleared, and an edit can't `cut` until its scenes are recorded again.
 
 ### Finding the app
 
@@ -175,7 +174,6 @@ and exits with the worst status among them.
 | [`record`](#retake-record) | Records takes, or with `--dry-run`, plays scenes without recording them. |
 | [`takes`](#retake-takes) | Lists takes. |
 | [`clean`](#retake-clean) | Deletes takes and cuts. |
-| [`conform`](#retake-conform) | Pins an edit to newer takes of its scenes. |
 | [`cut`](#retake-cut) | Renders videos. |
 | [`status`](#retake-status) | Summarizes scenes, takes, edits and videos. |
 | [`info`](#retake-info) | Prints how a take or video was made. |
@@ -573,8 +571,8 @@ Deletes takes and cuts, of both device types unless `--type` names one:
 pins, and asks first, unless `--yes`. Fails (2), deleting nothing, if a scene, take or edit named
 doesn't exist.
 
-Since [`conform`](#retake-conform) pins each scene's latest take, deleting later takes is how an edit goes back to an
-earlier one: `retake clean --takes create-note@5`, then `retake conform video1`, pins take 4.
+Since `cut` selects each scene's latest successful take, deleting later takes is how an edit goes
+back to an earlier one: after `retake clean --takes create-note@5`, the next cut uses take 4.
 
 `--on-device` deletes, instead, what Retake leaves in the app's container on the device: takes'
 copies of the app's data, and staged set files. `record` does this at the end of a run, so it's for
@@ -583,31 +581,8 @@ mode that deletes them and quits before any of the app's own code runs; iOS then
 again, as from the home screen, and Retake closes it. It never touches the app's real data, nor
 takes or cuts on the Mac.
 
-Edits' pins are left as they are, now pointing at takes that don't exist, so `cut` fails until
-they're recorded and conformed again. `retake clean` then `retake record` starts everything over.
-
-### `retake conform`
-
-```
-retake conform <edit> [--type <type>] [--dry-run]
-```
-
-Pins an edit to the latest successful take of each scene it uses, for each device type it names, or
-only `--type`'s. To cut from an earlier take, delete the takes after it with [`clean --takes`](#retake-clean).
-
-An edit's anchors name steps, not seconds, so they find the same moments in the new takes without
-changing. `conform` checks that every anchor resolves in the new takes, updates the edit's `takes`
-pins, and rewrites the edit in place. It fails (1), writing nothing, if an anchor doesn't resolve,
-naming the clip and the scene: an id the new take's scene no longer has, say.
-
-Any time still given as plain seconds is first turned into an anchor against the take it was cut
-from: the latest step starting at or before it, and the seconds after it. For a never-pinned edit,
-the latest successful take is both that initial timing source and the take it pins. That's also how
-an edit written in seconds moves to anchors once. An edit that explicitly pins a missing old take
-still fails rather than silently interpreting its seconds against different footage.
-
-Prints each change. `--dry-run` prints them without writing. The rewritten edit keeps its fields'
-order, and a `"$schema"` naming one of Retake's schemas is updated to this Retake's.
+Edits' old pins are left as they are. After the scenes are recorded again, the next `cut` replaces
+them with the latest successful takes. `retake clean` then `retake record` starts everything over.
 
 ### `retake cut`
 
@@ -616,11 +591,18 @@ retake cut <edit>... [--type <type>] [--draft] [--open]
 retake cut --all [--type <type>] [--draft]
 ```
 
-Renders each edit, for each device type it names (or only `--type`'s), from the takes it pins, to
+Renders each edit, for each device type it names (or only `--type`'s), from each scene's latest
+successful take, to
 `output/cuts/<type>/<edit>/`:
 
 - `<edit>-<type>-master.mov`, ProRes, and
 - `<edit>-<type>.mp4`, H.264 at the size and frame rate App Store Connect specifies for the type.
+
+Before rendering, `cut` checks every anchor against those takes, records their numbers in the
+edit's `takes`, and rewrites the edit in place. A plain-second time in a never-cut edit becomes an
+anchor against the latest successful take. The rewritten edit keeps its fields' order, and a
+`"$schema"` naming one of Retake's schemas is updated to this Retake's. To use an older take, delete
+the later takes with [`clean --takes`](#retake-clean) before cutting.
 
 `--draft` renders a quick, smaller H.264 alone, `<edit>-<type>-draft.mp4`: for checking timing, and
 for sharing where the full size isn't needed, such as a post on social media. A draft outside App
@@ -629,7 +611,7 @@ Store Connect's limits is warned about rather than failed. `--open` opens the re
 Warns, and carries on, when the edit's takes were recorded on more than one build of the app, device
 or iOS version, or Button Heist, naming the takes on each; the video's [metadata](#a-videos-fields) lists all of them.
 
-Fails (1) if a pinned take is missing or failed, an anchor doesn't resolve, an element a spotlight
+Fails (1) if a scene has no successful take, an anchor doesn't resolve, an element a spotlight
 or blur names isn't in the take's step log at that moment, one device type's takes come from devices
 with different screens (naming the takes on each), or the result is outside App Store Connect's
 limits for a preview, such as its length.
@@ -746,7 +728,7 @@ changes a project's own files:
 | `retake.json`, `sets/`, `scenes/iphone/`, `scenes/ipad/`, `edits/` | Created by `init`. |
 | `.gitignore` | Created by `init`, or added to, naming the output directory. An output directory outside the project's folder goes in the current directory's `.gitignore` instead. |
 | `scenes/<type>/*.json` | Written by `compose`. |
-| `edits/*.json` | Rewritten by `conform`. |
+| `edits/*.json` | Rewritten by `cut` to record its takes and normalize plain-second times. |
 
 **In the output directory**, `output/` in the project's folder unless [moved](#the-output-directory), and gitignored.
 What's worth keeping, and nothing that's rewritten wholesale:

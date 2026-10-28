@@ -167,17 +167,17 @@ struct ProjectValidatorTests {
         #expect(try validate().isEmpty, "--offline checks none of it")
     }
 
-    @Test func aTakeNotPinnedOrNotRecordedHereOnlyWarns() throws {
+    @Test func noSuccessfulTakeOnlyWarns() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try edit(#"{"take": "walk", "from": {"step": "open"}, "to": {"step": "done"}}"#, devices: #"["ipad"]"#)
         var (problems, warnings) = try validateWithTakes()
         #expect(problems.isEmpty)
-        #expect(warnings == ["edits/video.json: clips[0].take: the edit pins no ipad take of walk, so what's cut from it isn't checked; conform it"])
+        #expect(warnings == ["edits/video.json: clips[0].take: there's no successful ipad take of walk, so what's cut from it isn't checked; record it"])
 
         try recordWalk(failure: "step 2 didn't run")
         try write("edits/video.json", #"{"devices": ["ipad"], "takes": {"ipad": {"walk": 1}}, "clips": [{"take": "walk", "from": {"step": "open"}, "to": {"step": "done"}}]}"#)
         (problems, warnings) = try validateWithTakes()
         #expect(problems.isEmpty)
-        #expect(warnings == ["edits/video.json: clips[0].take: take 1 of walk for ipad failed (step 2 didn't run), so it can't be cut from, and isn't checked"])
+        #expect(warnings == ["edits/video.json: clips[0].take: there's no successful ipad take of walk, so what's cut from it isn't checked; record it"])
     }
 }
