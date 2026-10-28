@@ -33,7 +33,11 @@ public enum Conformer {
         // Times in seconds become anchors, against the takes the edit pinned when they were cut.
         let oldPins = edit.takes.mapValues { Dictionary($0.map { ($0.name, $0.value) }, uniquingKeysWith: { first, _ in first }) }
         func log(_ scene: String, _ type: DeviceType) -> TakeLog? {
-            oldPins[type]?[scene].flatMap { number in TakeStore.takes(of: scene, for: [type], in: project).first { $0.number == number }?.recorded }
+            let takes = TakeStore.takes(of: scene, for: [type], in: project)
+            if let number = oldPins[type]?[scene] {
+                return takes.first { $0.number == number }?.recorded
+            }
+            return takes.last { !$0.failed }?.recorded
         }
         var problems: [String] = []
         func converted(_ value: JSONValue, at path: String, scene: String?, type: DeviceType?) -> JSONValue {
@@ -51,7 +55,7 @@ public enum Conformer {
                         return .init(key: entry.key, value: converted(entry.value, at: at, scene: scene, type: type))
                     }
                     // A time in an override is its type's; one shared by every type, the first's with a take.
-                    let candidates = type.map { [$0] } ?? edit.devices
+                    let candidates = type.map { [$0] } ?? types
                     guard let source = candidates.lazy.compactMap({ type in log(scene, type).map { ($0, type) } }).first else {
                         problems.append("\(at): \(JSONReader.format(seconds)) s needs the take it was cut from to become an anchor, and no take of \(scene) it pinned is here.")
                         return entry

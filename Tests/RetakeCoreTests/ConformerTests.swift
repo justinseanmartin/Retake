@@ -72,6 +72,36 @@ struct ConformerTests {
         ], "the failed take 3 isn't pinned")
     }
 
+    @Test func secondsInANeverPinnedEditUseTheLatestSuccessfulTake() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try record(1)
+        try record(2)
+        try record(3, failure: "step 2 didn't run")
+        try write("edits/video.json", #"{"devices": ["ipad"], "clips": [{"take": "walk", "from": 2.25, "to": 3}]}"#)
+
+        let result = try Conformer.conform("video", in: project)
+
+        #expect(result.text == """
+            {
+              "devices": ["ipad"],
+              "takes": { "ipad": { "walk": 2 } },
+              "clips": [
+                {
+                  "take": "walk",
+                  "from": { "step": "b", "offset": 0.25, "edge": "start" },
+                  "to": { "step": "b", "offset": 1, "edge": "start" }
+                }
+              ]
+            }
+
+            """)
+        #expect(result.changes == [
+            #"clips[0].from: 2.25 s into walk take 2 (ipad) becomes { "step": "b", "offset": 0.25, "edge": "start" }"#,
+            #"clips[0].to: 3 s into walk take 2 (ipad) becomes { "step": "b", "offset": 1, "edge": "start" }"#,
+            "takes.ipad.walk: nothing becomes take 2",
+        ])
+    }
+
     @Test func anEditAlreadyOnTheLatestTakesHasNoChanges() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try record(1)

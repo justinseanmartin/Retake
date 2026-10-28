@@ -42,6 +42,10 @@ public enum Cutter {
         var logs: [String: TakeLog] = [:], movies: [String: URL] = [:]
         for scene in scenes {
             guard let number = pins[scene] else {
+                let takes = TakeStore.takes(of: scene, for: [type], in: project)
+                guard takes.contains(where: { !$0.failed }) else {
+                    throw RetakeError(.failed, "There's no successful \(type.rawValue) take of \(scene); record it, then run `retake conform \(name) --type \(type.rawValue)`.")
+                }
                 throw RetakeError(.failed, "\(name) pins no \(type.rawValue) take of \(scene); run `retake conform \(name)`.")
             }
             guard let take = TakeStore.takes(of: scene, for: [type], in: project).first(where: { $0.number == number }) else {

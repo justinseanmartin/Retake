@@ -601,8 +601,10 @@ pins, and rewrites the edit in place. It fails (1), writing nothing, if an ancho
 naming the clip and the scene: an id the new take's scene no longer has, say.
 
 Any time still given as plain seconds is first turned into an anchor against the take it was cut
-from: the latest step starting at or before it, and the seconds after it. That's also how an edit
-written in seconds moves to anchors once.
+from: the latest step starting at or before it, and the seconds after it. For a never-pinned edit,
+the latest successful take is both that initial timing source and the take it pins. That's also how
+an edit written in seconds moves to anchors once. An edit that explicitly pins a missing old take
+still fails rather than silently interpreting its seconds against different footage.
 
 Prints each change. `--dry-run` prints them without writing. The rewritten edit keeps its fields'
 order, and a `"$schema"` naming one of Retake's schemas is updated to this Retake's.

@@ -51,11 +51,18 @@ struct CutterTests {
     @Test func aTakeNotPinnedNotRecordedOrFailedIsntCut() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try edit("")
-        #expect(await failure() == "video pins no ipad take of walk; run `retake conform video`.")
+        #expect(await failure() == "There's no successful ipad take of walk; record it, then run `retake conform video --type ipad`.")
         try edit(#""walk": 1"#)
         #expect(await failure() == "Take 1 of walk, which video pins for ipad, isn't recorded; record it, or conform the edit.")
         try record("walk", 1, failure: "step 2 didn't run")
         #expect(await failure() == "Take 1 of walk for ipad failed (step 2 didn't run), so it can't be cut from.")
+    }
+
+    @Test func anUnpinnedSuccessfulTakeIsConformedBeforeCutting() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try record("walk", 1)
+        try edit("")
+        #expect(await failure() == "video pins no ipad take of walk; run `retake conform video`.")
     }
 
     @Test func takesFromDifferentScreensArentCutTogether() async throws {
