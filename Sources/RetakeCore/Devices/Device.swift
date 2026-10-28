@@ -90,6 +90,22 @@ public struct Devicectl: DeviceControl {
         }
     }
 
+    /// The device's screen in points, portrait: its primary display's native size over its point
+    /// scale, as `devicectl device info displays` reports them; nil when it can't say.
+    public func screenPoints(of device: Device) -> CGSize? {
+        (try? run(["device", "info", "displays", "--device", device.udid])).flatMap(Self.screenPoints(fromDisplays:))
+    }
+
+    public static func screenPoints(fromDisplays data: Data) -> CGSize? {
+        guard let value = try? JSONParser.parse(String(decoding: data, as: UTF8.self)),
+              case .array(let displays)? = value[path: "result", "displays"] else { return nil }
+        let primary = displays.first { $0[path: "primary"] == .bool(true) } ?? displays.first
+        guard case .array(let size)? = primary?[path: "nativeSize"], size.count == 2,
+              case .number(let first) = size[0], case .number(let second) = size[1],
+              case .number(let scale)? = primary?[path: "pointScale"], scale > 0 else { return nil }
+        return CGSize(width: min(first, second) / scale, height: max(first, second) / scale)
+    }
+
     /// Runs `devicectl` with `arguments`, returning the JSON it writes.
     public func run(_ arguments: [String]) throws(RetakeError) -> Data {
         let output = FileManager.default.temporaryDirectory.appending(path: "retake-devicectl-\(UUID().uuidString).json")

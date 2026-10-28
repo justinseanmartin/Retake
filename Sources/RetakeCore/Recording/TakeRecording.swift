@@ -41,6 +41,8 @@ public enum TakeRecording {
         }
         let bundleID = try Installer.bundleID(for: project)
         let installed = Launcher.installedVersion(bundleID: bundleID, on: device)
+        // Asked before recording starts, as devicectl talking to the device mid-take can upset it.
+        let screen = Devicectl().screenPoints(of: device)
         var log = TakeLog(
             scene: target.scene, take: target.take, set: set.name, state: set.state, deviceType: type,
             device: TakeLog.DeviceInfo(
@@ -121,6 +123,7 @@ public enum TakeRecording {
             log.frames = summary.frames
             log.dropped = summary.dropped
             log.shapes = summary.shapes
+            log.screen = screen
             log.aspect = set.aspect[type].map { SetFile.AspectChoice(portrait: $0.portrait, landscape: $0.landscapeShape) }
         }
         log.failure = failure?.message

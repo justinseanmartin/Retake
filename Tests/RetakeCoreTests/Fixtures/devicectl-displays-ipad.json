@@ -1,0 +1,27 @@
+{
+  "result": {
+    "displays": [
+      {
+        "bounds": [
+          [
+            0,
+            0
+          ],
+          [
+            2388,
+            1668
+          ]
+        ],
+        "currentOrientation": "rot90",
+        "name": "LCD",
+        "nativeOrientation": "rot270",
+        "nativeSize": [
+          2388,
+          1668
+        ],
+        "pointScale": 2,
+        "primary": true
+      }
+    ]
+  }
+}

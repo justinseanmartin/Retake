@@ -65,3 +65,12 @@ struct DeviceListTests {
         #expect(throws: DeviceList.Failure.self) { try DeviceList.parse(Data("not json".utf8)) }
     }
 }
+
+struct ScreenPointsTests {
+    @Test func theScreenIsItsNativeSizeOverItsPointScaleInPortrait() throws {
+        let url = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "Fixtures/devicectl-displays-ipad.json")
+        // devicectl gives the iPad's 2388×1668 pixels landscape first, at 2 pixels a point.
+        #expect(Devicectl.screenPoints(fromDisplays: try Data(contentsOf: url)) == CGSize(width: 834, height: 1194))
+        #expect(Devicectl.screenPoints(fromDisplays: Data(#"{"result": {"displays": []}}"#.utf8)) == nil)
+    }
+}

@@ -29,6 +29,9 @@ public struct TakeLog: Equatable, Sendable {
     /// The shape the set's `aspect` gave the app's window, portrait and landscape, at the top (or in
     /// landscape, the left) of the screen; nil when the window filled it. The editor crops to it.
     public var aspect: SetFile.AspectChoice? = nil
+    /// The device's screen in points, portrait, which the log's touches and frames are in, for the
+    /// editor to find them in the frames; nil in a log written before it was recorded.
+    public var screen: CGSize? = nil
     /// For a take recorded from before the app launched: when it was launched, when Retake's
     /// support library reported in, and when The Button Heist connected, for an edit to cut in on.
     public var launch: Launch?
@@ -163,6 +166,7 @@ extension TakeLog {
                 ("portrait", aspect.portrait.map { .string($0.description) }), ("landscape", aspect.landscape.map { .string($0.description) }),
             ])))
         }
+        if let screen { object.append(.init(key: "screen", value: .array([Self.number(screen.width, places: 100), Self.number(screen.height, places: 100)]))) }
         if let frames { object.append(.init(key: "frames", value: .number(Double(frames)))) }
         if let dropped { object.append(.init(key: "dropped", value: .number(Double(dropped)))) }
         if let launch {
@@ -292,6 +296,13 @@ extension TakeLog {
         let frames = root.optional("frames") { reader.integer($0, at: $1, atLeast: 0) }
         let dropped = root.optional("dropped") { reader.integer($0, at: $1, atLeast: 0) }
         let aspect = root.optional("aspect") { SetFile.readAspectChoice($0, $1, reader) }
+        let screen = root.optional("screen") { value, path -> CGSize? in
+            guard let numbers = reader.array(value, at: path, element: { reader.number($0, at: $1, .above(0)) }), numbers.count == 2 else {
+                reader.problem("expected [width, height]", at: path)
+                return nil
+            }
+            return CGSize(width: numbers[0], height: numbers[1])
+        }
         let launch = root.optional("launch") { value, path -> Launch? in
             guard var object = reader.object(value, at: path) else { return nil }
             defer { object.finish() }
@@ -345,7 +356,7 @@ extension TakeLog {
         return TakeLog(
             scene: scene, take: take, set: set, state: state, deviceType: deviceType, device: device, app: app, retake: retake,
             buttonHeist: buttonHeist, recordedAt: recordedAt, failure: failure, duration: duration, width: dimensions.0,
-            height: dimensions.1, frames: frames, dropped: dropped, aspect: aspect, launch: launch, clock: clock, steps: steps, shapes: shapes,
+            height: dimensions.1, frames: frames, dropped: dropped, aspect: aspect, screen: screen, launch: launch, clock: clock, steps: steps, shapes: shapes,
         )
     }
 }
