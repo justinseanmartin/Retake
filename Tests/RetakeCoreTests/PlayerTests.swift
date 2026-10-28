@@ -54,16 +54,16 @@ func screen(width: Double) -> [ScreenElement] {
 struct PlayerTests {
     let tap = Step(.tapElement(ElementTarget(label: "New Note")))
 
-    @Test func setupThenStepsEachWithItsHoldButNoneBeforeFrom() async throws {
+    @Test func setupThenStepsEachWithItsHold() async throws {
         let time = FakeTime()
         let driver = FakeDriver()
         let scene = SceneFile(
             setup: [Step(.activate(ElementTarget(label: "Library")), hold: 0.5)],
             steps: [Step(id: "a", tap.action, hold: 1), Step(id: "b", tap.action, hold: 2), Step(id: "c", tap.action, hold: 3)],
         )
-        try await time.player().play(scene, named: "create-note", from: 3, on: driver)
+        try await time.player().play(scene, named: "create-note", on: driver)
         #expect(driver.done == ["run", "run", "run", "run"])
-        #expect(time.pauses == [0.5, 3], "setup keeps its holds; steps before --from lose theirs")
+        #expect(time.pauses == [0.5, 1, 2, 3])
     }
 
     @Test func aStepWithNoHoldOfItsOwnHoldsForTheScenesDefault() async throws {
@@ -140,14 +140,6 @@ struct PlayerTests {
             try await FakeTime().player().play(scene, named: "turn", on: driver)
         } throws: { error in
             (error as? RetakeError)?.message.contains("didn't turn to landscape-right within 5 s") == true
-        }
-    }
-
-    @Test func fromPastTheLastStepIsAMisuse() async {
-        await #expect {
-            try await FakeTime().player().play(SceneFile(steps: [tap]), named: "create-note", from: 2, on: FakeDriver())
-        } throws: { error in
-            (error as? RetakeError)?.status == .usage
         }
     }
 }

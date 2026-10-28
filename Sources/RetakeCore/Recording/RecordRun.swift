@@ -87,7 +87,6 @@ public enum RecordRun {
         on device: Device,
         capture: CaptureDevice?,
         dryRun: Bool,
-        from: Int = 1,
         stopOnFailure: Bool,
         player: Player,
     ) async -> [Outcome] {
@@ -100,14 +99,11 @@ public enum RecordRun {
                     throw RetakeError(.environment, "Retake can't tell whether \(device.name) is an iPhone or an iPad.")
                 }
                 let (scene, set) = try AppSession.scene(name, in: project, for: type)
-                guard from <= scene.steps.count else {
-                    throw RetakeError(.usage, "--from \(from) is past \(name)'s last step, \(scene.steps.count).")
-                }
                 needsCleanUp = needsCleanUp || set.state != .live
                 if dryRun {
                     player.report(.scene(name, take: nil))
                     try await AppSession.run("dry-run-\(name)", in: project, set: set, scene: scene, on: device, report: player.report, cleanUp: false) { driver, _ throws(RetakeError) in
-                        try await player.play(scene, named: name, from: from, on: driver)
+                        try await player.play(scene, named: name, on: driver)
                     }
                 } else {
                     guard let capture else { throw RetakeError(.environment, "\(device.name)'s screen isn't offered for recording.") }

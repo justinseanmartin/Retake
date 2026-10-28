@@ -82,20 +82,15 @@ public struct Player: Sendable {
         self.report = report
     }
 
-    /// Plays `scene`'s setup, then `beforeSteps`, such as starting the recording, then its steps
-    /// from `from` (numbered from 1), the steps before it without their holds. Fails at the first
-    /// step that doesn't run, naming it.
+    /// Plays `scene`'s setup, then `beforeSteps`, such as starting the recording, then its steps,
+    /// each with its hold. Fails at the first step that doesn't run, naming it.
     @ButtonHeistActor
     public func play(
         _ scene: SceneFile,
         named name: String,
-        from: Int = 1,
         on driver: some AppDriver,
         beforeSteps: @ButtonHeistActor () async throws(RetakeError) -> Void = {},
     ) async throws(RetakeError) {
-        guard (1...scene.steps.count).contains(from) else {
-            throw RetakeError(.usage, "--from \(from) is past \(name)'s last step, \(scene.steps.count).")
-        }
         var orientation = scene.orientation
         for (index, step) in scene.setup.enumerated() {
             let played = Played(isSetup: true, number: index + 1, count: scene.setup.count, step: step)
@@ -107,7 +102,7 @@ public struct Player: Sendable {
             var step = step
             step.hold = step.hold ?? scene.defaultHold
             let played = Played(isSetup: false, number: index + 1, count: scene.steps.count, step: step)
-            try await play(played, in: name, orientation: &orientation, holding: index + 1 >= from, on: driver)
+            try await play(played, in: name, orientation: &orientation, holding: true, on: driver)
         }
     }
 

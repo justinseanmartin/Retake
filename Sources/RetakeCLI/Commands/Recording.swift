@@ -205,26 +205,11 @@ struct Record: AsyncParsableCommand {
     @Flag(help: "Play the scenes without recording them, writing nothing.")
     var dryRun = false
 
-    @Option(
-        name: .customLong("from"),
-        help: ArgumentHelp(
-            "With --dry-run and one scene, skip to this step, numbered from 1, playing the steps before it without their holds.",
-            valueName: "step",
-        ),
-    )
-    var fromStep: Int?
-
     @OptionGroup var project: ProjectOptions
 
     func validate() throws {
         if !scenes.isEmpty, edit != nil {
             throw ValidationError("Name scenes or give --for, not both.")
-        }
-        if let fromStep {
-            guard dryRun, scenes.count == 1 else {
-                throw ValidationError("--from goes with --dry-run and one scene named.")
-            }
-            if fromStep < 1 { throw ValidationError("--from numbers steps from 1.") }
         }
     }
 
@@ -249,7 +234,7 @@ struct Record: AsyncParsableCommand {
         let name = target.name, dryRun = dryRun
         let player = Player(report: { event in Self.show(event, scene: "", device: name, dryRun: dryRun) })
         let outcomes = await RecordRun.run(
-            chosen, in: located, on: target, capture: capture, dryRun: dryRun, from: fromStep ?? 1,
+            chosen, in: located, on: target, capture: capture, dryRun: dryRun,
             stopOnFailure: stopOnFailure, player: player,
         )
         // What became of each scene, and the worst status among them.
