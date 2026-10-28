@@ -71,7 +71,6 @@ public struct SceneDocument: Sendable {
             fields = object
         } else {
             fields = JSONObject([
-                .init(key: "$schema", value: .string(SchemaReference.current("scene").url)),
                 .init(key: "set", value: .string(set)),
                 .init(key: "steps", value: .array([])),
             ])

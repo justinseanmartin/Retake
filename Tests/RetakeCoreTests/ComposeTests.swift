@@ -76,12 +76,11 @@ struct ComposeActionTests {
 }
 
 struct SceneDocumentTests {
-    @Test func aNewSceneNamesItsSetAndSchemaAndWritesAStepALine() {
+    @Test func aNewSceneNamesItsSetAndWritesAStepALine() {
         var document = SceneDocument(url: URL(filePath: "/p/scenes/ipad/a.json"), scene: nil, text: nil, newOn: "returning-user")
         document.steps = [Step(id: "new-note", .tapElement(ElementTarget(label: "New Note")), hold: 0.8), Step(.waitFor(ElementTarget(label: "Synced"), gone: false, timeout: 10))]
         #expect(document.text == """
             {
-              "$schema": "\(SchemaReference.current("scene").url)",
               "set": "returning-user",
               "steps": [
                 { "tap": { "label": "New Note" }, "hold": 0.8, "id": "new-note" },
@@ -99,7 +98,7 @@ struct SceneDocumentTests {
         document.steps.append(Step(.orientation(.landscapeLeft)))
         let written = try JSONParser.parse(document.text)
         #expect(written[path: "leadIn"] == .number(1.5) && written[path: "tail"] == .number(2) && written[path: "set"] == .string("base"))
-        #expect(written[path: "$schema"] == nil, "only a new file gets one")
+        #expect(written[path: "$schema"] == nil, "Retake never adds one")
         #expect(SceneFile.read(document.text, with: JSONReader(file: "a.json"))?.steps == [Step(nil, hold: 1), Step(.orientation(.landscapeLeft))])
     }
 }

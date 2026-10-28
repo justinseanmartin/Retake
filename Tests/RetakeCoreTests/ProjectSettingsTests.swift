@@ -57,7 +57,7 @@ struct ProjectSettingsTests {
         )
         let text = JSONWriter.write(settings.json)
         #expect(read(text).settings == settings)
-        #expect(text.hasPrefix(#"{\#n  "$schema": "\#(SchemaReference.current("retake").url)",\#n  "bundleID""#))
+        #expect(text.hasPrefix(#"{\#n  "bundleID""#), "with no \"$schema\", which Retake never adds")
     }
 
     @Test func aSchemeBuildOptimisesUnlessToldNotTo() {

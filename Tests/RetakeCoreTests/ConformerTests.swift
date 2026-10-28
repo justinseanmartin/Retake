@@ -79,6 +79,18 @@ struct ConformerTests {
         #expect(try Conformer.conform("video", in: project).changes.isEmpty)
     }
 
+    @Test func onlyRetakesOwnSchemaIsBroughtUpToDate() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try record(1)
+        func conformed(_ schema: String) throws -> JSONValue? {
+            try write("edits/video.json", #"{"$schema": "\#(schema)", "devices": ["ipad"], "clips": [{"take": "walk", "from": {"step": "a"}, "to": {"step": "b"}}]}"#)
+            return try JSONParser.parse(Conformer.conform("video", in: project).text)[path: "$schema"]
+        }
+        let old = SchemaReference(version: "0.0.0", kind: "edit").url
+        #expect(try conformed(old) == .string(SchemaReference.current("edit").url))
+        #expect(try conformed("schemas/edit.json") == .string("schemas/edit.json"), "a project's own copy is left as it is")
+    }
+
     @Test func nothingIsConformedWithoutATakeOrWithAnAnchorTheNewTakeCantHold() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try write("edits/video.json", #"{"devices": ["ipad"], "clips": [{"take": "walk", "from": {"step": "a"}, "to": {"step": "b", "offset": 2.5}}]}"#)

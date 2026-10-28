@@ -88,9 +88,9 @@ extension ProjectSettings {
         return reader.problems.count == problemsBefore ? settings : nil
     }
 
-    /// The settings as a configuration file writes them, after a `"$schema"` key.
+    /// The settings as a configuration file writes them.
     public var json: JSONValue {
-        var entries = [JSONObject.Entry(key: "$schema", value: .string(SchemaReference.current("retake").url))]
+        var entries: [JSONObject.Entry] = []
         if let bundleID { entries.append(.init(key: "bundleID", value: .string(bundleID))) }
         if let build {
             var fields: [JSONObject.Entry] = []

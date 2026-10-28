@@ -101,7 +101,9 @@ public enum Conformer {
             let after = root.entries.firstIndex { $0.key == "devices" }.map { $0 + 1 } ?? root.entries.count
             root.entries.insert(.init(key: "takes", value: .object(pins)), at: after)
         }
-        if let index = root.entries.firstIndex(where: { $0.key == "$schema" }) {
+        // One of Retake's own schemas is brought up to this Retake's; any other is the project's.
+        if let index = root.entries.firstIndex(where: { $0.key == "$schema" }),
+           root.entries[index].value.stringValue.flatMap(SchemaReference.init(url:)) != nil {
             root.entries[index].value = .string(SchemaReference.current("edit").url)
         }
 

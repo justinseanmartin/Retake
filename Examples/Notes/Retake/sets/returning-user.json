@@ -1,5 +1,4 @@
 {
-  "$schema": "https://justinseanmartin.github.io/Retake/schemas/0.0.1/set.schema.json",
   "extends": "base",
   "files": { "Documents/notes.json": "data/returning-user/notes.json" },
   "defaults": { "sortOrder": "manual" },
