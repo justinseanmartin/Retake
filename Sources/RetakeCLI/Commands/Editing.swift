@@ -135,8 +135,110 @@ struct Status: AsyncParsableCommand {
     @OptionGroup var project: ProjectOptions
 
     func run() async throws {
-        _ = try project.locate()
-        throw RetakeError.notImplemented("status")
+        let status = await ProjectStatus.of(try project.locate())
+        if output.json {
+            print(JSONWriter.write(.array(status.sections.map(StatusOutput.json))), terminator: "")
+        } else {
+            StatusOutput.text(status)
+        }
+    }
+}
+
+/// What `status` prints: for people, or as JSON.
+enum StatusOutput {
+    static func date(_ date: Date) -> String {
+        date.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits).hour().minute())
+    }
+
+    static func text(_ status: ProjectStatus) {
+        guard !status.sections.isEmpty else { return print("No scenes, edits or videos yet.") }
+        for (index, section) in status.sections.enumerated() {
+            if index > 0 { print() }
+            print("\(section.type.rawValue):")
+            if !section.scenes.isEmpty {
+                let width = section.scenes.map(\.name.count).max()!
+                func name(_ scene: ProjectStatus.Scene) -> String { scene.name.padding(toLength: width, withPad: " ", startingAt: 0) }
+                print("  Scenes")
+                for scene in section.scenes {
+                    guard let take = scene.latest else {
+                        print("    \(name(scene))  no takes")
+                        continue
+                    }
+                    var parts = ["take \(take.number)"]
+                    if let log = take.recorded { parts.append(date(log.recordedAt)) }
+                    if take.failed { parts.append(take.recorded?.failure.map { "failed: \($0)" } ?? take.problem ?? "failed") }
+                    print("    \(name(scene))  \(parts.joined(separator: ", "))")
+                }
+            }
+            if !section.edits.isEmpty {
+                let width = section.edits.map(\.name.count).max()!
+                func name(_ edit: ProjectStatus.Edit) -> String { edit.name.padding(toLength: width, withPad: " ", startingAt: 0) }
+                print("  Edits")
+                for edit in section.edits {
+                    if let problem = edit.problem {
+                        print("    \(name(edit))  can't be read: \(problem)")
+                        continue
+                    }
+                    let pins = edit.pins.map { pin in
+                        var text = "\(pin.scene)@\(pin.take)"
+                        if let problem = pin.problem { text += " (\(problem))" }
+                        if let newer = pin.newer { text += " (take \(newer) is newer)" }
+                        return text
+                    }
+                    print("    \(name(edit))  \(pins.isEmpty ? "pins no takes" : pins.joined(separator: ", "))")
+                }
+            }
+            if !section.videos.isEmpty {
+                let width = section.videos.map(\.file.lastPathComponent.count).max()!
+                print("  Videos")
+                for video in section.videos {
+                    var parts = [video.renderedAt.map { "rendered \(date($0))" } ?? "rendered"]
+                    parts.append(video.changes.isEmpty ? "up to date" : "out of date: " + video.changes.joined(separator: "; "))
+                    if !video.mixed.isEmpty { parts.append("its takes span more than one of: \(video.mixed.joined(separator: ", "))") }
+                    print("    \(video.file.lastPathComponent.padding(toLength: width, withPad: " ", startingAt: 0))  \(parts.joined(separator: ", "))")
+                }
+            }
+        }
+    }
+
+    static func json(_ section: ProjectStatus.Section) -> JSONValue {
+        let iso = ISO8601DateFormatter()
+        let scenes: [JSONValue] = section.scenes.map { scene in
+            TakeLog.object([
+                ("name", .string(scene.name)),
+                ("latest", scene.latest.map { take in
+                    TakeLog.object([
+                        ("take", .number(Double(take.number))),
+                        ("recordedAt", take.recorded.map { .string(iso.string(from: $0.recordedAt)) }),
+                        ("failed", .bool(take.failed)),
+                    ])
+                } ?? .null),
+            ])
+        }
+        let edits: [JSONValue] = section.edits.map { edit in
+            TakeLog.object([
+                ("name", .string(edit.name)),
+                ("pins", .array(edit.pins.map { pin in
+                    TakeLog.object([
+                        ("scene", .string(pin.scene)), ("take", .number(Double(pin.take))),
+                        ("newer", pin.newer.map { .number(Double($0)) }), ("problem", pin.problem.map(JSONValue.string)),
+                    ])
+                })),
+                ("problem", edit.problem.map(JSONValue.string)),
+            ])
+        }
+        let videos: [JSONValue] = section.videos.map { video in
+            TakeLog.object([
+                ("edit", .string(video.edit)),
+                ("file", .string(video.file.lastPathComponent)),
+                ("draft", .bool(video.draft)),
+                ("renderedAt", video.renderedAt.map { .string(iso.string(from: $0)) }),
+                ("upToDate", .bool(video.changes.isEmpty)),
+                ("changes", .array(video.changes.map(JSONValue.string))),
+                ("mixed", .array(video.mixed.map(JSONValue.string))),
+            ])
+        }
+        return TakeLog.object([("type", .string(section.type.rawValue)), ("scenes", .array(scenes)), ("edits", .array(edits)), ("videos", .array(videos))])
     }
 }
 
@@ -164,6 +266,27 @@ struct Info: AsyncParsableCommand {
     }
 
     func run() async throws {
-        throw RetakeError.notImplemented("info")
+        var worst = ExitStatus.done
+        var records: [JSONValue] = []
+        for (index, path) in movies.enumerated() {
+            let movie = URL(filePath: path)
+            do {
+                let info = try await MovieInfo.read(movie)
+                if output.json {
+                    records.append(.object(JSONObject([
+                        .init(key: "movie", value: .string(path)),
+                        .init(key: info.isTake ? "take" : "video", value: info.json),
+                    ])))
+                } else {
+                    if index > 0 { print() }
+                    print("\(path): " + info.lines.joined(separator: "\n"))
+                }
+            } catch {
+                FileHandle.standardError.write(Data("error: \(path): \(error.message)\n".utf8))
+                worst = max(worst, error.status)
+            }
+        }
+        if output.json { print(JSONWriter.write(.array(records)), terminator: "") }
+        if worst != .done { throw ExitCode(worst.rawValue) }
     }
 }

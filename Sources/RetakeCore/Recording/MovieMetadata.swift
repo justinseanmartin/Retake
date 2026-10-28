@@ -114,6 +114,7 @@ public enum MovieMetadata {
             ("retake.version", video.retake),
             ("retake.edit", video.edit),
             ("retake.device.type", video.type.rawValue),
+            ("retake.app.bundle-id", video.bundleID),
             ("retake.app.versions", JSONWriter.compact(.array(video.appVersions))),
             ("retake.devices", JSONWriter.compact(.array(video.devices))),
             ("retake.buttonheist.versions", JSONWriter.compact(.array(video.buttonHeistVersions))),

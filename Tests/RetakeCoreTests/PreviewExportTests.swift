@@ -57,5 +57,6 @@ struct PreviewExportTests {
         let description = items.first { item in item.commonKey == .commonKeyDescription }
         let text = try #require(try await description?.load(.stringValue))
         #expect(try JSONParser.parse(text)[path: "edit"] == .string("video1"))
+        #expect(try await MovieInfo.read(preview) == MovieInfo.read(master), "info reads the same record from either")
     }
 }
