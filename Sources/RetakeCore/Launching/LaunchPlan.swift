@@ -42,7 +42,7 @@ public struct LaunchPlan: Equatable, Sendable {
         token: String = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased(),
     ) -> LaunchPlan {
         var environment: [String: String] = [:]
-        for variable in set.environment.overlaid(with: scene.environment) { environment[variable.name] = variable.value }
+        for variable in set.environment { environment[variable.name] = variable.value }
         environment.merge(SupportLibrary.environment(for: set, type: type, take: take)) { $1 }
         environment["DYLD_INSERT_LIBRARIES"] = insertedLibraries
         environment["INSIDEJOB_PORT"] = String(port)

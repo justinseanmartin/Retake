@@ -6,7 +6,7 @@ extension Step {
     public var json: JSONValue {
         var entries: [JSONObject.Entry] = []
         if let action { entries.append(.init(key: action.key, value: action.json)) }
-        if hold > 0 || action == nil { entries.append(.init(key: "hold", value: .number(hold))) }
+        if let hold, hold > 0 || action == nil { entries.append(.init(key: "hold", value: .number(hold))) }
         if let id { entries.append(.init(key: "id", value: .string(id))) }
         return .object(JSONObject(entries))
     }

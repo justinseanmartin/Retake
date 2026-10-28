@@ -18,10 +18,10 @@ struct SceneFileTests {
         let result = read(#"""
             {
               "set": "returning-user",
-              "environment": { "MYAPP_SKIP_WHATS_NEW": "1" },
               "setup": [{ "activate": { "label": "Library" } }],
               "leadIn": 1.5,
               "tail": 2,
+              "defaultHold": 0.5,
               "steps": [
                 { "id": "new-note", "tap": { "label": "New Note" }, "hold": 1.2 },
                 { "type": { "text": "Groceries\n", "into": { "value": "Title" } } },
@@ -35,7 +35,6 @@ struct SceneFileTests {
         #expect(result.problems.isEmpty)
         #expect(result.scene == SceneFile(
             set: "returning-user",
-            environment: [Named("MYAPP_SKIP_WHATS_NEW", "1")],
             setup: [Step(.activate(ElementTarget(label: "Library")))],
             steps: [
                 Step(id: "new-note", .tapElement(ElementTarget(label: "New Note")), hold: 1.2),
@@ -47,7 +46,14 @@ struct SceneFileTests {
             ],
             leadIn: 1.5,
             tail: 2,
+            defaultHold: 0.5,
         ))
+    }
+
+    @Test func aScenesLaunchIsItsSetsAlone() {
+        let reader = JSONReader(file: "scenes/ipad/create-note.json")
+        #expect(SceneFile.read(#"{"environment": {"FLAG": "1"}, "steps": [{"hold": 1}]}"#, with: reader) == nil)
+        #expect(reader.problems.map(\.description) == [#"scenes/ipad/create-note.json: unknown key "environment""#])
     }
 
     @Test func whatsLeftOutHasItsDefault() {
@@ -117,7 +123,6 @@ struct SceneFileTests {
         (#"{"steps": [{"hold": 1}], "setup": [{"id": "go", "tap": {"label": "a"}}]}"#, "scenes/ipad/create-note.json: setup[0].id: setup steps aren't recorded, so nothing can anchor to them; leave the id out"),
         (#"{"steps": [{"hold": 1}], "orientation": "upside-down"}"#, #"scenes/ipad/create-note.json: orientation: "upside-down" isn't one of portrait, portrait-upside-down, landscape-left or landscape-right"#),
         (#"{"steps": [{"hold": 1}], "leadIn": -0.5}"#, "scenes/ipad/create-note.json: leadIn: -0.5 must be at least 0"),
-        (#"{"steps": [{"hold": 1}], "environment": {"RETAKE_X": "1"}}"#, "scenes/ipad/create-note.json: environment.RETAKE_X: is Retake's to set: it launches the app with its own RETAKE_ variables"),
     ])
     func sceneMistakesAreNamed(_ text: String, _ expected: String) {
         #expect(read(text).problems == [expected])

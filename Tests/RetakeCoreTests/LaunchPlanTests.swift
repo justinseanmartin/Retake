@@ -9,11 +9,10 @@ struct LaunchPlanTests {
         LaunchPlan.make(project: project, set: set, scene: scene, type: .ipad, bundleID: "com.example.notes", take: "create-note-3", port: 31000, token: "secret")
     }
 
-    @Test func theEnvironmentIsTheSetsThenTheScenesThenRetakes() {
+    @Test func theEnvironmentIsTheSetsThenRetakes() {
         let set = ResolvedSet(name: "base", environment: [Named("MODE", "set"), Named("REGION", "neutral")])
-        let scene = SceneFile(environment: [Named("MODE", "scene")], steps: [Step(nil, hold: 1)])
-        let environment = plan(set: set, scene: scene).environment
-        #expect(environment["MODE"] == "scene" && environment["REGION"] == "neutral")
+        let environment = plan(set: set).environment
+        #expect(environment["MODE"] == "set" && environment["REGION"] == "neutral")
         #expect(environment["RETAKE_STATE"] == "clean" && environment["RETAKE_TAKE"] == "create-note-3")
         #expect(environment["DYLD_INSERT_LIBRARIES"] == "@executable_path/Frameworks/RetakeSupport.dylib:@executable_path/Frameworks/TheInsideJob.framework/TheInsideJob")
         #expect(environment["INSIDEJOB_PORT"] == "31000" && environment["INSIDEJOB_TOKEN"] == "secret")

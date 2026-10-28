@@ -76,7 +76,7 @@ public enum StepPlay: Equatable, Sendable {
 extension Step {
     /// How the step reads in what `record` prints: `tap "New Note"`.
     public var summary: String {
-        guard let action else { return "hold \(Self.seconds(hold))" }
+        guard let action else { return "hold \(Self.seconds(hold ?? 0))" }
         switch action {
         case .tapPoint(let point): return "tap \(point)"
         case .tapElement(let element): return "tap \(element)"
@@ -92,7 +92,7 @@ extension Step {
 
     /// Its summary with its hold, as `compose` lists steps: `tap "New Note", hold 0.8 s`.
     public var line: String {
-        action != nil && hold > 0 ? "\(summary), hold \(Self.seconds(hold))" : summary
+        if action != nil, let hold, hold > 0 { "\(summary), hold \(Self.seconds(hold))" } else { summary }
     }
 
     static func seconds(_ value: Double) -> String {

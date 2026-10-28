@@ -103,6 +103,9 @@ public struct Player: Sendable {
         }
         try await beforeSteps()
         for (index, step) in scene.steps.enumerated() {
+            // A step that gives no hold of its own holds for the scene's `defaultHold`.
+            var step = step
+            step.hold = step.hold ?? scene.defaultHold
             let played = Played(isSetup: false, number: index + 1, count: scene.steps.count, step: step)
             try await play(played, in: name, orientation: &orientation, holding: index + 1 >= from, on: driver)
         }
@@ -137,7 +140,7 @@ public struct Player: Sendable {
             throw RetakeError(error.status, "\(scene): \(played.name), \(played.step.summary), didn't run: \(error.message)")
         }
         report(.finished(played, Timing(sent: sent, received: Date(), evidence: evidence)))
-        if holding, played.step.hold > 0 { await pause(played.step.hold) }
+        if holding, let hold = played.step.hold, hold > 0 { await pause(hold) }
     }
 
     /// The Button Heist's failure for an element that matches several, said in a scene's terms, or

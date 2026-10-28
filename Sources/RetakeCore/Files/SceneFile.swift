@@ -12,8 +12,6 @@ public struct SceneFile: Equatable, Sendable {
 
     /// The set the scene starts on; the project's `defaultSet` when nil.
     public var set: String?
-    /// Added to the set's environment, for a flag only this scene needs.
-    public var environment: [Named<String>]
     /// Played before recording starts.
     public var setup: [Step]
     public var steps: [Step]
@@ -24,22 +22,24 @@ public struct SceneFile: Equatable, Sendable {
     public var recordsLaunch: Bool
     /// The orientation the device is turned to before the app launches.
     public var orientation: Orientation
+    /// The hold of each of `steps` that doesn't give its own.
+    public var defaultHold: Double
 
     public static let defaultLeadIn = 1.0
     public static let defaultTail = 1.0
 
     public init(
         set: String? = nil,
-        environment: [Named<String>] = [],
         setup: [Step] = [],
         steps: [Step],
         leadIn: Double = SceneFile.defaultLeadIn,
         tail: Double = SceneFile.defaultTail,
         recordsLaunch: Bool = false,
         orientation: Orientation = .portrait,
+        defaultHold: Double = 0,
     ) {
         self.set = set
-        self.environment = environment
+        self.defaultHold = defaultHold
         self.setup = setup
         self.steps = steps
         self.leadIn = leadIn
@@ -55,10 +55,10 @@ public struct Step: Equatable, Sendable {
     public var id: String?
     /// What the step does; nil for a step that's only a pause.
     public var action: Action?
-    /// Seconds to pause after it.
-    public var hold: Double
+    /// Seconds to pause after it; the scene's `defaultHold` when nil.
+    public var hold: Double?
 
-    public init(id: String? = nil, _ action: Action?, hold: Double = 0) {
+    public init(id: String? = nil, _ action: Action?, hold: Double? = nil) {
         self.id = id
         self.action = action
         self.hold = hold
@@ -132,13 +132,13 @@ extension SceneFile {
         guard let value = reader.parse(text), var object = reader.root(value, kind: "scene") else { return nil }
         let problemsBefore = reader.problems.count
         let set = object.optional("set", reader.nonEmptyString)
-        let environment = object.optional("environment") { SetFile.readEnvironment($0, $1, reader) } ?? []
         let setup = object.optional("setup") { readSteps($0, $1, reader, isSetup: true) } ?? []
         let steps = object.required("steps") { readSteps($0, $1, reader, isSetup: false) }
         let leadIn = object.optional("leadIn") { reader.number($0, at: $1, .atLeast(0)) } ?? defaultLeadIn
         let tail = object.optional("tail") { reader.number($0, at: $1, .atLeast(0)) } ?? defaultTail
         let recordsLaunch = object.optional("recordsLaunch", reader.bool) ?? false
         let orientation = object.optional("orientation") { reader.choice($0, at: $1, as: Orientation.self) } ?? .portrait
+        let defaultHold = object.optional("defaultHold") { reader.number($0, at: $1, .atLeast(0)) } ?? 0
         if let steps, steps.isEmpty, case .array(let values)? = object.value("steps"), values.isEmpty {
             reader.problem("needs at least one step", at: object.path("steps"))
         }
@@ -146,8 +146,8 @@ extension SceneFile {
         object.finish()
         guard reader.problems.count == problemsBefore, let steps else { return nil }
         return SceneFile(
-            set: set, environment: environment, setup: setup, steps: steps,
-            leadIn: leadIn, tail: tail, recordsLaunch: recordsLaunch, orientation: orientation,
+            set: set, setup: setup, steps: steps,
+            leadIn: leadIn, tail: tail, recordsLaunch: recordsLaunch, orientation: orientation, defaultHold: defaultHold,
         )
     }
 
@@ -207,7 +207,7 @@ extension SceneFile {
         }
         let action = object.required(key) { readAction(key, $0, $1, reader) }
         guard let action, reader.problems.count == problemsBefore else { return nil }
-        return Step(id: id, action, hold: hold ?? 0)
+        return Step(id: id, action, hold: hold)
     }
 
     static func readAction(_ key: String, _ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> Step.Action? {

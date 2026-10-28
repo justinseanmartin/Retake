@@ -66,6 +66,17 @@ struct PlayerTests {
         #expect(time.pauses == [0.5, 3], "setup keeps its holds; steps before --from lose theirs")
     }
 
+    @Test func aStepWithNoHoldOfItsOwnHoldsForTheScenesDefault() async throws {
+        let time = FakeTime()
+        let scene = SceneFile(
+            setup: [Step(.activate(ElementTarget(label: "Library")))],
+            steps: [Step(id: "a", tap.action), Step(id: "b", tap.action, hold: 2), Step(id: "c", tap.action, hold: 0)],
+            defaultHold: 0.5,
+        )
+        try await time.player().play(scene, named: "create-note", on: FakeDriver())
+        #expect(time.pauses == [0.5, 2], "a's default; b's own; c's own 0; the setup's none")
+    }
+
     @Test func theFirstStepThatDoesntRunStopsThePlayNamingIt() async {
         let driver = FakeDriver()
         driver.failingRun = 1
