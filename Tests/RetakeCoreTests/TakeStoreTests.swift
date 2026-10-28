@@ -19,7 +19,9 @@ struct TakeStoreTests {
         try record("b", 1, failure: "step 2 didn't run")
         try record("c", 1, movie: false)
         try record("a", 1, type: .iphone)
-        try write("edits/video1.json", #"{ "devices": ["ipad"], "takes": { "ipad": { "a": 2 } }, "clips": [{ "take": "a", "from": { "step": "start" }, "to": { "step": "end" } }] }"#)
+        for scene in ["a", "b", "c", "d"] { try write("scenes/ipad/\(scene).json", "{}") }
+        try write("scenes/iphone/a.json", "{}")
+        try write("edits/video1.json", #"{ "devices": ["ipad"], "takes": { "ipad": { "a": 2 } }, "clips": [{ "take": "a", "from": { "step": "start" }, "to": { "step": "end" }, "stills": [{ "take": "c", "at": 0 }] }] }"#)
         try write("output/cuts/ipad/video1/video1-ipad.mp4", "")
         try write("output/cuts/ipad/video2/video2-ipad.mp4", "")
     }
@@ -82,5 +84,27 @@ struct TakeStoreTests {
         #expect(!FileManager.default.fileExists(atPath: project.takes(for: .ipad).appending(path: "b").path))
         #expect(!FileManager.default.fileExists(atPath: project.cuts(for: .ipad).appending(path: "video1").path))
         #expect(FileManager.default.fileExists(atPath: project.cuts(for: .ipad).appending(path: "video2").path))
+    }
+
+    @Test func unusedKeepsNeededScenesAndTheirLatestSuccessfulTakes() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let cleaning = try TakeStore.unused(for: [.ipad], in: project)
+        #expect(names(cleaning.takes) == ["ipad a@1", "ipad b@1", "ipad c@1"])
+        #expect(cleaning.scenes.map(\.lastPathComponent) == ["b.json", "d.json"])
+        #expect(cleaning.cuts.isEmpty)
+
+        try TakeStore.delete(cleaning, in: project)
+
+        #expect(names(TakeStore.takes(for: [.ipad], in: project)) == ["ipad a@2"])
+        let files = ProjectFiles(project: project)
+        #expect(files.names(in: project.scenes(for: .ipad)) == ["a", "c"])
+        #expect(files.names(in: project.scenes(for: .iphone)) == ["a"], "--type leaves the other type alone")
+    }
+
+    @Test func unusedRefusesToGuessWhenAnEditCannotBeRead() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try write("edits/broken.json", #"{"clips": "not clips"}"#)
+        #expect(throws: RetakeError.self) { try TakeStore.unused(for: DeviceType.allCases, in: project) }
+        #expect(names(TakeStore.takes(for: DeviceType.allCases, in: project)).count == 5)
     }
 }

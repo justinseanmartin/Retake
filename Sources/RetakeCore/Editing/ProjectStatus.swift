@@ -75,7 +75,7 @@ public struct ProjectStatus: Sendable {
                 }
                 let pins = (edit.takes[type] ?? []).map { pin in
                     let recorded = takes[pin.name] ?? []
-                    let latest = recorded.last { !$0.failed }?.number
+                    let latest = recorded.last(where: { $0.successful })?.number
                     var problem: String?
                     if let take = recorded.first(where: { $0.number == pin.value }) {
                         if take.failed { problem = take.recorded?.failure.map { "failed: \($0)" } ?? take.problem ?? "failed" }

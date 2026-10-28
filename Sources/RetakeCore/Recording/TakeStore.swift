@@ -19,6 +19,8 @@ public enum TakeStore {
 
         /// A take that failed, or whose step log can't say it didn't, which no edit can pin.
         public var failed: Bool { recorded == nil || recorded?.failure != nil }
+        /// A complete take whose recording succeeded and whose movie and log can both be read.
+        public var successful: Bool { !failed && problem == nil }
 
         /// How messages name it: `create-note@3`.
         public var name: String { "\(scene)@\(number)" }
@@ -117,6 +119,8 @@ public enum TakeStore {
         public var takes: [Take]
         /// Each edit's folder of cuts, for a device type.
         public var cuts: [URL]
+        /// Scene definitions no edit uses, for a device type.
+        public var scenes: [URL] = []
 
         /// The takes it deletes that an edit last cut from; its next cut selects another take.
         public var pinned: [Take] { takes.filter { !$0.pinnedBy.isEmpty } }
@@ -158,6 +162,38 @@ public enum TakeStore {
         return Cleaning(takes: chosen, cuts: folders)
     }
 
+    /// What `clean --unused` deletes: every take except the latest successful one of a scene an
+    /// edit uses, and every scene definition no edit uses. Fails before choosing anything if an
+    /// edit can't be read, since its dependencies aren't safe to infer.
+    public static func unused(for types: [DeviceType], in project: Project) throws(RetakeError) -> Cleaning {
+        let projectFiles = ProjectFiles(project: project)
+        var needed = Dictionary(uniqueKeysWithValues: types.map { ($0, Set<String>()) })
+        for name in projectFiles.names(in: project.edits) {
+            let report = ProjectFiles.Report()
+            guard let edit = projectFiles.readEdit(name, into: report) else { throw report.error }
+            for type in types {
+                guard let video = edit.videos[type] else { continue }
+                for clip in video.clips {
+                    needed[type, default: []].insert(clip.take)
+                    needed[type, default: []].formUnion(clip.stills.map(\.take))
+                }
+            }
+        }
+
+        let allTakes = takes(for: types, in: project)
+        let latest = Dictionary(grouping: allTakes.filter { $0.successful }) { "\($0.type.rawValue)/\($0.scene)" }
+            .mapValues { $0.map(\.number).max()! }
+        let oldTakes = allTakes.filter { take in
+            guard needed[take.type]?.contains(take.scene) == true else { return true }
+            return take.number != latest["\(take.type.rawValue)/\(take.scene)"]
+        }
+        let unusedScenes = types.flatMap { type in
+            projectFiles.names(in: project.scenes(for: type)).filter { needed[type]?.contains($0) != true }
+                .map { projectFiles.sceneURL($0, for: type) }
+        }
+        return Cleaning(takes: oldTakes, cuts: [], scenes: unusedScenes)
+    }
+
     /// Deletes what `cleaning` chose, and a scene's folder once its last take is gone.
     public static func delete(_ cleaning: Cleaning, in project: Project) throws(RetakeError) {
         let files = FileManager.default
@@ -168,6 +204,7 @@ public enum TakeStore {
                 if (try? files.contentsOfDirectory(atPath: folder.path))?.isEmpty == true { try files.removeItem(at: folder) }
             }
             for folder in cleaning.cuts { try files.removeItem(at: folder) }
+            for scene in cleaning.scenes { try files.removeItem(at: scene) }
         } catch {
             throw RetakeError(.failed, "Couldn't delete everything: \(error.localizedDescription)")
         }

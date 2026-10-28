@@ -248,7 +248,7 @@ public struct ProjectValidator {
         var timelines: [String: TakeTimeline?] = [:]
         func pinned(_ scene: String, at path: JSONPath) -> TakeTimeline? {
             if let known = timelines[scene] { return known }
-            let take = TakeStore.takes(of: scene, for: [type], in: project).last { !$0.failed }
+            let take = TakeStore.takes(of: scene, for: [type], in: project).last(where: { $0.successful })
             let found: TakeTimeline?
             if let log = take?.recorded {
                 found = TakeTimeline(log)

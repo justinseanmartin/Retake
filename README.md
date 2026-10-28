@@ -453,6 +453,9 @@ every device type it names, from that type's takes of the same scenes:
 refreshes those pins to the latest successful takes. To cut from an earlier take, delete the takes
 after it with `retake clean --takes`.
 
+`retake clean --unused` keeps the latest successful take of every scene any edit uses and deletes
+older or failed takes, along with scene definitions and takes no edit uses.
+
 ### Anchors: times that follow the app
 
 Every time in an edit — a clip's `from` and `to`, a caption's `from` and `to`, a sound's `at`, a

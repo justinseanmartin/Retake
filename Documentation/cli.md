@@ -554,6 +554,7 @@ Without `--device` or `--type`, lists takes of both device types.
 
 ```
 retake clean [--takes [<scene>[@<take>],...]] [--cuts [<edit>,...]] [--type <type>] [--yes]
+retake clean --unused [--type <type>] [--yes]
 retake clean --on-device [--device <device>]
 ```
 
@@ -566,10 +567,16 @@ Deletes takes and cuts, of both device types unless `--type` names one:
 | `retake clean --takes create-note,share-note@2` | Every take of `create-note`, and take 2 of `share-note`. |
 | `retake clean --cuts` | Every cut. |
 | `retake clean --cuts video1` | `video1`'s cuts. |
+| `retake clean --unused` | Every unreferenced scene definition and take, and old or failed takes of referenced scenes. Keeps each referenced scene's latest successful take. |
 
 `--takes` and `--cuts` can be given together. It lists what it will delete, naming each take an edit
 pins, and asks first, unless `--yes`. Fails (2), deleting nothing, if a scene, take or edit named
 doesn't exist.
+
+`--unused` derives what is needed from every edit, including scenes used only for stills. It refuses
+to delete anything if an edit cannot be read, because that edit's dependencies are unknown. It
+leaves rendered cuts, sets and other project files alone. `--type` limits both takes and scene
+definitions to one device type.
 
 Since `cut` selects each scene's latest successful take, deleting later takes is how an edit goes
 back to an earlier one: after `retake clean --takes create-note@5`, the next cut uses take 4.

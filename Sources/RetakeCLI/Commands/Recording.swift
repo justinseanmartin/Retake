@@ -390,6 +390,8 @@ struct Clean: AsyncParsableCommand {
             With neither --takes nor --cuts, deletes every take and every cut, of both device types \
             unless --type names one. --takes alone deletes every take, and given scenes, or a scene's \
             take as <scene>@<take>, only those; --cuts alone every cut, and given edits, only theirs. \
+            --unused deletes old takes and scene definitions no edit needs, keeping each needed \
+            scene's latest successful take. \
             Lists what it will delete, naming takes an edit pins, and asks first unless --yes. With \
             --on-device, deletes instead what Retake leaves in the app's container on the device \
             (takes' copies of its data, and staged set files), which record does at the end of a run.
@@ -406,6 +408,9 @@ struct Clean: AsyncParsableCommand {
     @Option(help: ArgumentHelp("Only this device type's.", valueName: "type"))
     var type: DeviceType?
 
+    @Flag(help: "Delete old takes and scene definitions no edit needs, keeping each needed scene's latest successful take.")
+    var unused = false
+
     @Flag(help: "Don't ask first.")
     var yes = false
 
@@ -419,10 +424,13 @@ struct Clean: AsyncParsableCommand {
     static let optionalValues = ["--takes", "--cuts"]
 
     func validate() throws {
-        if onDevice, takes != nil || cuts != nil || type != nil || yes {
+        if onDevice, takes != nil || cuts != nil || type != nil || yes || unused {
             throw ValidationError(
-                "--on-device deletes only what's on the device; it takes no --takes, --cuts, --type or --yes.",
+                "--on-device deletes only what's on the device; it takes no --takes, --cuts, --type, --unused or --yes.",
             )
+        }
+        if unused, takes != nil || cuts != nil {
+            throw ValidationError("--unused chooses takes and scenes itself; it can't be combined with --takes or --cuts.")
         }
         if !onDevice, device.device != nil {
             throw ValidationError("--device applies only with --on-device.")
@@ -437,15 +445,22 @@ struct Clean: AsyncParsableCommand {
     func run() async throws {
         let located = try project.locate()
         guard onDevice else {
-            let choices = try Self.list(takes).map { names throws(RetakeError) in try names.map { name throws(RetakeError) in try TakeStore.TakeChoice.parse(name) } }
-            let cleaning = try TakeStore.cleaning(takes: choices, cuts: Self.list(cuts), for: type.map { [$0] } ?? DeviceType.allCases, in: located)
-            guard !cleaning.takes.isEmpty || !cleaning.cuts.isEmpty else { return print("Nothing to delete.") }
+            let types = type.map { [$0] } ?? DeviceType.allCases
+            let cleaning: TakeStore.Cleaning
+            if unused {
+                cleaning = try TakeStore.unused(for: types, in: located)
+            } else {
+                let choices = try Self.list(takes).map { names throws(RetakeError) in try names.map { name throws(RetakeError) in try TakeStore.TakeChoice.parse(name) } }
+                cleaning = try TakeStore.cleaning(takes: choices, cuts: Self.list(cuts), for: types, in: located)
+            }
+            guard !cleaning.takes.isEmpty || !cleaning.cuts.isEmpty || !cleaning.scenes.isEmpty else { return print("Nothing to delete.") }
             Self.describe(cleaning, in: located)
             if !yes {
                 guard Prompt.isInteractive else {
                     throw RetakeError(.usage, "Give --yes to delete without being asked; there's no terminal to ask at.")
                 }
-                FileHandle.standardError.write(Data("Delete \(cleaning.takes.count + cleaning.cuts.count == 1 ? "it" : "them")? [y/N] ".utf8))
+                let count = cleaning.takes.count + cleaning.cuts.count + cleaning.scenes.count
+                FileHandle.standardError.write(Data("Delete \(count == 1 ? "it" : "them")? [y/N] ".utf8))
                 guard ["y", "yes"].contains(readLine()?.trimmingCharacters(in: .whitespaces).lowercased() ?? "") else {
                     return print("Nothing deleted.")
                 }
@@ -479,6 +494,10 @@ struct Clean: AsyncParsableCommand {
         if !cleaning.cuts.isEmpty {
             print("Cuts:")
             for folder in cleaning.cuts { print("  \(project.displayPath(folder))") }
+        }
+        if !cleaning.scenes.isEmpty {
+            print("Scenes:")
+            for scene in cleaning.scenes { print("  \(project.displayPath(scene))") }
         }
         for take in cleaning.pinned {
             Console.warn("\(take.name) (\(take.type.rawValue)) was used by \(take.pinnedBy.joined(separator: ", ")); its next cut will select the latest successful take left.")

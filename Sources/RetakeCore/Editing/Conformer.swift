@@ -37,7 +37,7 @@ public enum CutPreparer {
             if let number = oldPins[type]?[scene], let old = takes.first(where: { $0.number == number })?.recorded {
                 return old
             }
-            return takes.last { !$0.failed }?.recorded
+            return takes.last(where: { $0.successful })?.recorded
         }
         var problems: [String] = []
         func converted(_ value: JSONValue, at path: String, scene: String?, type: DeviceType?) -> JSONValue {
@@ -84,7 +84,7 @@ public enum CutPreparer {
             let scenes = video.clips.flatMap { [$0.take] + $0.stills.map(\.take) }.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
             var typePins: [JSONObject.Entry] = []
             for scene in scenes {
-                guard let latest = TakeStore.takes(of: scene, for: [type], in: project).last(where: { !$0.failed }) else {
+                guard let latest = TakeStore.takes(of: scene, for: [type], in: project).last(where: { $0.successful }) else {
                     throw RetakeError(.failed, "There's no successful \(type.rawValue) take of \(scene) to pin; record it.")
                 }
                 typePins.append(.init(key: scene, value: .number(Double(latest.number))))
