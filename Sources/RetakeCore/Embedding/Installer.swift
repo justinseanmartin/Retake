@@ -150,7 +150,8 @@ public enum Installer {
     public static func app(from source: Source, for device: Device, project: Project, allowProvisioningUpdates: Bool) throws(RetakeError) -> URL {
         switch source {
         case .app(let url):
-            return url
+            // The bundle itself, not a link to it, so the copy embedding changes is of the bundle.
+            return url.resolvingSymlinksInPath()
         case .scheme(let build, let root):
             let derivedData = buildFolder(project).appending(path: "DerivedData", directoryHint: .isDirectory)
             let arguments = xcodebuildArguments(build, udid: device.udid, derivedData: derivedData, allowProvisioningUpdates: allowProvisioningUpdates)
@@ -176,7 +177,7 @@ public enum Installer {
             guard let listed = try? Subprocess.xcrun(settings, in: root), listed.status == 0 else {
                 throw RetakeError(.failed, "xcodebuild couldn't say where it built \(build.scheme).")
             }
-            return try builtApp(fromSettings: listed.output)
+            return try builtApp(fromSettings: listed.output).resolvingSymlinksInPath()
         case .command(let build, let root):
             let result: Subprocess.Result
             do {
@@ -191,7 +192,7 @@ public enum Installer {
             guard FileManager.default.fileExists(atPath: app.path) else {
                 throw RetakeError(.failed, "The build command finished, but there's no app at \(build.app).")
             }
-            return app
+            return app.resolvingSymlinksInPath()
         }
     }
 

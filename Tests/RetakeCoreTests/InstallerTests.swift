@@ -70,6 +70,15 @@ struct InstallerTests {
         }
     }
 
+    @Test func anAppLinkedToIsTheBundleItself() throws {
+        let device = Device(udid: "00008103-0000000000000001", name: "Sam’s iPad", type: .ipad)
+        let build = ProjectSettings.CommandBuild(command: "mkdir -p elsewhere/Notes.app out && ln -sfn ../elsewhere/Notes.app out/Notes.app", app: "out/Notes.app")
+        let app = try Installer.app(from: .command(build, root: root), for: device, project: project(), allowProvisioningUpdates: false)
+        #expect(app.path == root.appending(path: "elsewhere/Notes.app").resolvingSymlinksInPath().path, "embedding copies it, not the link")
+        let given = try Installer.app(from: .app(root.appending(path: "out/Notes.app")), for: device, project: project(), allowProvisioningUpdates: false)
+        #expect(given.path == root.appending(path: "elsewhere/Notes.app").resolvingSymlinksInPath().path)
+    }
+
     @Test func theBundleIDIsTheProjectsOrTheInstalledApps() throws {
         #expect(try Installer.bundleID(for: project(ProjectSettings(bundleID: "com.example.named"))) == "com.example.named")
         #expect(throws: RetakeError.self) { try Installer.bundleID(for: project()) }
