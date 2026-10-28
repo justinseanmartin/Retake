@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Refuses a commit whose staged schemas, Documentation/reference/<kind>.schema.json, aren't what the
+# file types generate, when it touches either. Turn it on with
+# `git config core.hooksPath Scripts/git-hooks`. It builds retake from the working tree, into
+# RETAKE_SCRATCH_PATH (.build unless given), so a build it shares with yours stays incremental.
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+git diff --cached --name-only | grep -qE '^(Sources/|Documentation/reference/.*\.schema\.json$)' || exit 0
+
+SCRATCH="${RETAKE_SCRATCH_PATH:-$ROOT/.build}"
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/retake-pre-commit.XXXXXX")"
+trap 'rm -rf "$WORK"' EXIT
+
+swift build --package-path "$ROOT" --scratch-path "$SCRATCH" --product retake > "$WORK/build.log" 2>&1 \
+    || { tail -20 "$WORK/build.log" >&2; echo "pre-commit: retake doesn't build, so its schemas can't be checked" >&2; exit 1; }
+"$(swift build --package-path "$ROOT" --scratch-path "$SCRATCH" --product retake --show-bin-path)/retake" schema --output "$WORK" > /dev/null
+
+stale=()
+for generated in "$WORK"/*.schema.json; do
+    name="$(basename "$generated")"
+    git show ":Documentation/reference/$name" 2>/dev/null | cmp -s "$generated" - || stale+=("$name")
+done
+if (( ${#stale[@]} )); then
+    echo "pre-commit: the staged schemas aren't what the file types generate: ${stale[*]}" >&2
+    echo "Run \`retake schema --output Documentation/reference\`, and RETAKE_REGENERATE=1 swift test --filter Reference for the reference, then stage them." >&2
+    if ! git diff --quiet -- Sources; then
+        echo "(Generated from the working tree, whose Sources/ has unstaged changes.)" >&2
+    fi
+    exit 1
+fi
