@@ -119,7 +119,10 @@ public final class TakeWriter: @unchecked Sendable {
         if shapes.last.map({ $0.width != width || $0.height != height }) ?? true {
             shapes.append(ShapeChange(at: (time - start).seconds, width: width, height: height, turn: turn))
         }
-        while !live, !video.isReadyForMoreMediaData, writer?.status == .writing { usleep(1000) }
+        // Not live, as in tests, the writer is waited for, but not forever: with nothing written to
+        // its sound input, it can stop taking video until sound comes.
+        let deadline = Date().addingTimeInterval(2)
+        while !live, !video.isReadyForMoreMediaData, writer?.status == .writing, Date() < deadline { usleep(1000) }
         guard video.isReadyForMoreMediaData, let fitted = fitted(pixels, turning: turn), adaptor.append(fitted, withPresentationTime: time) else {
             dropped += 1
             return

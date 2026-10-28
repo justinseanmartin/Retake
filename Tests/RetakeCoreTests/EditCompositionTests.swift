@@ -135,23 +135,33 @@ struct TurnFramingTests {
 struct EditCompositionTests {
     let folder = FileManager.default.temporaryDirectory.appending(path: "retake-composition-\(UUID().uuidString)", directoryHint: .isDirectory)
 
-    /// A one-colour movie, 2 s at 30 frames a second, 60×80.
+    /// A one-colour movie, 2 s at 30 frames a second, 64×96, a size every encoder takes.
     func movie(_ name: String, red: UInt8, green: UInt8, blue: UInt8) async throws -> URL {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let url = folder.appending(path: "\(name).mov")
-        let writer = TakeWriter(writingTo: url, live: false)
-        for index in 0..<60 { writer.appendVideo(try Self.frame(red: red, green: green, blue: blue, at: index)) }
-        _ = try await writer.finish()
+        // Picture only: a writer with a sound input too would wait for sound before taking more.
+        let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
+        let input = AVAssetWriterInput(mediaType: .video, outputSettings: [AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: 64, AVVideoHeightKey: 96])
+        writer.add(input)
+        writer.startWriting()
+        writer.startSession(atSourceTime: .zero)
+        for index in 0..<60 {
+            while !input.isReadyForMoreMediaData { try await Task.sleep(for: .milliseconds(1)) }
+            input.append(try Self.frame(red: red, green: green, blue: blue, at: index))
+        }
+        input.markAsFinished()
+        await writer.finishWriting()
+        #expect(writer.status == .completed, "\(String(describing: writer.error))")
         return url
     }
 
     static func frame(red: UInt8, green: UInt8, blue: UInt8, at index: Int) throws -> CMSampleBuffer {
         var pixels: CVPixelBuffer?
-        CVPixelBufferCreate(nil, 60, 80, kCVPixelFormatType_32BGRA, [kCVPixelBufferIOSurfacePropertiesKey as String: [:]] as CFDictionary, &pixels)
+        CVPixelBufferCreate(nil, 64, 96, kCVPixelFormatType_32BGRA, [kCVPixelBufferIOSurfacePropertiesKey as String: [:]] as CFDictionary, &pixels)
         let buffer = try #require(pixels)
         CVPixelBufferLockBaseAddress(buffer, [])
         let base = try #require(CVPixelBufferGetBaseAddress(buffer)).assumingMemoryBound(to: UInt8.self)
-        for offset in stride(from: 0, to: CVPixelBufferGetBytesPerRow(buffer) * 80, by: 4) {
+        for offset in stride(from: 0, to: CVPixelBufferGetBytesPerRow(buffer) * 96, by: 4) {
             (base[offset], base[offset + 1], base[offset + 2], base[offset + 3]) = (blue, green, red, 255)
         }
         CVPixelBufferUnlockBaseAddress(buffer, [])
@@ -186,7 +196,7 @@ struct EditCompositionTests {
             .init(take: "red", from: 0, to: 1, speed: 1, start: 0, duration: 1, crossfade: 0),
             .init(take: "green", from: 0.5, to: 1.5, speed: 2, start: 0.75, duration: 0.5, crossfade: 0.25),
         ])
-        let composition = try await EditComposition.make(plan, movies: movies, spec: PreviewSpec(width: 60, height: 80, framesPerSecond: 30), background: .black)
+        let composition = try await EditComposition.make(plan, movies: movies, spec: PreviewSpec(width: 64, height: 96, framesPerSecond: 30), background: .black)
         #expect(abs(composition.composition.duration.seconds - 1.25) < 0.01)
         let ranges = composition.videoComposition.instructions.map { ($0.timeRange.start.seconds, $0.timeRange.end.seconds) }
         #expect(ranges.map(\.0) == [0, 0.75, 1] && ranges.map(\.1) == [0.75, 1, 1.25])
@@ -205,11 +215,11 @@ struct EditCompositionTests {
         defer { try? FileManager.default.removeItem(at: folder) }
         let movies = ["red": try await movie("red", red: 255, green: 0, blue: 0)]
         var log = TakeLogReadingTests.log()
-        log.shapes = [.init(at: 0, width: 60, height: 80, turn: 0), .init(at: 1, width: 80, height: 60, turn: 90)]
+        log.shapes = [.init(at: 0, width: 64, height: 96, turn: 0), .init(at: 1, width: 96, height: 64, turn: 90)]
         var placement = CutPlan.Placement(take: "red", from: 0.5, to: 1.5, speed: 2, start: 0, duration: 0.5, crossfade: 0)
         placement.turnBlur = 0.2
         let composition = try await EditComposition.make(
-            CutPlan(placements: [placement]), movies: movies, logs: ["red": log], spec: PreviewSpec(width: 60, height: 80, framesPerSecond: 30), background: .black,
+            CutPlan(placements: [placement]), movies: movies, logs: ["red": log], spec: PreviewSpec(width: 64, height: 96, framesPerSecond: 30), background: .black,
         )
         #expect(composition.framings[0].map(\.at) == [0, 0.25], "the turn, half a second into the take's stretch, at twice its speed")
         #expect(composition.turnBlurs.count == 1)
