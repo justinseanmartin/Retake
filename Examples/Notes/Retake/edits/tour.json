@@ -1,15 +1,15 @@
 {
   "$schema": "https://justinseanmartin.github.io/Retake/schemas/0.0.1/edit.schema.json",
-  "intent": "Notes in a few seconds: getting started, then a note written, synced and shared.",
+  "intent": "Notes in a few seconds: getting started, then a note written, synced, shared and filed.",
   "devices": ["iphone", "ipad"],
   "background": "#F4F1EA",
   "clips": [
     {
       "id": "welcome",
-      "intent": "The welcome screen, and Get Started tapped.",
+      "intent": "The welcome screen arriving, Get Started tapped, and the library it opens on.",
       "take": "first-launch",
-      "from": { "step": "welcome" },
-      "to": { "step": "get-started", "offset": 0.5 },
+      "from": { "step": "welcome", "offset": -1.5 },
+      "to": { "step": "library", "offset": 0.8 },
       "touches": true,
       "captions": [
         { "text": "Start writing in seconds", "y": 0.1, "color": "#1F6FEB", "ipad": { "y": 0.08 } }
@@ -19,7 +19,7 @@
       "id": "write",
       "intent": "A new note, titled, then synced.",
       "take": "create-note",
-      "from": { "step": "new-note" },
+      "from": { "step": "new-note", "offset": -0.5 },
       "to": { "step": "synced", "offset": 0.8 },
       "crossfade": 0.4,
       "touches": true,
@@ -33,10 +33,21 @@
       "take": "create-note",
       "from": { "step": "share" },
       "to": { "step": "sent", "offset": 0.8 },
+      "crossfade": 0.3,
+      "touches": true
+    },
+    {
+      "id": "filed",
+      "intent": "The sheet closed, and back to the library with the new note in it.",
+      "take": "create-note",
+      "from": { "step": "sent", "offset": 0.8 },
+      "to": { "step": "end" },
       "speed": 1.2,
       "crossfade": 0.3,
       "touches": true,
-      "ipad": { "speed": 1.4 }
+      "captions": [
+        { "text": "Every note, in one place", "y": 0.1, "color": "#1F6FEB", "ipad": { "y": 0.08 } }
+      ]
     }
   ]
 }

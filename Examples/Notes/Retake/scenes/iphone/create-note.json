@@ -11,7 +11,7 @@
     { "waitFor": { "label": "Sent" }, "hold": 1, "id": "sent" },
     { "tap": { "label": "Done" } },
     { "waitFor": { "label": "Done", "gone": true }, "hold": 0.5 },
-    { "tap": { "label": "Library" }, "id": "library" },
+    { "tap": { "label": "Library", "traits": ["button"] }, "id": "library" },
     { "waitFor": { "label": "New Note" }, "hold": 1 }
   ]
 }
