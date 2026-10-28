@@ -97,9 +97,9 @@ public enum TakeRecording {
                                 connected: clock.seconds(launched.connected),
                             )
                         }
-                        // The lead-in is from the movie's start, so a take recorded from before
-                        // launch, already longer, waits for nothing more.
-                        let leadIn = scene.leadIn - recorder.elapsed
+                        // The lead-in is from the movie's start; for a take recorded from before
+                        // launch, from now, when the app is reachable, so its first screen settles.
+                        let leadIn = scene.recordsLaunch ? scene.leadIn : scene.leadIn - recorder.elapsed
                         if leadIn > 0 { await player.pause(leadIn) }
                     }
                     await player.pause(scene.tail)

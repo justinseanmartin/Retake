@@ -26,7 +26,8 @@ extension OnDevice {
             #expect((log.launch != nil) == scene.recordsLaunch)
             if let launch = log.launch {
                 #expect(0 < launch.launched && launch.launched < launch.reported && launch.reported <= launch.connected)
-                #expect(launch.connected < log.steps[0].start)
+                // The lead-in starts once the app is reachable, so its first screen settles first.
+                #expect(launch.connected + scene.leadIn - 0.1 < log.steps[0].start, "\(launch.connected) + \(scene.leadIn), then \(log.steps[0].start)")
             }
             let written = try JSONParser.parse(String(contentsOf: target.log, encoding: .utf8))
             #expect(written == log.json)
