@@ -169,7 +169,7 @@ struct EditFileTests {
         let report = ProjectFiles.Report()
         let edit = files.readEdit("tour", into: report)
         #expect(report.problems.isEmpty && report.warnings.isEmpty, "\(report.problems)")
-        #expect(edit?.videos[.ipad]?.clips[2].speed == 1.4)
+        #expect(edit?.videos[.ipad]?.clips[0].captions[0].y == 0.08 && edit?.videos[.iphone]?.clips[0].captions[0].y == 0.1, "the iPad's override")
     }
 
     @Test func coloursReadAndPrintAsWritten() {
