@@ -767,7 +767,7 @@ a repository:
 | `builds/<project>/DerivedData/` | The app as `install` builds it with `xcodebuild`. |
 | `builds/<project>/installed/` | The copy `install` embeds Retake in and installs, replaced each time. |
 | `devices.json` | Device aliases, from `devices add`, `devices remove` and `init`. |
-| `insidejob/<version>/` | TheInsideJob for the Button Heist version Retake is built against, for a Retake built from source (`scripts/fetch-insidejob.sh`); a release carries its own. |
+| `insidejob/<version>/` | TheInsideJob for the Button Heist version Retake is built against, for a Retake built from source (`Scripts/fetch-insidejob.sh`); a release carries its own. |
 | `support/<contract>/` | Retake's support library, by its contract version, for a Retake built from source; a release carries its own. |
 | `screen-capture-released` | When Retake last let go of a device's screen, so the next command waits out the 8 seconds macOS takes to offer it again. |
 

@@ -31,8 +31,8 @@ recording by hand, no editing timeline to rebuild, and no guessing which frames 
 - [Project layout](#project-layout)
 - [Building from source](#building-from-source)
 
-The full command reference is [docs/cli.md](docs/cli.md), and every field of every file is in [docs/reference](docs/reference/),
-generated from Retake's [schemas](#schemas).
+The full command reference is [Documentation/cli.md](Documentation/cli.md), and every field of every file is in
+[Documentation/reference](Documentation/reference/), generated from Retake's [schemas](#schemas).
 
 ## How it works
 
@@ -115,7 +115,7 @@ record with whichever one is on the device. Run `retake check` on release archiv
 embed in could ever be archived.
 
 `install` can also run your own build command, from `retake.json`, when one `xcodebuild` call can't
-build your app; see [`retake install`](docs/cli.md#retake-install).
+build your app; see [`retake install`](Documentation/cli.md#retake-install).
 
 **Your app shouldn't link TheInsideJob itself.** Retake always supplies its own, the exact version
 it's built against (see [the version pin](#the-button-heist-and-retakes-version-pin)), and `embed` and `install` stop if the app already
@@ -159,7 +159,7 @@ and dictionaries of them, as JSON has; a `Data` or `Date` value can't be given y
 and `arguments` are added to the launch, for your app's own Debug-only flags and for the language
 and locale. `extends` builds on another set, so what every set shares is written once, and a flag
 only one scene needs goes in a small set of its own that extends the one it builds on. `state` and
-`aspect` are below, and every field is in the [set reference](docs/reference/set.md).
+`aspect` are below, and every field is in the [set reference](Documentation/reference/set.md).
 
 ### `state`: clean, cloned or live
 
@@ -251,7 +251,7 @@ with named options, such as `tap --label "New Note"`, running it at once and add
 when it runs, so a scene is only ever made of steps that worked. `undo` takes the last one back. An
 agent can drive it just as well: `retake compose <scene> --json` reads actions a line each from
 standard input and answers each with a line of JSON, saying what ran, what failed and why, and
-what's on screen now. See [`retake compose`](docs/cli.md#retake-compose).
+what's on screen now. See [`retake compose`](Documentation/cli.md#retake-compose).
 
 Scenes are JSON files, so they can be written or changed by hand too. A scene's `set` is the
 project's `defaultSet` unless it names one:
@@ -316,7 +316,7 @@ was aimed at, so a step that follows one that presents or dismisses something sh
 The step log records when an `orientation` step's frames changed shape, for the edit to
 [show the turn](#turns), and when a `waitFor`'s element appeared, so an edit can cut on what the app did,
 such as a sheet arriving, not just on what the scene did. Every step, its options and their defaults
-are in the [scene reference](docs/reference/scene.md).
+are in the [scene reference](Documentation/reference/scene.md).
 
 A step's `id` names it for edits to anchor to; see [anchors](#anchors-times-that-follow-the-app). Ids are unique within a scene, can't
 look like a number, and can't be `start` or `end`, which name the take's own edges.
@@ -664,7 +664,7 @@ every project: a build rewrites thousands of files each time, and aliases name y
 
 A project can live anywhere, under any folder's name: `retake init --config Previews/retake.json`
 makes one in `Previews/`, and commands then need `--config` or `RETAKE_CONFIG` to find it, which the
-repository's `mise.toml` can set for everyone; see [finding the project](docs/cli.md#finding-the-project).
+repository's `mise.toml` can set for everyone; see [finding the project](Documentation/cli.md#finding-the-project).
 
 ### Schemas
 
@@ -682,7 +682,7 @@ ignored, and every error names the file and the field, such as `edits/video1.jso
 clips[3].from.fraction: 1.4 is outside -1 to 1`. `retake validate` checks a whole project without a
 device, including what only the takes can answer, such as an anchor's step id existing in its scene.
 
-The [reference](docs/reference/) lists every field of every file, generated from the schemas. This README explains
+The [reference](Documentation/reference/) lists every field of every file, generated from the schemas. This README explains
 how the pieces fit together; the reference is where each field is defined.
 
 ## Building from source
@@ -698,11 +698,11 @@ it's The Button Heist's own release build, which records its Xcode in the bundle
 ```sh
 swift build
 swift test
-scripts/fetch-insidejob.sh     # downloads the TheInsideJob Retake installs, for the pinned release
+Scripts/fetch-insidejob.sh     # downloads the TheInsideJob Retake installs, for the pinned release
 ```
 
 `swift build` fetches The Button Heist's packages at the pinned release, since Retake links its
-client library directly. `scripts/fetch-insidejob.sh` downloads the same release's
+client library directly. `Scripts/fetch-insidejob.sh` downloads the same release's
 `theinsidejob-<version>.zip`, checks it against the release's checksums, and puts its
 `TheInsideJob.xcframework` where a locally built `retake` installs it from. Released builds include
 it. Neither needs The Button Heist's own development tools.
@@ -714,11 +714,11 @@ For changes that span both, point Retake at a local clone of The Button Heist:
 ```sh
 export RETAKE_BUTTONHEIST_PATH=../TheButtonHeist
 swift build
-scripts/fetch-insidejob.sh
+Scripts/fetch-insidejob.sh
 ```
 
 With `RETAKE_BUTTONHEIST_PATH` set, `swift build` uses that clone instead of the pinned release, and
-`scripts/fetch-insidejob.sh` builds TheInsideJob from it rather than downloading it. One variable
+`Scripts/fetch-insidejob.sh` builds TheInsideJob from it rather than downloading it. One variable
 drives both on purpose: Retake's client and the framework it installs must come from the same
 source. A clone between releases reports a version with its contract hash, so a framework built from
 a different state of the clone is refused at the handshake rather than half working. Rebuild both

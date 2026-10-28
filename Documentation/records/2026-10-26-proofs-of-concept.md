@@ -1,9 +1,9 @@
 # Proofs of concept behind Retake's design
 
 Status: **done** (2026-10-23 to 2026-10-26). What was tried on devices before Retake's code was
-written, and what it showed. The [README](../../README.md) and [docs/cli.md](../cli.md) are designed on these results, and
-[the v0.0.1 plan](2026-10-26-v0.0.1-implementation-plan.md) builds on them. The code behind them is in `spikes/`, kept locally and not checked
-in.
+written, and what it showed. The [README](../../README.md) and [Documentation/cli.md](../cli.md) are designed on these results,
+and [the v0.0.1 plan](2026-10-26-v0.0.1-implementation-plan.md) builds on them. The code behind them is in `spikes/`, kept locally and not
+checked in.
 
 ## Why they came first
 
