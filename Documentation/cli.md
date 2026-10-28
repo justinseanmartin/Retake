@@ -315,10 +315,12 @@ Where the app comes from, the first that applies:
 2. `--scheme`: Retake builds it with `xcodebuild`, as below.
 3. `retake.json`'s `build`, in one of two forms:
 
+   <!-- schema: retake -->
    ```json
    "build": { "scheme": "MyApp", "workspace": "MyApp.xcworkspace", "configuration": "Debug" }
    ```
 
+   <!-- schema: retake -->
    ```json
    "build": { "command": "scripts/build-for-retake.sh", "app": "build/Debug-iphoneos/MyApp.app" }
    ```
@@ -848,6 +850,7 @@ status` and `retake info` show the same.
 The `.mp4`'s description holds all of a video's fields as one JSON object. Here, one take was
 recorded on a later build than the other:
 
+<!-- schema: none -->
 ```json
 {
   "retake": { "version": "0.1.0" },

@@ -137,6 +137,7 @@ with no code in the app.
 A set is everything that puts the app into a known state before a take: its data, its settings, and
 its launch environment. A scene names its set, so every take of the scene starts the same way.
 
+<!-- schema: set -->
 ```json
 {
   "extends": "base",
@@ -256,6 +257,7 @@ what's on screen now. See [`retake compose`](Documentation/cli.md#retake-compose
 Scenes are JSON files, so they can be written or changed by hand too. A scene's `set` is the
 project's `defaultSet` unless it names one:
 
+<!-- schema: scene -->
 ```json
 {
   "set": "returning-user",
@@ -378,6 +380,7 @@ that doesn't take, is tried again.
 An edit is a list of clips, each a stretch of a take, played in order. One edit makes the video for
 every device type it names, from that type's takes of the same scenes:
 
+<!-- schema: edit -->
 ```json
 {
   "intent": "The core loop in 20 s: create a note, share it, see it sync.",
@@ -494,6 +497,7 @@ Spotlights and blurs name an element the way steps do, by its accessibility labe
 its frame in the take's step log, which records what was on screen after each step. So the same
 spotlight lands on the same button on every device, with no rectangles to measure:
 
+<!-- schema: edit clip -->
 ```json
 "spotlight": { "element": { "label": "Share" }, "padding": 8 },
 "blurs": [{ "element": { "label": "Name" }, "from": { "step": "type-name" }, "to": { "step": "end" } }]
@@ -528,6 +532,7 @@ A caption can show an SF Symbol before its text, and animate it. `rotate` is the
 far, turning the symbol by `degrees` (clockwise when positive) over `duration` seconds, from when
 the caption appears:
 
+<!-- schema: edit clip -->
 ```json
 "captions": [
   {
