@@ -126,6 +126,22 @@ struct PlayerTests {
         #expect(time.pauses.count == 3)
     }
 
+    @Test func aLoopingAnimationDoesntKeepATurnFromSettlingNorPassForOne() {
+        func rect(_ x: Double) -> ScreenElement.Rect { ScreenElement.Rect(x: x, y: 0, width: 10, height: 10) }
+        let portrait = [rect(0), rect(100), rect(200), rect(300)]
+        let landscape = [rect(50), rect(150), rect(250), rect(300)]
+        // The last element bobs on every look; the rest have moved to landscape and stay.
+        var bobbing = landscape
+        bobbing[3] = rect(305)
+        #expect(Player.hasSettled(bobbing, from: portrait, moving: [3], before: [3]))
+        #expect(!Player.hasSettled(bobbing, from: portrait, moving: [3], before: nil), "one look isn't enough to tell")
+        #expect(!Player.hasSettled(bobbing, from: portrait, moving: [0, 1, 3], before: [0, 1, 2, 3]), "still turning")
+        // Nothing turned: only the animation differs from before.
+        var stayed = portrait
+        stayed[3] = rect(305)
+        #expect(!Player.hasSettled(stayed, from: portrait, moving: [3], before: [3]))
+    }
+
     @Test func aTurnToTheWayTheDeviceFacesDoesntWait() async throws {
         let driver = FakeDriver()
         try await FakeTime().player().play(SceneFile(steps: [Step(.orientation(.portrait))]), named: "turn", on: driver)

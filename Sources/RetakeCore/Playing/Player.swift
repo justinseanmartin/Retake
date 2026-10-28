@@ -152,10 +152,12 @@ public struct Player: Sendable {
     }
 
     /// Turns the device and waits for the app to turn with it: for what's on screen to have moved
-    /// from where it was, and then to look the same twice running, so the app has finished laying
-    /// itself out. The Button Heist doesn't report a turn as a change of screen, and doesn't say
-    /// the screen's size. A turn to the way the device already faces needs no wait. Returns what's
-    /// on screen once it has turned.
+    /// from where it was, and then to settle, so the app has finished laying itself out. Settled is
+    /// nothing moving from one look to the next, or only a few elements that were moving the look
+    /// before too, such as a looping animation, which never settles; and something else must have
+    /// moved since before the turn, so an animation alone doesn't pass for one. The Button Heist
+    /// doesn't report a turn as a change of screen, and doesn't say the screen's size. A turn to the
+    /// way the device already faces needs no wait. Returns what's on screen once it has turned.
     @ButtonHeistActor
     func turn(from current: SceneFile.Orientation, to target: SceneFile.Orientation, on driver: some AppDriver) async throws(RetakeError) -> [ScreenElement] {
         let before = try await driver.elements()
@@ -164,10 +166,17 @@ public struct Player: Sendable {
         guard target != current else { return before }
         let deadline = now() + Self.turnTimeout
         var last: [ScreenElement.Rect?]?
+        var moving: Set<Int>?
         while now() < deadline {
             let elements = try await driver.elements()
             let frames = Self.frames(elements)
-            if frames != Self.frames(before), frames == last { return elements }
+            if let last, last.count == frames.count {
+                let now = Set(frames.indices.filter { frames[$0] != last[$0] })
+                if Self.hasSettled(frames, from: Self.frames(before), moving: now, before: moving) { return elements }
+                moving = now
+            } else {
+                moving = nil
+            }
             last = frames
             await pause(Self.turnPollInterval)
         }
@@ -175,6 +184,15 @@ public struct Player: Sendable {
             .failed,
             "the app didn't turn to \(target.rawValue) within \(Step.seconds(Self.turnTimeout)); does it support \(target.rawValue)?",
         )
+    }
+
+    /// Whether `frames`, whose elements at `moving` moved since the last look, have settled after a
+    /// turn from `before`, those at `earlier` having moved the look before that.
+    static func hasSettled(_ frames: [ScreenElement.Rect?], from before: [ScreenElement.Rect?], moving: Set<Int>, before earlier: Set<Int>?) -> Bool {
+        let animating = moving.isEmpty || (moving.count * 3 <= frames.count && earlier.map(moving.isSubset(of:)) == true)
+        guard animating else { return false }
+        if before.count != frames.count { return true }
+        return frames.indices.contains { !moving.contains($0) && frames[$0] != before[$0] }
     }
 
     static func frames(_ elements: [ScreenElement]) -> [ScreenElement.Rect?] {
