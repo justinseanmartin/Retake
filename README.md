@@ -712,6 +712,18 @@ client library directly. `Scripts/fetch-insidejob.sh` downloads the same release
 `TheInsideJob.xcframework` where a locally built `retake` installs it from. Released builds include
 it. Neither needs The Button Heist's own development tools.
 
+The schemas in `Documentation/reference/` are generated from Retake's file types, and checked in.
+After changing what a file may say, regenerate them, and the reference beside them:
+
+```sh
+swift run retake schema --output Documentation/reference
+RETAKE_REGENERATE=1 swift test --filter Reference
+```
+
+A pre-commit hook refuses a commit whose staged schemas differ from what the types generate. Turn it
+on once per clone with `git config core.hooksPath Scripts/git-hooks`. It builds `retake` into
+`RETAKE_SCRATCH_PATH`, or `.build` unless that's set.
+
 ### Working on Retake and The Button Heist together
 
 For changes that span both, point Retake at a local clone of The Button Heist:
