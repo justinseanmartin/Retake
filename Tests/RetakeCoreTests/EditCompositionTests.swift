@@ -91,6 +91,24 @@ struct TurnFramingTests {
         #expect(lands(held, .zero) == .zero && lands(held, CGPoint(x: 1200, y: 1600)) == CGPoint(x: 1200, y: 1600), "not turned")
     }
 
+    @Test func screenPointsLandOnTheCanvasThroughTheFrameAndAnyTurn() throws {
+        let screen = CGSize(width: 834, height: 1194)
+        func lands(_ framing: ClipFraming, _ x: Double, _ y: Double) throws -> CGPoint {
+            let placed = CGPoint(x: x, y: y).applying(try #require(framing.pointsToCanvas))
+            return CGPoint(x: placed.x.rounded(), y: placed.y.rounded())
+        }
+        // Upright, the capture is 1200 pixels across 834 points, and the 3:4 window fills the canvas.
+        let upright = ClipFraming.framing(canvas, stored: stored, turned: 0, aspect: aspect, turns: .letterboxed, screen: screen)
+        #expect(try lands(upright, 417, 0) == CGPoint(x: 600, y: 0))
+        #expect(try lands(upright, 834, 1112) == CGPoint(x: 1200, y: 1600), "the 3:4 window's bottom right")
+        // Turned, the landscape screen is 1194×834 points; its 4:3 window, 1112 points across, is
+        // letterboxed as 1200×900.
+        let turned = ClipFraming.framing(canvas, stored: stored, turned: 90, aspect: aspect, turns: .letterboxed, screen: screen)
+        #expect(try lands(turned, 0, 0) == CGPoint(x: 0, y: 350))
+        #expect(try lands(turned, 1112, 834) == CGPoint(x: 1200, y: 1250))
+        #expect(ClipFraming.framing(canvas, stored: stored, turned: 0, aspect: aspect, turns: .letterboxed).pointsToCanvas == nil, "no screen recorded")
+    }
+
     @Test func anUprightFrameIsFramedAsBefore() {
         let upright = ClipFraming.framing(canvas, stored: stored, turned: 0, aspect: aspect, turns: .letterboxed)
         #expect(upright == .filling(canvas, capture: stored, aspect: aspect.portrait))

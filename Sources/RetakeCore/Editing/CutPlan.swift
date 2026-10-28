@@ -98,6 +98,14 @@ public struct ClipFraming: Equatable, Sendable {
     public var cropRect: CGRect
     /// From the take's pixels to the canvas's.
     public var transform: CGAffineTransform
+    /// From the device's screen points, as the step log gives touches and frames, to the canvas's
+    /// pixels; nil when the take didn't record its screen's size.
+    public var pointsToCanvas: CGAffineTransform? = nil
+
+    /// A rectangle in screen points, on the canvas.
+    public func canvasRect(_ rect: CGRect) -> CGRect? {
+        pointsToCanvas.map { rect.applying($0).standardized }
+    }
 
     /// The app's window in a portrait frame of `capture`'s size: the whole frame, or with `aspect`,
     /// the band of that shape at its top, which the set's `aspect` laid the app out in.
@@ -130,6 +138,22 @@ public struct ClipFraming: Equatable, Sendable {
     /// landscape; with `device`, left as stored, the window cropped where it lies and filling the
     /// canvas, as a camera fixed to the device would see it.
     public static func framing(
+        _ canvas: CGSize, stored: CGSize, turned degrees: Int, aspect: SetFile.AspectChoice?, turns: Edit.Turns, screen: CGSize? = nil,
+    ) -> ClipFraming {
+        var framing = unplaced(canvas, stored: stored, turned: degrees, aspect: aspect, turns: turns)
+        // A point on the upright screen is the capture's scale times as far into the upright frame.
+        if let screen {
+            let upright = degrees == 0 ? stored : CGSize(width: stored.height, height: stored.width)
+            let points = upright.width > upright.height ? CGSize(width: screen.height, height: screen.width) : screen
+            let scale = upright.width / points.width
+            framing.pointsToCanvas = CGAffineTransform(scaleX: scale, y: scale)
+                .concatenating(quarterTurn(degrees, of: upright))
+                .concatenating(framing.transform)
+        }
+        return framing
+    }
+
+    static func unplaced(
         _ canvas: CGSize, stored: CGSize, turned degrees: Int, aspect: SetFile.AspectChoice?, turns: Edit.Turns,
     ) -> ClipFraming {
         let upright = degrees == 0 ? stored : CGSize(width: stored.height, height: stored.width)

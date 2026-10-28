@@ -53,7 +53,7 @@ public struct EditComposition: @unchecked Sendable {
                 let log = logs[placement.take]
                 let stretches = Self.stretches(of: placement, shapes: log?.shapes ?? [])
                 framings.append(stretches.map { at, turn in
-                    (placement.videoTime(at), ClipFraming.framing(spec.size, stored: size, turned: turn, aspect: log?.aspect, turns: placement.turns))
+                    (placement.videoTime(at), ClipFraming.framing(spec.size, stored: size, turned: turn, aspect: log?.aspect, turns: placement.turns, screen: log?.screen))
                 })
                 if let blur = placement.turnBlur {
                     for (at, _) in stretches.dropFirst() {
