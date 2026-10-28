@@ -348,7 +348,9 @@ it before launching the app, so a take never starts the way the last one ended.
 
 `setup` steps play before recording starts. `leadIn` and `tail` record a little before the first
 step and after the last, 1 second each unless given, so the edit has frames to cut in and out on.
-`"recordsLaunch": true` starts recording before the app launches, to catch its launch screen.
+`"recordsLaunch": true` starts recording before the app launches, to catch its launch screen; the
+lead-in then starts once the app is up and reachable, so the first step waits for its first screen
+to settle, as it would without the launch.
 
 Points are in the device's screen points, so scenes are written per device type: `scenes/iphone/`
 and `scenes/ipad/`. A scene of the same name on each type, with the same steps and ids, is what lets
