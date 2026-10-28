@@ -78,12 +78,13 @@ extension EditFile {
     }
 
     /// One device type's edit, from its merged object, with the keys that belong only to the base
-    /// (`devices`, `takes`, `intent`, `$schema`) read already.
+    /// (`devices`, `takes`, `$schema`) read already.
     static func readEdit(_ object: JSONObject, _ reader: JSONReader) -> Edit? {
         var root = ObjectReader(reader: reader, object: object, path: .root)
-        root.know("$schema", "devices", "takes", "intent")
+        root.know("$schema", "devices", "takes")
         defer { root.finish() }
         let problemsBefore = reader.problems.count
+        let intent = root.optional("intent", reader.string)
         let music = root.optional("music") { value, path -> Edit.Music? in
             guard var object = reader.object(value, at: path) else { return nil }
             defer { object.finish() }
@@ -108,7 +109,7 @@ extension EditFile {
         }
         guard reader.problems.count == problemsBefore, let clips else { return nil }
         return Edit(
-            music: music, tapSound: tapSound, takeAudioVolume: takeAudioVolume, background: background,
+            intent: intent, music: music, tapSound: tapSound, takeAudioVolume: takeAudioVolume, background: background,
             turns: turns, turnBlur: turnBlur, clips: clips,
         )
     }

@@ -34,11 +34,13 @@ public struct EditFile: Equatable, Sendable {
 
     /// The keys a device type's overrides can't give, since they're already per type, or say which
     /// types there are.
-    static let notOverridable = ["devices", "takes", "intent"]
+    static let notOverridable = ["devices", "takes"]
 }
 
 /// One device type's video, as an edit cuts it.
 public struct Edit: Equatable, Sendable {
+    /// What this device type's video is there to show. Not read by the render.
+    public var intent: String?
     public var music: Music?
     public var tapSound: Sound?
     /// The level of the take's own sound, where a clip plays it.
@@ -50,6 +52,7 @@ public struct Edit: Equatable, Sendable {
     public var clips: [Clip]
 
     public init(
+        intent: String? = nil,
         music: Music? = nil,
         tapSound: Sound? = nil,
         takeAudioVolume: Double = 1,
@@ -58,6 +61,7 @@ public struct Edit: Equatable, Sendable {
         turnBlur: TurnBlur? = nil,
         clips: [Clip],
     ) {
+        self.intent = intent
         self.music = music
         self.tapSound = tapSound
         self.takeAudioVolume = takeAudioVolume

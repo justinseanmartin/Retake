@@ -674,7 +674,7 @@ Checks the project's files, or the files named, against the schemas, then what a
 - names that must exist: a scene's set, a set's `extends` (with no cycles), a set's `files`, an
   edit's scenes, sounds and music;
 - that step ids are unique in a scene, aren't numbers, and aren't `start` or `end`;
-- that a scene of the same name on each device type an edit names has the same step ids;
+- that every step id an edit references exists in that scene for each device type;
 - with takes recorded, that every anchor resolves in the takes the edit pins, and every element a
   spotlight or blur names is in the step log at that moment, as `cut` will check. A take the edit
   doesn't pin, or that isn't recorded here, as in a fresh clone or on CI, is warned about rather

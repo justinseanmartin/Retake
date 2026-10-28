@@ -22,7 +22,7 @@ public enum Reference {
                 "Every object in an edit, at the top and in each of the definitions below, can be given again under `iphone` or",
                 "`ipad`, with any of its fields, and applies only to that device type's video. An object in an override is laid over",
                 "the one it overrides key by key; a list, or a single value, replaces it. At the top, an override can't give",
-                "`devices`, `takes` or `intent`.",
+                "`devices` or `takes`.",
                 "",
             ]
         }

@@ -351,7 +351,7 @@ lead-in then starts once the app is up and reachable, so the first step waits fo
 to settle, as it would without the launch.
 
 Points are in the device's screen points, so scenes are written per device type: `scenes/iphone/`
-and `scenes/ipad/`. A scene of the same name on each type, with the same steps and ids, is what lets
+and `scenes/ipad/`. A scene of the same name on each type, with every step id an edit references, is what lets
 one edit cut both.
 
 ### What a scene can't reach

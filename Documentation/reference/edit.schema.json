@@ -83,6 +83,10 @@
       "description": "Overrides for iphone's video, laid over the rest key by key.",
       "type": "object",
       "properties": {
+        "intent": {
+          "description": "What the video is there to show. Not read by the render.",
+          "type": "string"
+        },
         "music": {
           "$ref": "#/$defs/music-override"
         },
@@ -120,6 +124,10 @@
       "description": "Overrides for ipad's video, laid over the rest key by key.",
       "type": "object",
       "properties": {
+        "intent": {
+          "description": "What the video is there to show. Not read by the render.",
+          "type": "string"
+        },
         "music": {
           "$ref": "#/$defs/music-override"
         },

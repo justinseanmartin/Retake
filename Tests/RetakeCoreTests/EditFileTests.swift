@@ -106,9 +106,11 @@ struct EditFileTests {
 
     @Test func topLevelFieldsAreOverriddenToo() throws {
         let edit = try #require(read(#"""
-            {"devices": ["iphone", "ipad"], "turns": "letterboxed", "ipad": {"turns": "device", "music": {"file": "ipad.m4a"}},
+            {"intent": "Phone tour", "devices": ["iphone", "ipad"], "turns": "letterboxed",
+             "ipad": {"intent": "Tablet tour", "turns": "device", "music": {"file": "ipad.m4a"}},
              "clips": [{"take": "a", "from": 0, "to": 1}]}
             """#).edit)
+        #expect(edit.videos[.iphone]?.intent == "Phone tour" && edit.videos[.ipad]?.intent == "Tablet tour")
         #expect(edit.videos[.iphone]?.turns == .letterboxed && edit.videos[.iphone]?.music == nil)
         #expect(edit.videos[.ipad]?.turns == .device && edit.videos[.ipad]?.music?.file == "ipad.m4a")
     }

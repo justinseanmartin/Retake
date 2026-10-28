@@ -208,30 +208,6 @@ public struct ProjectValidator {
             }
         }
 
-        // A scene the edit cuts on more than one device type must have the same step ids on each,
-        // since its anchors name them on every type.
-        guard edit.devices.count > 1 else { return }
-        let used = Set(edit.videos.values.flatMap { $0.clips.flatMap { [$0.take] + $0.stills.map(\.take) } })
-        for name in used.sorted() {
-            let present = edit.devices.compactMap { type in loadScene(name, type).map { (type, $0) } }
-            guard let (firstType, first) = present.first else { continue }
-            for (type, other) in present.dropFirst() {
-                let firstIDs = first.steps.compactMap(\.id)
-                let otherIDs = other.steps.compactMap(\.id)
-                guard firstIDs != otherIDs else { continue }
-                let missing = firstIDs.filter { !otherIDs.contains($0) }
-                let extra = otherIDs.filter { !firstIDs.contains($0) }
-                var differences: [String] = []
-                if !missing.isEmpty { differences.append("it lacks \(missing.map { "\"\($0)\"" }.joined(separator: ", "))") }
-                if !extra.isEmpty { differences.append("it has \(extra.map { "\"\($0)\"" }.joined(separator: ", ")), which the other hasn't") }
-                if differences.isEmpty { differences.append("they're in a different order") }
-                report.problem(FileProblem(
-                    file: project.displayPath(files.sceneURL(name, for: type)),
-                    path: JSONPath.root.appending("steps"),
-                    message: "its step ids differ from \(project.displayPath(files.sceneURL(name, for: firstType)))'s, which \(file) cuts both from: \(differences.joined(separator: "; "))",
-                ))
-            }
-        }
     }
 
     // MARK: - Against the takes

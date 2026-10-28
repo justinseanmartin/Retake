@@ -99,12 +99,16 @@ struct ProjectValidatorTests {
         #expect(try validate() == [#"edits/video.json: clips[0].captions[0].to.step: scenes/iphone/other.json has no step "open""#])
     }
 
-    @Test func aSceneCutOnBothTypesNeedsTheSameStepIDs() throws {
+    @Test func deviceOnlyStepIDsNeedNotMatch() throws {
         try write("scenes/ipad/walk.json", #"{"set": "base", "steps": [{"id": "open", "tap": {"label": "a"}}, {"id": "finish", "hold": 1}]}"#)
         try edit(#"{"take": "walk", "from": 0, "to": 1}"#)
-        #expect(try validate() == [
-            #"scenes/ipad/walk.json: steps: its step ids differ from scenes/iphone/walk.json's, which edits/video.json cuts both from: it lacks "done"; it has "finish", which the other hasn't"#,
-        ])
+        #expect(try validate() == [])
+    }
+
+    @Test func aReferencedStepIDMustExistForEachDevice() throws {
+        try write("scenes/ipad/walk.json", #"{"set": "base", "steps": [{"id": "open", "tap": {"label": "a"}}, {"id": "finish", "hold": 1}]}"#)
+        try edit(#"{"take": "walk", "from": {"step": "open"}, "to": {"step": "done"}}"#)
+        #expect(try validate() == [#"edits/video.json: clips[0].to.step: scenes/ipad/walk.json has no step "done""#])
     }
 
     @Test func onlyTheNamedFilesAreReported() throws {
