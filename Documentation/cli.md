@@ -663,10 +663,13 @@ retake check <path>
 ```
 
 Checks an `.xcarchive`, `.ipa` or `.app` for TheInsideJob and Retake's support library, in its
-frameworks and in its executables. Exits 1 if either is found, naming where, and 0 if neither is.
-Made for a release script or an archive's build phase. An app embedded by `retake install` is a
-copy, so never reaches an archive; one embedded in place by `retake embed` would, if the same build
-were archived, which `check` catches.
+frameworks and in its executables. Exits 1 if either is found, naming where, and 0 if neither is. It
+also exits 1 when it can't read part of what it checks, naming it, since what it can't read it can't
+clear. Made for a release script or an archive's build phase. In a phase with Xcode's script sandbox
+on, list as the phase's inputs the app, its `Info.plist`, its executable, its `Frameworks` folder
+and each framework's executable, which are what `check` reads. An app embedded by `retake install`
+is a copy, so never reaches an archive; one embedded in place by `retake embed` would, if the same
+build were archived, which `check` catches.
 
 ### `retake validate`
 
