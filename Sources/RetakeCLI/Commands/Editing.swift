@@ -24,8 +24,24 @@ struct Conform: AsyncParsableCommand {
     @OptionGroup var project: ProjectOptions
 
     func run() async throws {
-        _ = try project.locate()
-        throw RetakeError.notImplemented("conform")
+        let located = try project.locate()
+        let files = ProjectFiles(project: located)
+        guard FileManager.default.fileExists(atPath: files.editURL(edit).path) else {
+            throw RetakeError(.usage, "There's no edit \"\(edit)\" (\(located.displayPath(files.editURL(edit)))).")
+        }
+        let result = try Conformer.conform(edit, types: type.map { [$0] }, in: located)
+        if result.changes.isEmpty {
+            print("\(edit) already pins the latest takes.")
+            return
+        }
+        for change in result.changes { print("  \(change)") }
+        guard !dryRun else { return print("Nothing written (--dry-run).") }
+        do {
+            try Data(result.text.utf8).write(to: files.editURL(edit), options: .atomic)
+        } catch {
+            throw RetakeError(.failed, "Couldn't write \(located.displayPath(files.editURL(edit))): \(error.localizedDescription)")
+        }
+        print("Wrote \(located.displayPath(files.editURL(edit))).")
     }
 }
 

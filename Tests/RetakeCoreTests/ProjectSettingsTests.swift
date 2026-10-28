@@ -249,3 +249,25 @@ struct ProjectInitializerTests {
         #expect(!FileManager.default.fileExists(atPath: directory.appending(path: "Retake/retake.json").path))
     }
 }
+
+struct FittingWriterTests {
+    @Test func anEditLaidOutByHandIsWrittenBackTheSame() throws {
+        let url = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/Notes/Retake/edits/tour.json")
+        let text = try String(contentsOf: url, encoding: .utf8)
+        #expect(JSONWriter.fitting(try JSONParser.parse(text)) == text)
+    }
+
+    @Test func whatFitsWhereItStartsIsOneLineAndWhatDoesntIsLaidOut() throws {
+        let value = try JSONParser.parse(#"{"a": {"b": [1, 2]}, "long": ["\#(String(repeating: "x", count: 90))", "y"]}"#)
+        #expect(JSONWriter.fitting(value, width: 40) == """
+            {
+              "a": { "b": [1, 2] },
+              "long": [
+                "\(String(repeating: "x", count: 90))",
+                "y"
+              ]
+            }
+
+            """)
+    }
+}
