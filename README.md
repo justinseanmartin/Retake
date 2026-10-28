@@ -173,6 +173,8 @@ its launch environment. A scene names its set, so every take of the scene starts
 
 `files` are put in the app's data before launch, at the paths the app reads them from, so an app
 that keeps its data in Documents or Application Support starts on a known state with no code at all.
+Their sources are relative to `retake.json`; `..` can reach a fixture shared with the app project or
+another Retake project, while absolute paths are rejected so the project stays portable.
 `defaults` are what `UserDefaults.standard` holds at launch: strings, numbers, booleans, and lists
 and dictionaries of them, as JSON has; a `Data` or `Date` value can't be given yet. `environment`
 and `arguments` are added to the launch, for your app's own Debug-only flags and for the language

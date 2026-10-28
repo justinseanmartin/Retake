@@ -41,7 +41,7 @@ struct SetFileTests {
         (#"{"state": "fresh"}"#, #"sets/a.json: state: "fresh" isn't one of clean, cloned or live"#),
         (#"{"files": {"/etc/hosts": "a"}}"#, #"sets/a.json: files["/etc/hosts"]: isn't a path inside the app's data, such as Documents/notes.json"#),
         (#"{"files": {"Documents/../../x": "a"}}"#, #"sets/a.json: files["Documents/../../x"]: isn't a path inside the app's data, such as Documents/notes.json"#),
-        (#"{"files": {"Documents/a": "../secrets"}}"#, #"sets/a.json: files["Documents/a"]: "../secrets" isn't a path inside the project"#),
+        (#"{"files": {"Documents/a": "/tmp/secrets"}}"#, #"sets/a.json: files["Documents/a"]: "/tmp/secrets" isn't a relative path"#),
         (#"{"files": {"Documents/media/": "data/media"}}"#, #"sets/a.json: files["Documents/media/"]: is a folder, ending in "/", so "data/media" must be one too"#),
         (#"{"files": {"Documents/a.json": "data/"}}"#, #"sets/a.json: files["Documents/a.json"]: is a file, so "data/" can't be a folder ending in "/""#),
         (#"{"defaults": {"name": null}}"#, "sets/a.json: defaults.name: can't hold null, which UserDefaults can't store; leave the key out instead"),
@@ -61,6 +61,12 @@ struct SetFileTests {
         let result = read(text)
         #expect(result.problems == [expected])
         #expect(result.set == nil)
+    }
+
+    @Test func aSourceMayBeRelativeToAParentDirectory() {
+        let result = read(#"{"files": {"Documents/a": "../shared/a"}}"#)
+        #expect(result.problems.isEmpty)
+        #expect(result.set?.files == [SetFile.FileCopy(destination: "Documents/a", source: "../shared/a")])
     }
 }
 

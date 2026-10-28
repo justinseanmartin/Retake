@@ -108,8 +108,8 @@ extension SetFile {
                 reader.problem("isn't a path inside the app's data, such as Documents/notes.json", at: path)
                 return nil
             }
-            if source.hasPrefix("/") || source.split(separator: "/").contains("..") {
-                reader.problem("\"\(source)\" isn't a path inside the project", at: path)
+            if source.hasPrefix("/") {
+                reader.problem("\"\(source)\" isn't a relative path", at: path)
                 return nil
             }
             if destination.hasSuffix("/") != source.hasSuffix("/") {

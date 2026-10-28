@@ -55,10 +55,18 @@ struct ProjectValidatorTests {
         #expect(Set(try validate()) == [
             #"retake.json: defaultSet: there's no set "nowhere" (sets/nowhere.json)"#,
             #"sets/top.json: extends: there's no set "missing" (sets/missing.json)"#,
-            #"sets/top.json: files["Documents/a.json"]: "data/absent.json" doesn't exist in the project"#,
+            #"sets/top.json: files["Documents/a.json"]: "data/absent.json" doesn't exist"#,
             #"sets/top.json: files["Documents/m/"]: "data/notes.json/" is a file, not a folder"#,
             #"scenes/iphone/orphan.json: set: there's no set "gone" (sets/gone.json)"#,
         ], "a scene with no set uses defaultSet, which is reported once, on retake.json")
+    }
+
+    @Test func aSetMayUseAFileOutsideTheProject() throws {
+        let external = root.deletingLastPathComponent().appending(path: "\(root.lastPathComponent)-fixture.json")
+        defer { try? FileManager.default.removeItem(at: external) }
+        try Data("[]".utf8).write(to: external)
+        try write("sets/top.json", #"{"files": {"Documents/a.json": "../\#(external.lastPathComponent)"}}"#)
+        #expect(try validate([.set("top")]) == [])
     }
 
     @Test func aSceneWithNoSetNeedsADefaultSet() throws {

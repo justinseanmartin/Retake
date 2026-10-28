@@ -73,7 +73,7 @@ extension SetFile {
                     State.allCases.map(\.rawValue),
                 ).defaulting(to: "clean")),
                 .init("files", .dictionary(
-                    "Files and folders put in the app's data before launch: each key is where it goes in the app's data, such as Documents/notes.json, and its value the file in the project, relative to the directory holding retake.json. A folder ends in / on both sides.",
+                    "Files and folders put in the app's data before launch: each key is where it goes in the app's data, such as Documents/notes.json, and its value a path relative to the directory holding retake.json. The source may use .. to share fixtures outside the project. A folder ends in / on both sides.",
                     keys: .string(nil, pattern: "^[^/]"),
                     values: .string(nil, nonEmpty: true),
                 ).example(.object(JSONObject([.init(key: "Documents/notes.sqlite", value: "data/returning-user/notes.sqlite")])))),

@@ -87,7 +87,7 @@ public struct ProjectValidator {
             var isFolder: ObjCBool = false
             let at = JSONPath.root.appending("files").appending(copy.destination)
             if !fileManager.fileExists(atPath: source.path, isDirectory: &isFolder) {
-                report.problem(FileProblem(file: file, path: at, message: "\"\(copy.source)\" doesn't exist in the project"))
+                report.problem(FileProblem(file: file, path: at, message: "\"\(copy.source)\" doesn't exist"))
             } else if isFolder.boolValue != copy.isFolder {
                 report.problem(FileProblem(
                     file: file,
