@@ -43,7 +43,7 @@ public enum Embedder {
         let app = AppBundle(url: url)
         let earlier = app.embedRecord
 
-        let found = InsideJobDetector.find(in: app, ignoring: Set(earlier?.added ?? []))
+        let found = try InsideJobDetector.find(in: app, ignoring: Set(earlier?.added ?? []))
         if !found.isEmpty {
             throw RetakeError(
                 .failed,

@@ -34,7 +34,7 @@ struct ArchiveCheckTests {
         return url
     }
 
-    func check(_ path: String, symbols: @escaping (URL) -> [String] = { _ in [] }) throws -> [String] {
+    func check(_ path: String, symbols: @escaping (URL) throws(RetakeError) -> [String] = { _ in [] }) throws -> [String] {
         try ArchiveCheck.check(root.appending(path: path), symbols: symbols)
     }
 
@@ -51,6 +51,19 @@ struct ArchiveCheckTests {
             "Products/Applications/Notes.app/Frameworks/RetakeSupport.dylib",
             "Products/Applications/Notes.app/Frameworks/TheInsideJob.framework",
         ])
+    }
+
+    @Test func whatCantBeReadFailsTheCheckRatherThanPassingIt() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let app = try app("Notes.app", frameworks: ["TheInsideJob.framework"])
+        let frameworks = app.appending(path: "Frameworks")
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: frameworks.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: frameworks.path) }
+        #expect(throws: RetakeError.self, "a sandboxed build phase can't list it") { try check("Notes.app") }
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: frameworks.path)
+        #expect(throws: RetakeError.self, "nm couldn't read an executable") {
+            try check("Notes.app") { _ throws(RetakeError) in throw RetakeError(.failed, "unreadable") }
+        }
     }
 
     @Test func aStaticLinkIsCaughtByItsSymbols() throws {

@@ -22,25 +22,25 @@ struct EmbeddingTests {
         try Data().write(to: framework.appending(path: name))
     }
 
-    @Test func anAppIsReadForWhatEmbedNeeds() {
+    @Test func anAppIsReadForWhatEmbedNeeds() throws {
         #expect(app.bundleID == "com.example.notes" && app.isForDevices)
         #expect(app.version.version == "1.9.0" && app.version.build == "412")
-        #expect(app.executables().map(\.lastPathComponent) == ["Notes", "Notes.debug.dylib"])
+        #expect(try app.executables().map(\.lastPathComponent) == ["Notes", "Notes.debug.dylib"])
     }
 
     @Test func theInsideJobIsFoundByNameAndBySymbol() throws {
-        #expect(InsideJobDetector.find(in: app, symbols: { _ in [] }) == [])
+        #expect(try InsideJobDetector.find(in: app, symbols: { _ in [] }) == [])
         try addFramework("Firebase")
         try addFramework("TheInsideJob")
-        #expect(InsideJobDetector.find(in: app, symbols: { _ in [] }) == ["Frameworks/TheInsideJob.framework"])
-        let linked = InsideJobDetector.find(in: app, symbols: { url in
+        #expect(try InsideJobDetector.find(in: app, symbols: { _ in [] }) == ["Frameworks/TheInsideJob.framework"])
+        let linked = try InsideJobDetector.find(in: app, symbols: { url in
             url.lastPathComponent == "Notes.debug.dylib" ? ["_$s12TheInsideJob6ServerC5startyyF"] : []
         })
         #expect(linked == ["Frameworks/TheInsideJob.framework", "Notes.debug.dylib (TheInsideJob linked into it)"])
     }
 
     @Test func otherButtonHeistModulesArentMistakenForIt() throws {
-        let found = InsideJobDetector.find(in: app, symbols: { _ in ["_$s8TheScore7MessageO", "_TheInsideJobVersionString", "_$s11ButtonHeist8TheFenceC"] })
+        let found = try InsideJobDetector.find(in: app, symbols: { _ in ["_$s8TheScore7MessageO", "_TheInsideJobVersionString", "_$s11ButtonHeist8TheFenceC"] })
         #expect(found.isEmpty, "\(found)")
     }
 
@@ -49,8 +49,8 @@ struct EmbeddingTests {
         try Data().write(to: app.frameworks.appending(path: "RetakeSupport.dylib"))
         let ignoring: Set = ["Frameworks/TheInsideJob.framework", "Frameworks/RetakeSupport.dylib"]
         let symbols = { (url: URL) in url.lastPathComponent == "TheInsideJob" ? ["_$s12TheInsideJob6ServerC"] : [] }
-        #expect(InsideJobDetector.find(in: app, ignoring: ignoring, symbols: symbols) == [])
-        #expect(InsideJobDetector.find(in: app, symbols: { _ in [] }) == ["Frameworks/RetakeSupport.dylib", "Frameworks/TheInsideJob.framework"])
+        #expect(try InsideJobDetector.find(in: app, ignoring: ignoring, symbols: symbols) == [])
+        #expect(try InsideJobDetector.find(in: app, symbols: { _ in [] }) == ["Frameworks/RetakeSupport.dylib", "Frameworks/TheInsideJob.framework"])
     }
 
     @Test func theEmbedRecordIsWrittenInTheAppsOwnFormat() throws {

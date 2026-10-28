@@ -88,16 +88,15 @@ public struct AppBundle: Sendable {
     }
 
     /// The app's executables: its own, and its `*.debug.dylib`, which a Debug build splits its code
-    /// into, then each framework's.
-    public func executables() -> [URL] {
+    /// into, then each framework's. Fails (1) for a folder or `Info.plist` that's there but can't be
+    /// read, since what can't be read can't be cleared.
+    public func executables() throws(RetakeError) -> [URL] {
         var found: [URL] = []
-        if let name = (try? readInfo().info["CFBundleExecutable"]) as? String {
+        if FileManager.default.fileExists(atPath: infoPlist.path), let name = try readInfo().info["CFBundleExecutable"] as? String {
             found.append(url.appending(path: name))
         }
-        let entries = (try? FileManager.default.contentsOfDirectory(atPath: url.path)) ?? []
-        found += entries.filter { $0.hasSuffix(".debug.dylib") }.sorted().map { url.appending(path: $0) }
-        let frameworks = (try? FileManager.default.contentsOfDirectory(atPath: frameworks.path)) ?? []
-        for entry in frameworks.sorted() {
+        found += try Self.listing(url).filter { $0.hasSuffix(".debug.dylib") }.map { url.appending(path: $0) }
+        for entry in try Self.listing(frameworks) {
             let item = self.frameworks.appending(path: entry)
             if entry.hasSuffix(".framework") {
                 found.append(item.appending(path: String(entry.dropLast(".framework".count))))
@@ -107,6 +106,18 @@ public struct AppBundle: Sendable {
         }
         return found.filter { FileManager.default.fileExists(atPath: $0.path) }
     }
+
+    /// A folder's entries, sorted: none when it isn't there, and a failure (1) when it's there but
+    /// can't be listed, as in a sandboxed build phase that wasn't given it.
+    static func listing(_ folder: URL) throws(RetakeError) -> [String] {
+        var isFolder: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: folder.path, isDirectory: &isFolder), isFolder.boolValue else { return [] }
+        do {
+            return try FileManager.default.contentsOfDirectory(atPath: folder.path).sorted()
+        } catch {
+            throw RetakeError(.failed, "Couldn't read \(folder.path), so what's in it can't be checked: \(error.localizedDescription)")
+        }
+    }
 }
 
 /// Finding TheInsideJob, or Retake's support library, in an app: by the name of a framework or
@@ -114,7 +125,10 @@ public struct AppBundle: Sendable {
 public enum InsideJobDetector {
     /// Where TheInsideJob or the support library is, relative to `root`; empty when it isn't there.
     /// `ignoring` are paths Retake itself added, which an earlier embed recorded.
-    public static func find(in app: AppBundle, root: URL? = nil, ignoring: Set<String> = [], symbols: (URL) -> [String] = definedSymbols) -> [String] {
+    /// Fails (1) for any part of the app it can't read, rather than taking it to be clear.
+    public static func find(
+        in app: AppBundle, root: URL? = nil, ignoring: Set<String> = [], symbols: (URL) throws(RetakeError) -> [String] = definedSymbols,
+    ) throws(RetakeError) -> [String] {
         let base = root ?? app.url
         func relative(_ url: URL) -> String {
             let path = url.standardizedFileURL.path
@@ -127,16 +141,15 @@ public enum InsideJobDetector {
             return path.hasPrefix(prefix) ? String(path.dropFirst(prefix.count)) : path
         }
         var found: [String] = []
-        let names = (try? FileManager.default.contentsOfDirectory(atPath: app.frameworks.path)) ?? []
-        for name in names.sorted() where isRetakeName(name) {
+        for name in try AppBundle.listing(app.frameworks) where isRetakeName(name) {
             let item = app.frameworks.appending(path: name)
             if !ignoring.contains(appRelative(item)) { found.append(relative(item)) }
         }
-        for executable in app.executables() {
+        for executable in try app.executables() {
             let path = appRelative(executable)
             if ignoring.contains(where: { path.hasPrefix($0) }) { continue }
             if found.contains(where: { relative(executable).hasPrefix($0) }) { continue }
-            if symbols(executable).contains(where: isTheInsideJobSymbol) {
+            if try symbols(executable).contains(where: isTheInsideJobSymbol) {
                 found.append("\(relative(executable)) (TheInsideJob linked into it)")
             }
         }
@@ -155,9 +168,11 @@ public enum InsideJobDetector {
         symbol.contains("12TheInsideJob")
     }
 
-    /// The symbols `executable` defines, from `nm`.
-    public static func definedSymbols(_ executable: URL) -> [String] {
-        guard let result = try? Subprocess.xcrun(["nm", "-U", "-j", executable.path]), result.status == 0 else { return [] }
+    /// The symbols `executable` defines, from `nm`; a failure (1) when `nm` can't read them.
+    public static func definedSymbols(_ executable: URL) throws(RetakeError) -> [String] {
+        guard let result = try? Subprocess.xcrun(["nm", "-U", "-j", executable.path]), result.status == 0 else {
+            throw RetakeError(.failed, "Couldn't read the symbols of \(executable.path), so it can't be checked for TheInsideJob.")
+        }
         return result.outputText.split(separator: "\n").map(String.init)
     }
 }
