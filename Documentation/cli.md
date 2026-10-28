@@ -123,10 +123,10 @@ edits/video1.json: clips[3].from.fraction: 1.4 is outside -1 to 1
 scenes/ipad/create-note.json: steps[2]: unknown key "tapp"
 ```
 
-Each file's `"$schema"` key says which schema it was written against, and is optional. A file
-without one is read against this Retake's; one naming another version's is read against this
-Retake's too, with a warning when the versions differ, since the schema can't be older or newer than
-the code reading it.
+A file may name its schema in a `"$schema"` key, for editors; Retake never adds one. A file without
+one is read against this Retake's schema; one naming another version's is read against this Retake's
+too, with a warning when the versions differ, since the schema can't be older or newer than the code
+reading it.
 
 ### Output
 
@@ -204,7 +204,6 @@ The output directory is gitignored: in a `.gitignore` in the project's folder, o
 that folder, in the current directory's `.gitignore`, when it's below the current directory, and in
 neither when it isn't.
 
-`retake.json` names its schema's URL in `"$schema"`, which editors fetch to complete and check it.
 Asks for the scheme when it isn't given and can't be found in an Xcode project in the current
 directory. Writes `bundleID` only when `--bundle-id` gives one; otherwise the bundle ID comes from
 the app `install` builds (see [Finding the app](#finding-the-app)).
@@ -606,7 +605,7 @@ from: the latest step starting at or before it, and the seconds after it. That's
 written in seconds moves to anchors once.
 
 Prints each change. `--dry-run` prints them without writing. The rewritten edit keeps its fields'
-order and its `"$schema"`, updated to this Retake's.
+order, and a `"$schema"` naming one of Retake's schemas is updated to this Retake's.
 
 ### `retake cut`
 

@@ -694,13 +694,14 @@ repository's `mise.toml` can set for everyone; see [finding the project](Documen
 ### Schemas
 
 Every file Retake reads has a [JSON Schema](https://json-schema.org), released with Retake and versioned with it:
-`retake.json`, sets, scenes and edits. Each file names its schema in a `"$schema"` key: the URL its
-schema is published at, which names Retake's version, such as
+`retake.json`, sets, scenes and edits. Retake reads every file against its own schema, so a file
+needn't name one. For an editor, a file can name its schema in a `"$schema"` key: the URL its schema
+is published at, which names Retake's version, such as
 `https://justinseanmartin.github.io/Retake/schemas/0.0.1/edit.schema.json`. Editors that read JSON
 Schema, VS Code among them, fetch it from there, and complete fields as you type, describe them on
-hover, and mark mistakes; nothing is copied into the project. `retake init` and `retake conform` set
-the key, and it's optional: a file without one is read the same way. `retake schema` prints the
-schemas, for tools and agents, or writes them to a directory for working offline.
+hover, and mark mistakes; nothing is copied into the project. Retake never adds the key, and `retake
+conform` keeps one up to date. `retake schema` prints the schemas, for tools and agents, or writes
+them to a directory for working offline.
 
 Retake reads the files strictly, against the same schemas: a key it doesn't know is an error, not
 ignored, and every error names the file and the field, such as `edits/video1.json:
