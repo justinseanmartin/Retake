@@ -493,6 +493,9 @@ struct Install: AsyncParsableCommand {
     @Flag(help: "Let xcodebuild register the device and update profiles on your team.")
     var allowProvisioningUpdates = false
 
+    @Flag(help: "Build as the configuration says, rather than with the compiler's optimisation on.")
+    var noOptimize = false
+
     @OptionGroup var device: DeviceOptions
     @OptionGroup var signing: SigningOptions
 
@@ -515,6 +518,9 @@ struct Install: AsyncParsableCommand {
                 "--allow-provisioning-updates only applies when Retake runs xcodebuild, not to --app.",
             )
         }
+        if app != nil, noOptimize {
+            throw ValidationError("--no-optimize only applies when Retake runs xcodebuild, not to --app.")
+        }
     }
 
     func run() async throws {
@@ -532,9 +538,16 @@ struct Install: AsyncParsableCommand {
                 container: workspace.map { .workspace(given($0).path) } ?? xcodeproj.map { .project(given($0).path) },
                 configuration: configuration,
                 allowProvisioningUpdates: allowProvisioningUpdates,
+                optimize: !noOptimize,
             )
         }
-        let source = try Installer.source(app: app.map(given), scheme: scheme, project: located)
+        var source = try Installer.source(app: app.map(given), scheme: scheme, project: located)
+        if noOptimize, case .scheme(var build, let root) = source {
+            build.optimize = false
+            source = .scheme(build, root: root)
+        } else if noOptimize, case .command = source {
+            Console.note("--no-optimize doesn't change a build command's build, which is the project's own.")
+        }
         switch source {
         case .scheme(let build, _): print("Building \(build.scheme) for \(target.name)...")
         case .command(let build, _): print("Running \(build.command)...")

@@ -41,12 +41,16 @@ public struct ProjectSettings: Equatable, Sendable {
         public var configuration: String?
         /// Whether `xcodebuild` may register the device and update profiles on the team.
         public var allowProvisioningUpdates: Bool
+        /// Whether the compiler optimises, whatever the configuration says: Swift at `-O`, C and
+        /// Objective-C at `-Os`, so the app runs as fast as its users see it.
+        public var optimize: Bool
 
-        public init(scheme: String, container: Container? = nil, configuration: String? = nil, allowProvisioningUpdates: Bool = false) {
+        public init(scheme: String, container: Container? = nil, configuration: String? = nil, allowProvisioningUpdates: Bool = false, optimize: Bool = true) {
             self.scheme = scheme
             self.container = container
             self.configuration = configuration
             self.allowProvisioningUpdates = allowProvisioningUpdates
+            self.optimize = optimize
         }
     }
 
@@ -100,6 +104,7 @@ extension ProjectSettings {
                 }
                 if let configuration = scheme.configuration { fields.append(.init(key: "configuration", value: .string(configuration))) }
                 if scheme.allowProvisioningUpdates { fields.append(.init(key: "allowProvisioningUpdates", value: .bool(true))) }
+                if !scheme.optimize { fields.append(.init(key: "optimize", value: .bool(false))) }
             case .command(let command):
                 fields.append(.init(key: "command", value: .string(command.command)))
                 fields.append(.init(key: "app", value: .string(command.app)))
@@ -128,7 +133,7 @@ extension ProjectSettings {
         defer { object.finish() }
         let hasScheme = object.has("scheme")
         let hasCommand = object.has("command")
-        object.know("workspace", "xcodeproj", "configuration", "allowProvisioningUpdates", "app")
+        object.know("workspace", "xcodeproj", "configuration", "allowProvisioningUpdates", "optimize", "app")
         switch (hasScheme, hasCommand) {
         case (true, true):
             reader.problem("give \"scheme\", for Retake to build it with xcodebuild, or \"command\", to run your own build, not both", at: path)
@@ -148,11 +153,12 @@ extension ProjectSettings {
             let project = object.optional("xcodeproj", reader.nonEmptyString)
             let configuration = object.optional("configuration", reader.nonEmptyString)
             let allow = object.optional("allowProvisioningUpdates", reader.bool) ?? false
+            let optimize = object.optional("optimize", reader.bool) ?? true
             guard let scheme else { return nil }
             let container: Container? = workspace.map(Container.workspace) ?? project.map(Container.project)
-            return .scheme(SchemeBuild(scheme: scheme, container: container, configuration: configuration, allowProvisioningUpdates: allow))
+            return .scheme(SchemeBuild(scheme: scheme, container: container, configuration: configuration, allowProvisioningUpdates: allow, optimize: optimize))
         case (false, true):
-            for key in ["workspace", "xcodeproj", "configuration", "allowProvisioningUpdates"] where object.has(key) {
+            for key in ["workspace", "xcodeproj", "configuration", "allowProvisioningUpdates", "optimize"] where object.has(key) {
                 reader.problem(
                     "\"\(key)\" goes with \"scheme\"; with \"command\", your own build decides it",
                     at: path,

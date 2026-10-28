@@ -28,8 +28,12 @@ struct InstallerTests {
         let derivedData = URL(filePath: "/p/output/build/DerivedData")
         #expect(Installer.xcodebuildArguments(build, udid: "00008103-1", derivedData: derivedData, allowProvisioningUpdates: false) == [
             "xcodebuild", "-workspace", "Notes.xcworkspace", "-scheme", "Notes", "-configuration", "Debug",
-            "-destination", "id=00008103-1", "-derivedDataPath", "/p/output/build/DerivedData", "build",
+            "-destination", "id=00008103-1", "-derivedDataPath", "/p/output/build/DerivedData",
+            "SWIFT_OPTIMIZATION_LEVEL=-O", "GCC_OPTIMIZATION_LEVEL=s", "build",
         ])
+        var asConfigured = build
+        asConfigured.optimize = false
+        #expect(!Installer.xcodebuildArguments(asConfigured, udid: "u", derivedData: derivedData, allowProvisioningUpdates: false).contains { $0.contains("OPTIMIZATION") })
         let allowed = ProjectSettings.SchemeBuild(scheme: "Notes", configuration: "Preview", allowProvisioningUpdates: true)
         let arguments = Installer.xcodebuildArguments(allowed, udid: "u", derivedData: derivedData, allowProvisioningUpdates: false, showingSettings: true)
         #expect(arguments.contains("-allowProvisioningUpdates") && arguments.suffix(2) == ["-showBuildSettings", "-json"])

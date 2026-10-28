@@ -102,6 +102,8 @@ public enum Installer {
             "-derivedDataPath", derivedData.path,
         ]
         if allowProvisioningUpdates || build.allowProvisioningUpdates { arguments.append("-allowProvisioningUpdates") }
+        // A Debug build at -Onone can stutter where the app as its users have it wouldn't.
+        if build.optimize { arguments += ["SWIFT_OPTIMIZATION_LEVEL=-O", "GCC_OPTIMIZATION_LEVEL=s"] }
         arguments.append(showingSettings ? "-showBuildSettings" : "build")
         if showingSettings { arguments.append("-json") }
         return arguments

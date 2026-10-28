@@ -60,6 +60,16 @@ struct ProjectSettingsTests {
         #expect(text.hasPrefix(#"{\#n  "$schema": "\#(SchemaReference.current("retake").url)",\#n  "bundleID""#))
     }
 
+    @Test func aSchemeBuildOptimisesUnlessToldNotTo() {
+        guard case .scheme(let optimised)? = read(#"{"build": {"scheme": "Notes"}}"#).settings?.build,
+              case .scheme(let asConfigured)? = read(#"{"build": {"scheme": "Notes", "optimize": false}}"#).settings?.build else {
+            Issue.record("didn't read the builds")
+            return
+        }
+        #expect(optimised.optimize && !asConfigured.optimize)
+        #expect(read(#"{"build": {"command": "make", "app": "a.app", "optimize": false}}"#).problems.count == 1, "a build command is the project's own")
+    }
+
     @Test func theOutputDirectoryIsTheCommandsThenTheFilesThenTheDefault() {
         let file = URL(filePath: "/work/Previews/retake.json")
         let configured = ProjectSettings(output: "../Takes")
