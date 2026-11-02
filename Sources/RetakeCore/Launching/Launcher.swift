@@ -169,6 +169,22 @@ public enum Launcher {
         return LaunchReport.parse(data)
     }
 
+    /// When the app's main thread missed frames, on the device's clock, and for how long, as the
+    /// support library last wrote them; nil when it wrote none, as a library before contract 2 doesn't.
+    public static func readHitches(bundleID: String, from device: Device) -> [(at: Date, duration: Double)]? {
+        let local = FileManager.default.temporaryDirectory.appending(path: "retake-hitches-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: local) }
+        guard let result = try? Subprocess.xcrun([
+            "devicectl", "device", "copy", "from", "--device", device.udid, "--domain-type", "appDataContainer",
+            "--domain-identifier", bundleID, "--source", SupportLibrary.hitchesPath, "--destination", local.path, "--quiet",
+        ]), result.status == 0, let data = FileManager.default.contents(atPath: local.path),
+            let value = try? JSONParser.parse(String(decoding: data, as: UTF8.self)), case .array(let hitches)? = value[path: "hitches"] else { return nil }
+        return hitches.compactMap { hitch in
+            guard case .array(let pair) = hitch, pair.count == 2, case .number(let at) = pair[0], case .number(let duration) = pair[1] else { return nil }
+            return (Date(timeIntervalSinceReferenceDate: at), duration)
+        }
+    }
+
     /// The installed app's version and build (`CFBundleShortVersionString`, `CFBundleVersion`), as
     /// the device reports them; nil when it can't say.
     public static func installedVersion(bundleID: String, on device: Device) -> (version: String?, build: String?)? {

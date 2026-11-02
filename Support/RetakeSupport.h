@@ -16,7 +16,8 @@
 //
 // and the set's files, which the Mac stages in the app's container, in tmp/RetakeSet/, laid out as
 // they go: Documents/…, Library/…. The library writes tmp/RetakeLaunch/report.json in the app's
-// real home, for Retake to copy back.
+// real home, for Retake to copy back, and tmp/RetakeLaunch/hitches.json, the times the app's main
+// thread missed frames, for Retake to copy back once the take is recorded.
 #import <Foundation/Foundation.h>
 
 #define RETAKE_SUPPORT_CONTRACT 2
@@ -34,6 +35,9 @@ void RetakeSetUpDefaults(NSDictionary<NSString *, NSString *> *environment);
 void RetakeSetUpAspect(NSDictionary<NSString *, NSString *> *environment);
 
 void RetakeStartClock(void);
+
+/// Watches the main thread for missed frames, writing each to tmp/RetakeLaunch/hitches.json.
+void RetakeStartHitchWatch(void);
 
 /// Plays silence for as long as the app runs, so its sound output never idles and restarts.
 void RetakeKeepAudioRunning(void);

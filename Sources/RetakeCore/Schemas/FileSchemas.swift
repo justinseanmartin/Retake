@@ -40,6 +40,9 @@ extension ProjectSettings {
                 .init("device", .string("The device commands use when none is named: an alias, a UDID, or a device's name.", nonEmpty: true)),
                 .init("defaultSet", .string("The set a scene starts on when it names none, and the one `retake compose` gives a new scene.", nonEmpty: true)),
                 .init("output", .string("Where takes and cuts go. \(path)", nonEmpty: true).defaulting(to: "output")),
+                .init("hitchWarning", .number(
+                    "The milliseconds the app's main thread must miss frames for, at once, for `record` and `cut` to warn of it.", atLeast: 0,
+                ).defaulting(to: .number(ProjectSettings.defaultHitchWarning))),
             ],
         )
         return FileSchema(kind: "retake", title: "retake.json", root: root, definitions: [])

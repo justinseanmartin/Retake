@@ -58,6 +58,8 @@ public struct SupportLibrary: Equatable, Sendable {
 
     /// Where the library writes its report, in the app's container.
     public static let reportPath = "tmp/RetakeLaunch/report.json"
+    /// Where it writes the times the app's main thread missed frames.
+    public static let hitchesPath = "tmp/RetakeLaunch/hitches.json"
 }
 
 /// What the support library reports at launch, from `tmp/RetakeLaunch/report.json`.

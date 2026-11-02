@@ -85,6 +85,15 @@ public enum Cutter {
             let takes = scenes.compactMap { scene in logs[scene].map { "\(scene) take \($0.take) (\($0.app.version ?? "?") (\($0.app.build ?? "?")), \($0.device.marketingName ?? $0.device.model), iOS \($0.device.os))" } }
             warnings.append("\(name)'s \(type.rawValue) takes span more than one of: \(record.mixed.joined(separator: ", ")): \(takes.joined(separator: "; ")).")
         }
+        for (index, (clip, placement)) in zip(video.clips, plan.placements).enumerated() {
+            guard let log = logs[clip.take] else { continue }
+            let frozen = (log.hitches ?? []).filter {
+                $0.duration >= project.settings.hitchThreshold && $0.at < placement.to && $0.at + $0.duration > placement.from
+            }
+            if !frozen.isEmpty {
+                warnings.append("\(name)'s \(type.rawValue) clips[\(index)] plays \(clip.take) take \(log.take) across \(TakeLog.describe(frozen, over: project.settings.hitchThreshold)).")
+            }
+        }
         if !length.contains(plan.duration) {
             let message = "\(name)'s \(type.rawValue) video is \(TakeTimeline.seconds(plan.duration)) long; App Store Connect takes 15 to 30 s."
             guard draft else { throw RetakeError(.failed, message) }

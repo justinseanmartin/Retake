@@ -399,10 +399,14 @@ no audio, are filled so later sounds stay on their frames; the device's full-ran
 converted rather than played back oversaturated; and a recording that fails to start, or a launch
 that doesn't take, is tried again.
 
-One more is the app's side of it. When an app's sound starts again after a quiet stretch, the
+Two more are the app's side of it. When an app's sound starts again after a quiet stretch, the
 device restarts its sound output, and the recording loses up to half a second of video while it
 does, though the app looks smooth on the device; Retake's support library plays noise far below
-hearing for as long as the app runs, so the output never stops.
+hearing for as long as the app runs, so the output never stops. And the library watches the app's
+main thread for missed frames: `record` warns of the take's hitches from its first step on, how many
+and the longest, saying whether the longest came while a step was being played, and `cut` warns of
+any a clip plays, the lead-in's included. Only hitches as long as `retake.json`'s `hitchWarning`,
+50 ms unless it says otherwise, are warned of.
 
 ## Edits: the video cut from the takes
 

@@ -115,6 +115,7 @@ public enum TakeRecording {
             failure = failure ?? error
         }
         if failure == nil, collected.summary == nil { throw RetakeError(.failed, "Nothing was recorded.") }
+        let hitches = Launcher.readHitches(bundleID: bundleID, from: device)
 
         if let summary = collected.summary {
             log.duration = summary.duration
@@ -131,6 +132,11 @@ public enum TakeRecording {
         log.clock = TakeLog.Clock(deviceAhead: collected.clock?.deviceAhead)
         if let clock = collected.clock {
             log.steps = collected.steps.map { TakeLog.entry($0.played, $0.timing, on: clock) }
+            log.hitches = hitches.map { hitches in
+                hitches.map { TakeLog.Hitch(at: clock.seconds($0.at.addingTimeInterval(-(clock.deviceAhead ?? 0))), duration: $0.duration) }
+                    .filter { $0.at + $0.duration > 0 && $0.at < log.duration }
+            }
+            if let warning = log.hitchWarning(over: project.settings.hitchThreshold) { report(.warning(warning)) }
         }
         do {
             try Data((JSONWriter.write(log.json) + "\n").utf8).write(to: target.log)

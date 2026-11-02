@@ -15,13 +15,24 @@ public struct ProjectSettings: Equatable, Sendable {
     /// Where output goes, relative to the configuration file's directory; see Documentation/cli.md, "The
     /// output directory".
     public var output: String?
+    /// The milliseconds a hitch, the app's main thread missing frames, must last to be warned about.
+    public var hitchWarning: Double?
 
-    public init(bundleID: String? = nil, build: Build? = nil, device: String? = nil, defaultSet: String? = nil, output: String? = nil) {
+    public static let defaultHitchWarning = 50.0
+
+    /// `hitchWarning`, or its default, in seconds.
+    public var hitchThreshold: Double { (hitchWarning ?? Self.defaultHitchWarning) / 1000 }
+
+    public init(
+        bundleID: String? = nil, build: Build? = nil, device: String? = nil, defaultSet: String? = nil, output: String? = nil,
+        hitchWarning: Double? = nil,
+    ) {
         self.bundleID = bundleID
         self.build = build
         self.device = device
         self.defaultSet = defaultSet
         self.output = output
+        self.hitchWarning = hitchWarning
     }
 
     /// How `install` builds the app, in one of Documentation/cli.md's two forms.
@@ -83,6 +94,7 @@ extension ProjectSettings {
             device: object.optional("device", reader.nonEmptyString),
             defaultSet: object.optional("defaultSet", reader.nonEmptyString),
             output: object.optional("output", reader.nonEmptyString),
+            hitchWarning: object.optional("hitchWarning") { reader.number($0, at: $1, .atLeast(0)) },
         )
         object.finish()
         return reader.problems.count == problemsBefore ? settings : nil
@@ -114,6 +126,7 @@ extension ProjectSettings {
         if let device { entries.append(.init(key: "device", value: .string(device))) }
         if let defaultSet { entries.append(.init(key: "defaultSet", value: .string(defaultSet))) }
         if let output { entries.append(.init(key: "output", value: .string(output))) }
+        if let hitchWarning { entries.append(.init(key: "hitchWarning", value: .number(hitchWarning))) }
         return .object(JSONObject(entries))
     }
 

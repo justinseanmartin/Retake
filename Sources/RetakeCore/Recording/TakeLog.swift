@@ -40,6 +40,36 @@ public struct TakeLog: Equatable, Sendable {
     public var steps: [Entry]
     /// The movie's first shape, and each change after it, with how the frames were turned.
     public var shapes: [TakeWriter.ShapeChange]
+    /// Each time the app's main thread missed a frame while it was recorded, on the movie's clock;
+    /// nil when the app's support library didn't watch.
+    public var hitches: [Hitch]? = nil
+
+    /// The take's hitches of `threshold` seconds or more as a person should hear of them: how many,
+    /// the longest, and whether it came while The Button Heist was acting on a step; nil when none.
+    /// Those over before the first step are left out: the lead-in holds a stall of most of a second
+    /// just after the app is connected, in nearly every take, which would always be the longest and
+    /// hide the ones that matter. A clip that does play the lead-in is warned of by `cut`.
+    public func hitchWarning(over threshold: Double) -> String? {
+        let firstStep = steps.first?.start ?? 0
+        let over = (hitches ?? []).filter { $0.duration >= threshold && $0.at + $0.duration > firstStep }
+        guard let longest = over.max(by: { $0.duration < $1.duration }) else { return nil }
+        let step = steps.first { longest.at >= $0.start - 0.05 && longest.at <= $0.end + 0.1 }
+        return "\(scene) take \(take): \(Self.describe(over, over: threshold)) at \(TakeTimeline.seconds(longest.at))"
+            + (step.map { ", during step \($0.number)" } ?? ", between steps") + "."
+    }
+
+    /// `3 hitches over 50 ms, the longest 530 ms`.
+    public static func describe(_ hitches: [Hitch], over threshold: Double) -> String {
+        let longest = hitches.map(\.duration).max() ?? 0
+        return "\(hitches.count) hitch\(hitches.count == 1 ? "" : "es") over \(Int((threshold * 1000).rounded())) ms, the longest \(Int((longest * 1000).rounded())) ms"
+    }
+
+    /// The app's main thread busy for at least a frame: when it last drew, and how long until it
+    /// drew again.
+    public struct Hitch: Equatable, Sendable {
+        public var at: Double
+        public var duration: Double
+    }
 
     public struct DeviceInfo: Equatable, Sendable {
         /// The hardware identifier, `iPad13,4`, and the marketing name.
@@ -187,6 +217,9 @@ extension TakeLog {
                 ("turn", .number(Double(shape.turn))),
             ])
         })))
+        if let hitches {
+            object.append(.init(key: "hitches", value: .array(hitches.map { Self.object([("at", Self.number($0.at)), ("duration", Self.number($0.duration))]) })))
+        }
         return .object(JSONObject(object))
     }
 
@@ -357,6 +390,16 @@ extension TakeLog {
                 return TakeWriter.ShapeChange(at: at, width: dimensions.0, height: dimensions.1, turn: turn)
             }
         }
+        let hitches = root.optional("hitches") { value, path in
+            reader.array(value, at: path) { value, path -> Hitch? in
+                guard var object = reader.object(value, at: path) else { return nil }
+                defer { object.finish() }
+                let at = object.required("at") { reader.number($0, at: $1) }
+                let duration = object.required("duration") { reader.number($0, at: $1, .atLeast(0)) }
+                guard let at, let duration else { return nil }
+                return Hitch(at: at, duration: duration)
+            }
+        }
         guard reader.problems.isEmpty, let scene, let take, let set, let state, let deviceType, let device, let app, let retake,
               let buttonHeist, let recordedAt, let duration, let dimensions, let clock, let steps, let shapes
         else { return nil }
@@ -364,6 +407,7 @@ extension TakeLog {
             scene: scene, take: take, set: set, state: state, deviceType: deviceType, device: device, app: app, retake: retake,
             buttonHeist: buttonHeist, recordedAt: recordedAt, failure: failure, duration: duration, width: dimensions.0,
             height: dimensions.1, frames: frames, dropped: dropped, aspect: aspect, screen: screen, launch: launch, clock: clock, steps: steps, shapes: shapes,
+            hitches: hitches,
         )
     }
 }

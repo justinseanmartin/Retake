@@ -16,6 +16,7 @@ Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.
 | `device` | string, not empty |  | The device commands use when none is named: an alias, a UDID, or a device's name. |
 | `defaultSet` | string, not empty |  | The set a scene starts on when it names none, and the one `retake compose` gives a new scene. |
 | `output` | string, not empty | `"output"` | Where takes and cuts go. Relative to the directory holding retake.json. |
+| `hitchWarning` | number ≥ 0 | `50` | The milliseconds the app's main thread must miss frames for, at once, for `record` and `cut` to warn of it. |
 
 ### `build`, with `scheme`
 

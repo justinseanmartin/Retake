@@ -117,6 +117,22 @@ struct TakeLogReadingTests {
         #expect(reader.problems.isEmpty)
     }
 
+    @Test func hitchesReadBackAndAreToldByCountAndTheLongest() {
+        var log = Self.log()
+        log.hitches = [.init(at: 1.2, duration: 0.53), .init(at: 4, duration: 0.017)]
+        let reader = JSONReader(file: "3.json")
+        #expect(TakeLog.read(JSONWriter.write(log.json), with: reader)?.hitches == log.hitches)
+        #expect(log.hitchWarning(over: 0.01) == "create-note take 3: 2 hitches over 10 ms, the longest 530 ms at 1.2 s, during step 1.")
+        #expect(log.hitchWarning(over: 0.05) == "create-note take 3: 1 hitch over 50 ms, the longest 530 ms at 1.2 s, during step 1.")
+        #expect(log.hitchWarning(over: 0.6) == nil, "none as long as the threshold")
+        log.hitches = [.init(at: 0.1, duration: 0.85), .init(at: 4, duration: 0.06)]
+        #expect(log.hitchWarning(over: 0.05) == "create-note take 3: 1 hitch over 50 ms, the longest 60 ms at 4 s, between steps.", "the lead-in's left out")
+        log.hitches = []
+        #expect(log.hitchWarning(over: 0.05) == nil)
+        log.hitches = nil
+        #expect(TakeLog.read(JSONWriter.write(log.json), with: JSONReader(file: "3.json"))?.hitches == nil, "a take the library didn't watch")
+    }
+
     @Test func aLogThatIsntOneIsNamedWhereItsWrong() {
         let reader = JSONReader(file: "3.json")
         var text = JSONWriter.write(Self.log().json)

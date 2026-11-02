@@ -92,6 +92,12 @@
       "type": "string",
       "minLength": 1,
       "default": "output"
+    },
+    "hitchWarning": {
+      "description": "The milliseconds the app's main thread must miss frames for, at once, for `record` and `cut` to warn of it.",
+      "type": "number",
+      "minimum": 0,
+      "default": 50
     }
   },
   "additionalProperties": false
