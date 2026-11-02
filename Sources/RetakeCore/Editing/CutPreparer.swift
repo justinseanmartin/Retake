@@ -1,8 +1,8 @@
 import Foundation
 
-/// Prepares an edit for `retake cut`: pins the latest successful take of each scene it uses,
-/// turning any time still in plain seconds into an anchor against the take it was cut from, and
-/// checks every anchor resolves in the new takes before the edit is rewritten. See Documentation/cli.md,
+/// Prepares an edit for `retake cut`: turns any time still in plain seconds into an anchor against
+/// its scene's latest successful take, which is what a time in seconds is read against, and checks
+/// every anchor resolves in the latest takes before the edit is rewritten. See Documentation/cli.md,
 /// the cut.
 public enum CutPreparer {
     public struct Result: Sendable {
@@ -30,14 +30,8 @@ public enum CutPreparer {
         let types = edit.devices.filter { requested?.contains($0) ?? true }
         var changes: [String] = []
 
-        // Times in seconds become anchors, against the takes the edit pinned when they were cut.
-        let oldPins = edit.takes.mapValues { Dictionary($0.map { ($0.name, $0.value) }, uniquingKeysWith: { first, _ in first }) }
         func log(_ scene: String, _ type: DeviceType) -> TakeLog? {
-            let takes = TakeStore.takes(of: scene, for: [type], in: project)
-            if let number = oldPins[type]?[scene], let old = takes.first(where: { $0.number == number })?.recorded {
-                return old
-            }
-            return takes.last(where: { $0.successful })?.recorded
+            TakeStore.takes(of: scene, for: [type], in: project).last(where: \.successful)?.recorded
         }
         var problems: [String] = []
         func converted(_ value: JSONValue, at path: String, scene: String?, type: DeviceType?) -> JSONValue {
@@ -58,7 +52,7 @@ public enum CutPreparer {
                     // A time in an override is its type's; one shared by every type, the first's with a take.
                     let candidates = type.map { [$0] } ?? types
                     guard let source = candidates.lazy.compactMap({ type in log(scene, type).map { ($0, type) } }).first else {
-                        problems.append("\(at): \(JSONReader.format(seconds)) s needs the take it was cut from to become an anchor, and no take of \(scene) it pinned is here.")
+                        problems.append("\(at): \(JSONReader.format(seconds)) s needs a successful take of \(scene) to become an anchor in; record it.")
                         return entry
                     }
                     let anchor = anchor(for: seconds, in: source.0)
@@ -69,51 +63,21 @@ public enum CutPreparer {
                 return value
             }
         }
-        var pins = root["takes"].flatMap { if case .object(let object) = $0 { object } else { nil } } ?? JSONObject()
         root = JSONObject(root.entries.map { entry in
             entry.key == "clips" ? .init(key: "clips", value: converted(entry.value, at: "clips", scene: nil, type: nil)) : entry
         })
         guard problems.isEmpty else { throw RetakeError(.failed, problems.joined(separator: "\n")) }
 
-        // Each scene each type plays, or takes a still from, pinned to its latest successful take.
-        guard let interim = EditFile.read(JSONWriter.write(.object(root)), with: JSONReader(file: project.displayPath(url))) else {
-            throw RetakeError(.failed, "\(project.displayPath(url)) can't be read once its times are anchors.")
-        }
-        for type in types {
-            guard let video = interim.videos[type] else { continue }
-            let scenes = video.clips.flatMap { [$0.take] + $0.stills.map(\.take) }.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
-            var typePins: [JSONObject.Entry] = []
-            for scene in scenes {
-                guard let latest = TakeStore.takes(of: scene, for: [type], in: project).last(where: { $0.successful }) else {
-                    throw RetakeError(.failed, "There's no successful \(type.rawValue) take of \(scene) to pin; record it.")
-                }
-                typePins.append(.init(key: scene, value: .number(Double(latest.number))))
-                let was = oldPins[type]?[scene]
-                if was != latest.number {
-                    changes.append("takes.\(type.rawValue).\(scene): \(was.map { "take \($0)" } ?? "nothing") becomes take \(latest.number)")
-                }
-            }
-            let value = JSONValue.object(JSONObject(typePins))
-            if let index = pins.entries.firstIndex(where: { $0.key == type.rawValue }) {
-                pins.entries[index].value = value
-            } else {
-                pins.entries.append(.init(key: type.rawValue, value: value))
-            }
-        }
-        if let index = root.entries.firstIndex(where: { $0.key == "takes" }) {
-            root.entries[index].value = .object(pins)
-        } else {
-            let after = root.entries.firstIndex { $0.key == "devices" }.map { $0 + 1 } ?? root.entries.count
-            root.entries.insert(.init(key: "takes", value: .object(pins)), at: after)
-        }
         // One of Retake's own schemas is brought up to this Retake's; any other is the project's.
         if let index = root.entries.firstIndex(where: { $0.key == "$schema" }),
            root.entries[index].value.stringValue.flatMap(SchemaReference.init(url:)) != nil {
             root.entries[index].value = .string(SchemaReference.current("edit").url)
         }
 
-        // Every anchor and element resolves in the new takes, or nothing is written.
         let newText = JSONWriter.fitting(.object(root))
+        guard !changes.isEmpty else { return Result(text: newText, changes: []) }
+
+        // Every anchor and element resolves in the latest takes, or nothing is written.
         let reader = JSONReader(file: project.displayPath(url))
         guard let prepared = EditFile.read(newText, with: reader) else {
             throw RetakeError(.failed, reader.problems.map(\.description).joined(separator: "\n"))

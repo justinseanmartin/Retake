@@ -1,7 +1,8 @@
 import AVFoundation
 import Foundation
 
-/// What `retake cut` does for one edit and one device type: reads the takes it pins, checks them,
+/// What `retake cut` does for one edit and one device type: reads each scene's latest successful
+/// take, checks them,
 /// plans the cut, composes it with its overlays and sound, and exports it. See Documentation/cli.md,
 /// "retake cut".
 public enum Cutter {
@@ -21,9 +22,9 @@ public enum Cutter {
         project.cuts(for: type).appending(path: edit, directoryHint: .isDirectory)
     }
 
-    /// Selects the latest takes for one device type and writes the edit when that changes it.
-    /// Commands cutting several types do this for every type before rendering any of them, so a
-    /// later type's pins do not immediately make an earlier render look out of date.
+    /// Turns any time in plain seconds into an anchor in the latest takes, writing the edit when
+    /// that changes it. Commands cutting several types do this for every type before rendering any
+    /// of them, so a later type's rewrite doesn't make an earlier render look out of date.
     public static func prepare(
         _ name: String, for type: DeviceType, in project: Project, report: (String) -> Void = { _ in },
     ) throws(RetakeError) {
@@ -35,11 +36,11 @@ public enum Cutter {
         } catch {
             throw RetakeError(.failed, "Couldn't write \(project.displayPath(files.editURL(name))): \(error.localizedDescription)")
         }
-        report("Updated \(project.displayPath(files.editURL(name))) to use the latest \(type.rawValue) takes.")
+        report("Updated \(project.displayPath(files.editURL(name))): its times in seconds are anchors now.")
     }
 
-    /// Cuts `name`'s video for `type`. Fails (1) for an edit that can't be read, a pinned take
-    /// missing or failed, takes from devices with different screens, an anchor or element that
+    /// Cuts `name`'s video for `type`. Fails (1) for an edit that can't be read, a scene with no
+    /// successful take, takes from devices with different screens, an anchor or element that
     /// doesn't resolve, or, unless a draft, a video outside App Store Connect's limits; misuse (2)
     /// for an edit that doesn't name `type`.
     public static func cut(
@@ -53,21 +54,12 @@ public enum Cutter {
             throw RetakeError(.usage, "\(name) isn't cut for \(type.rawValue): its devices are \(edit.devices.map(\.rawValue).joined(separator: ", ")).")
         }
 
-        // The pinned take of every scene the video plays or takes a still from, in the order it
-        // first does.
-        let scenes = video.clips.flatMap { [$0.take] + $0.stills.map(\.take) }.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
-        let pins = Dictionary((edit.takes[type] ?? []).map { ($0.name, $0.value) }, uniquingKeysWith: { first, _ in first })
+        // The latest successful take of every scene the video plays or takes a still from.
+        let scenes = video.scenes
         var logs: [String: TakeLog] = [:], movies: [String: URL] = [:]
         for scene in scenes {
-            guard let number = pins[scene] else { throw RetakeError(.failed, "\(name) has no \(type.rawValue) take of \(scene) after selecting the latest takes.") }
-            guard let take = TakeStore.takes(of: scene, for: [type], in: project).first(where: { $0.number == number }) else {
-                throw RetakeError(.failed, "Take \(number) of \(scene), which \(name) selected for \(type.rawValue), isn't recorded; record \(scene) and retry the cut.")
-            }
-            guard let log = take.recorded, take.problem == nil else {
-                throw RetakeError(.failed, "Take \(number) of \(scene) for \(type.rawValue) can't be read: \(take.problem ?? "").")
-            }
-            if let failure = log.failure {
-                throw RetakeError(.failed, "Take \(number) of \(scene) for \(type.rawValue) failed (\(failure)), so it can't be cut from.")
+            guard let take = TakeStore.takes(of: scene, for: [type], in: project).last(where: \.successful), let log = take.recorded else {
+                throw RetakeError(.failed, "There's no successful \(type.rawValue) take of \(scene) for \(name) to be cut from; record it.")
             }
             logs[scene] = log
             movies[scene] = take.movie

@@ -20,7 +20,7 @@ struct RecordRunTests {
         try write("output/takes/ipad/a/1.json", #"{ "scene": "a" }"#)
         try write("output/takes/ipad/b/2.json", #"{ "scene": "b", "failure": "step 1 didn't run" }"#)
         try write("edits/video1.json", """
-            { "devices": ["ipad"], "takes": { "ipad": {} }, "clips": [
+            { "devices": ["ipad"], "clips": [
               { "take": "c", "from": { "step": "start" }, "to": { "step": "end" } },
               { "take": "a", "from": { "step": "start" }, "to": { "step": "end" } }
             ] }

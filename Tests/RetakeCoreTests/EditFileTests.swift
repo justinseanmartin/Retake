@@ -18,10 +18,6 @@ struct EditFileTests {
         {
           "intent": "The core loop in 20 s: create a note, share it, see it sync.",
           "devices": ["iphone", "ipad"],
-          "takes": {
-            "iphone": { "create-note": 3, "share-note": 1 },
-            "ipad": { "create-note": 2, "share-note": 2 }
-          },
           "music": { "file": "audio/theme.m4a", "volume": 0.6, "fadeOut": 1.5 },
           "tapSound": { "file": "audio/tap.m4a", "volume": 0.5 },
           "background": "#F4F1EA",
@@ -67,7 +63,6 @@ struct EditFileTests {
         #expect(result.problems.isEmpty)
         let edit = try #require(result.edit)
         #expect(edit.devices == [.iphone, .ipad])
-        #expect(edit.takes[.ipad] == [Named("create-note", 2), Named("share-note", 2)])
         let iphone = try #require(edit.videos[.iphone])
         let ipad = try #require(edit.videos[.ipad])
         #expect(iphone.clips[1].speed == 1 && ipad.clips[1].speed == 1.3)
@@ -155,8 +150,7 @@ struct EditFileTests {
         (#"{"devices": ["iphone", "iphone"], "clips": [{"take": "a", "from": 0, "to": 1}]}"#, #"edits/video1.json: devices[1]: "iphone" is given more than once"#),
         (#"{"devices": ["iphone"], "ipad": {"turns": "device"}, "clips": [{"take": "a", "from": 0, "to": 1}]}"#, "edits/video1.json: ipad: overrides ipad, which isn't one of this edit's devices"),
         (#"{"devices": ["iphone"], "iphone": {"devices": ["ipad"]}, "clips": [{"take": "a", "from": 0, "to": 1}]}"#, #"edits/video1.json: iphone: "devices" can't be given for one device type"#),
-        (#"{"devices": ["iphone"], "takes": {"ipad": {"a": 1}}, "clips": [{"take": "a", "from": 0, "to": 1}]}"#, "edits/video1.json: takes: pins takes for ipad, which isn't one of this edit's devices"),
-        (#"{"devices": ["iphone"], "takes": {"iphone": {"a": 0}}, "clips": [{"take": "a", "from": 0, "to": 1}]}"#, "edits/video1.json: takes.iphone.a: 0 must be at least 1"),
+        (#"{"devices": ["iphone"], "takes": {"iphone": {"a": 1}}, "clips": [{"take": "a", "from": 0, "to": 1}]}"#, #"edits/video1.json: takes: an edit doesn't name its takes: cut uses each scene's latest successful take, and `retake clean --takes` goes back to an earlier one; delete "takes""#),
         (#"{"devices": ["iphone"], "clips": []}"#, "edits/video1.json: clips: needs at least one clip"),
         (#"{"devices": ["iphone"], "clips": [{"id": "x", "take": "a", "from": 0, "to": 1}, {"id": "x", "take": "a", "from": 0, "to": 1}]}"#, #"edits/video1.json: clips[1].id: "x" is already clips[0]'s id; ids are unique in an edit"#),
     ])

@@ -14,10 +14,11 @@ public enum TakeStore {
         /// What the step log says; nil when it's missing or can't be read, `problem` saying why.
         public var recorded: TakeLog?
         public var problem: String?
-        /// The edits that pin it, by name.
-        public var pinnedBy: [String]
+        /// The edits cut from it, by name: those that use its scene, when it's the scene's latest
+        /// successful take.
+        public var usedBy: [String] = []
 
-        /// A take that failed, or whose step log can't say it didn't, which no edit can pin.
+        /// A take that failed, or whose step log can't say it didn't, which no edit is cut from.
         public var failed: Bool { recorded == nil || recorded?.failure != nil }
         /// A complete take whose recording succeeded and whose movie and log can both be read.
         public var successful: Bool { !failed && problem == nil }
@@ -29,8 +30,7 @@ public enum TakeStore {
     /// Every take of `scene`, or of every scene, for each of `types` in turn, by scene and number.
     public static func takes(of scene: String? = nil, for types: [DeviceType], in project: Project) -> [Take] {
         let files = FileManager.default
-        let pins = pins(in: project)
-        return types.flatMap { type -> [Take] in
+        var takes = types.flatMap { type -> [Take] in
             let folder = project.takes(for: type)
             let scenes = scene.map { [$0] } ?? ((try? files.contentsOfDirectory(atPath: folder.path)) ?? []).sorted()
             return scenes.flatMap { scene -> [Take] in
@@ -41,14 +41,18 @@ public enum TakeStore {
                     guard ["json", "mov"].contains(url.pathExtension), let number = Int(url.deletingPathExtension().lastPathComponent), number > 0 else { return nil }
                     return number
                 })
-                return numbers.sorted().map { number in
-                    take(number, of: scene, for: type, in: sceneFolder, pinnedBy: pins[Pin(type: type, scene: scene, take: number)] ?? [], project: project)
-                }
+                return numbers.sorted().map { number in take(number, of: scene, for: type, in: sceneFolder, project: project) }
             }
         }
+        let users = users(in: project)
+        for (key, indices) in Dictionary(grouping: takes.indices, by: { SceneKey(type: takes[$0].type, scene: takes[$0].scene) }) {
+            guard let latest = indices.last(where: { takes[$0].successful }) else { continue }
+            takes[latest].usedBy = users[key] ?? []
+        }
+        return takes
     }
 
-    static func take(_ number: Int, of scene: String, for type: DeviceType, in folder: URL, pinnedBy: [String], project: Project) -> Take {
+    static func take(_ number: Int, of scene: String, for type: DeviceType, in folder: URL, project: Project) -> Take {
         let movie = folder.appending(path: "\(number).mov"), log = folder.appending(path: "\(number).json")
         var recorded: TakeLog?, problem: String?
         if let data = FileManager.default.contents(atPath: log.path) {
@@ -59,26 +63,26 @@ public enum TakeStore {
             problem = "\(project.displayPath(log)) is missing"
         }
         if recorded != nil, !FileManager.default.fileExists(atPath: movie.path) { problem = "\(project.displayPath(movie)) is missing" }
-        return Take(type: type, scene: scene, number: number, movie: movie, log: log, recorded: recorded, problem: problem, pinnedBy: pinnedBy)
+        return Take(type: type, scene: scene, number: number, movie: movie, log: log, recorded: recorded, problem: problem)
     }
 
-    struct Pin: Hashable {
+    struct SceneKey: Hashable {
         var type: DeviceType
         var scene: String
-        var take: Int
     }
 
-    /// Which edits pin each take. An edit that can't be read pins nothing here; `validate` says why.
-    static func pins(in project: Project) -> [Pin: [String]] {
+    /// Which edits use each scene, playing it or taking a still from it. An edit that can't be read
+    /// uses nothing here; `validate` says why.
+    static func users(in project: Project) -> [SceneKey: [String]] {
         let files = ProjectFiles(project: project)
-        var pins: [Pin: [String]] = [:]
+        var users: [SceneKey: [String]] = [:]
         for edit in files.names(in: project.edits) {
             guard let file = files.readEdit(edit, into: ProjectFiles.Report()) else { continue }
-            for (type, takes) in file.takes {
-                for take in takes { pins[Pin(type: type, scene: take.name, take: take.value), default: []].append(edit) }
+            for (type, video) in file.videos {
+                for scene in video.scenes { users[SceneKey(type: type, scene: scene), default: []].append(edit) }
             }
         }
-        return pins
+        return users
     }
 
     /// Which takes `clean --takes` names: a scene's every take, or one take of it.
@@ -122,8 +126,9 @@ public enum TakeStore {
         /// Scene definitions no edit uses, for a device type.
         public var scenes: [URL] = []
 
-        /// The takes it deletes that an edit last cut from; its next cut selects another take.
-        public var pinned: [Take] { takes.filter { !$0.pinnedBy.isEmpty } }
+        /// The takes it deletes that an edit is cut from; its next cut uses the latest successful
+        /// take left.
+        public var used: [Take] { takes.filter { !$0.usedBy.isEmpty } }
     }
 
     /// What `clean` would delete: with neither `takes` nor `cuts` given, every take and cut;

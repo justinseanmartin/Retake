@@ -6,8 +6,6 @@ import Foundation
 public struct EditFile: Equatable, Sendable {
     public var intent: String?
     public var devices: [DeviceType]
-    /// The take of each scene the edit is cut from, per device type.
-    public var takes: [DeviceType: [Named<Int>]]
     /// The edit as each device type's video is cut from it.
     public var videos: [DeviceType: Edit]
     /// Where each device type's values were written, for naming a problem found in them later.
@@ -16,13 +14,11 @@ public struct EditFile: Equatable, Sendable {
     public init(
         intent: String? = nil,
         devices: [DeviceType],
-        takes: [DeviceType: [Named<Int>]] = [:],
         videos: [DeviceType: Edit],
         origins: [DeviceType: Origins] = [:],
     ) {
         self.intent = intent
         self.devices = devices
-        self.takes = takes
         self.videos = videos
         self.origins = origins
     }
@@ -32,9 +28,8 @@ public struct EditFile: Equatable, Sendable {
         origins[type]?.source(of: path) ?? path
     }
 
-    /// The keys a device type's overrides can't give, since they're already per type, or say which
-    /// types there are.
-    static let notOverridable = ["devices", "takes"]
+    /// The keys a device type's overrides can't give, since they say which types there are.
+    static let notOverridable = ["devices"]
 }
 
 /// One device type's video, as an edit cuts it.
@@ -50,6 +45,11 @@ public struct Edit: Equatable, Sendable {
     public var turns: Turns
     public var turnBlur: TurnBlur?
     public var clips: [Clip]
+
+    /// Every scene it plays or takes a still from, in the order it first does.
+    public var scenes: [String] {
+        clips.flatMap { [$0.take] + $0.stills.map(\.take) }.reduce(into: []) { if !$0.contains($1) { $0.append($1) } }
+    }
 
     public init(
         intent: String? = nil,
@@ -94,7 +94,7 @@ public struct Edit: Equatable, Sendable {
     public struct Clip: Equatable, Sendable {
         public var id: String?
         public var intent: String?
-        /// The scene whose pinned take the clip is cut from.
+        /// The scene whose latest successful take the clip is cut from.
         public var take: String
         public var from: Anchor
         public var to: Anchor
@@ -184,7 +184,7 @@ public struct Edit: Equatable, Sendable {
 
     /// A frame of another take, popped in over the clip.
     public struct Still: Equatable, Sendable {
-        /// The scene whose pinned take it's from.
+        /// The scene whose latest successful take it's from.
         public var take: String
         public var at: Anchor
     }

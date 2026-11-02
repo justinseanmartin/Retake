@@ -38,8 +38,8 @@ struct CutterTests {
         try write("output/takes/\(type.rawValue)/\(scene)/\(number).mov", "")
     }
 
-    func edit(_ pins: String, clips: String = #"{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}}"#) throws {
-        try write("edits/video.json", #"{"devices": ["ipad"], "takes": {"ipad": {\#(pins)}}, "clips": [\#(clips)]}"#)
+    func edit(clips: String = #"{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}}"#) throws {
+        try write("edits/video.json", #"{"devices": ["ipad"], "clips": [\#(clips)]}"#)
     }
 
     func failure(draft: Bool = false) async -> String? {
@@ -53,22 +53,19 @@ struct CutterTests {
 
     @Test func aTakeNotRecordedOrFailedIsntCut() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        try edit("")
-        #expect(await failure() == "There's no successful ipad take of walk to pin; record it.")
-        try edit(#""walk": 1"#)
-        #expect(await failure() == "There's no successful ipad take of walk to pin; record it.")
+        try edit()
+        #expect(await failure() == "There's no successful ipad take of walk for video to be cut from; record it.")
         try record("walk", 1, failure: "step 2 didn't run")
-        #expect(await failure() == "There's no successful ipad take of walk to pin; record it.")
+        #expect(await failure() == "There's no successful ipad take of walk for video to be cut from; record it.")
     }
 
-    @Test func anUnpinnedSuccessfulTakeIsSelectedBeforeCutting() async throws {
+    @Test func cuttingLeavesAnEditWhoseTimesAreAnchorsAsItIs() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try record("walk", 1)
-        try edit("")
+        try edit()
+        let before = try String(contentsOf: root.appending(path: "edits/video.json"), encoding: .utf8)
         #expect(await failure() == "video's ipad video is 5 s long; App Store Connect takes 15 to 30 s.")
-        let text = try String(contentsOf: root.appending(path: "edits/video.json"), encoding: .utf8)
-        let json = try JSONParser.parse(text)
-        #expect(json[path: "takes"]?[path: "ipad"]?[path: "walk"] == .number(1))
+        #expect(try String(contentsOf: root.appending(path: "edits/video.json"), encoding: .utf8) == before)
     }
 
     @Test func everyTypeCanBePreparedBeforeAnyIsRendered() throws {
@@ -77,7 +74,7 @@ struct CutterTests {
         try write("scenes/iphone/walk.json", scene)
         try record("walk", 1, for: .iphone)
         try record("walk", 1, for: .ipad)
-        try write("edits/video.json", #"{"devices": ["iphone", "ipad"], "clips": [{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}}]}"#)
+        try write("edits/video.json", #"{"devices": ["iphone", "ipad"], "clips": [{"take": "walk", "from": 1.25, "to": {"step": "end"}}]}"#)
 
         try Cutter.prepare("video", for: .iphone, in: project)
         try Cutter.prepare("video", for: .ipad, in: project)
@@ -86,23 +83,21 @@ struct CutterTests {
         try Cutter.prepare("video", for: .ipad, in: project)
 
         #expect(try String(contentsOf: root.appending(path: "edits/video.json"), encoding: .utf8) == prepared)
-        let json = try JSONParser.parse(prepared)
-        #expect(json[path: "takes"]?[path: "iphone"]?[path: "walk"] == .number(1))
-        #expect(json[path: "takes"]?[path: "ipad"]?[path: "walk"] == .number(1))
+        #expect(prepared.contains(#""from": { "step": "a", "offset": 0.25, "edge": "start" }"#), "its time in seconds is an anchor")
     }
 
     @Test func takesFromDifferentScreensArentCutTogether() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try record("walk", 1)
         try record("other", 1, screen: CGSize(width: 820, height: 1180))
-        try edit(#""walk": 1, "other": 1"#, clips: #"{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}}, {"take": "other", "from": {"step": "a"}, "to": {"step": "end"}}"#)
+        try edit(clips: #"{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}}, {"take": "other", "from": {"step": "a"}, "to": {"step": "end"}}"#)
         #expect(await failure() == "video's ipad takes come from devices with different screens: 820×1180 points: other take 1; 834×1194 points: walk take 1.")
     }
 
     @Test func aVideoOutsideAppStoreConnectsLengthsIsntCutButADraftIs() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try record("walk", 1)
-        try edit(#""walk": 1"#)
+        try edit()
         #expect(await failure() == "video's ipad video is 5 s long; App Store Connect takes 15 to 30 s.")
         // A draft only warns, and goes on to compose, which fails here on the take's empty movie.
         #expect(await failure(draft: true)?.contains("App Store Connect") == false)

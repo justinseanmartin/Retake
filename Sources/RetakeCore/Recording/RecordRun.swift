@@ -30,7 +30,7 @@ public enum RecordRun {
 
     /// The scenes to record, in order, as Documentation/cli.md's table says: those named; or every scene in
     /// `scenes/<type>/`, or every one `edit` uses, either way only those with no take yet unless
-    /// `force`. A failed take can't be pinned, so it isn't a take for this. Misuse (2) for a scene
+    /// `force`. A failed take is never cut from, so it isn't a take for this. Misuse (2) for a scene
     /// or edit that doesn't exist, or an edit not cut for this device type.
     public static func scenes(
         named: [String], edit: String?, force: Bool, for type: DeviceType, in project: Project,

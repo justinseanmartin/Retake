@@ -83,7 +83,7 @@ struct SchemaTests {
         ("scene", ##"{"steps": [{"press": {"label": "a"}}]}"##, false),
 
         ("edit", #"""
-        {"intent": "x", "devices": ["iphone", "ipad"], "takes": {"iphone": {"a": 3}, "ipad": {"a": 2}},
+        {"intent": "x", "devices": ["iphone", "ipad"],
          "music": {"file": "m.m4a", "volume": 0.6, "fadeOut": 1.5}, "tapSound": {"file": "t.m4a", "volume": 0.5},
          "takeAudioVolume": 0.8, "background": "#F4F1EA", "turns": "device", "turnBlur": {"duration": 0.6},
          "ipad": {"background": "#000000", "music": {"volume": 0.4}},

@@ -23,7 +23,7 @@ public struct PreviewSpec: Equatable, Sendable {
 /// editor's timing, apart from AVFoundation, so it can be tested.
 public struct CutPlan: Equatable, Sendable {
     public struct Placement: Equatable, Sendable {
-        /// The clip's scene, whose pinned take it plays.
+        /// The clip's scene, whose latest successful take it plays.
         public var take: String
         /// Seconds into the take it plays from and to.
         public var from: Double

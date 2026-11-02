@@ -204,7 +204,7 @@ extension EditFile {
         let clip = Schema.object("A stretch of a take, played in order.", [
             .init("id", .string("Names the clip, for a caption to run on into it. Unique in the edit.", nonEmpty: true)),
             .init("intent", .string("What the clip is there to show, for whoever changes the video later. Not read by the render.")),
-            .init("take", .string("The scene whose pinned take the clip is cut from.", nonEmpty: true)),
+            .init("take", .string("The scene whose latest successful take the clip is cut from.", nonEmpty: true)),
             .init("from", .ref("anchor", "Where the clip starts in the take.")),
             .init("to", .ref("anchor", "Where it ends.")),
             .init("speed", .number("How fast it plays: 2 is twice as fast.", above: 0).defaulting(to: 1)),
@@ -277,7 +277,7 @@ extension EditFile {
                 .init("radius", .number("How strong the blur is.", above: 0).defaulting(to: 20)),
             ]).exactlyOne(of: ["element", "rect"])),
             .init("still", .object("A frame of another take, popped in over the clip.", [
-                .init("take", .string("The scene whose pinned take it's from.", nonEmpty: true)),
+                .init("take", .string("The scene whose latest successful take it's from.", nonEmpty: true)),
                 .init("at", .ref("anchor", "The moment in that take.")),
             ], required: ["take", "at"])),
             .init("rect", .object("A rectangle in screen points.", [
@@ -311,10 +311,6 @@ extension EditFile {
                 FileSchema.schemaKey,
                 .init("intent", .string("What the video is there to show. Not read by the render.")),
                 .init("devices", .array("The device types it makes a video for.", of: .choice(nil, devices), minItems: 1, unique: true)),
-                .init("takes", .object(
-                    "The take of each scene the edit was last cut from, per device type, as `retake cut` records them.",
-                    devices.map { .init($0, .dictionary("Each scene's pinned \($0) take, by the scene's name: its number.", values: .integer(nil, atLeast: 1))) },
-                )),
                 .init("music", .ref("music")),
                 .init("tapSound", .ref("tap-sound")),
                 .init("takeAudioVolume", .number("The level of the take's own sound, where a clip plays it.", atLeast: 0).defaulting(to: 1)),

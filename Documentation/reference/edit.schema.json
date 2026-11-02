@@ -23,29 +23,6 @@
       "minItems": 1,
       "uniqueItems": true
     },
-    "takes": {
-      "description": "The take of each scene the edit was last cut from, per device type, as `retake cut` records them.",
-      "type": "object",
-      "properties": {
-        "iphone": {
-          "description": "Each scene's pinned iphone take, by the scene's name: its number.",
-          "type": "object",
-          "additionalProperties": {
-            "type": "integer",
-            "minimum": 1
-          }
-        },
-        "ipad": {
-          "description": "Each scene's pinned ipad take, by the scene's name: its number.",
-          "type": "object",
-          "additionalProperties": {
-            "type": "integer",
-            "minimum": 1
-          }
-        }
-      },
-      "additionalProperties": false
-    },
     "music": {
       "$ref": "#/$defs/music"
     },
@@ -179,7 +156,7 @@
           "type": "string"
         },
         "take": {
-          "description": "The scene whose pinned take the clip is cut from.",
+          "description": "The scene whose latest successful take the clip is cut from.",
           "type": "string",
           "minLength": 1
         },
@@ -517,7 +494,7 @@
       "type": "object",
       "properties": {
         "take": {
-          "description": "The scene whose pinned take it's from.",
+          "description": "The scene whose latest successful take it's from.",
           "type": "string",
           "minLength": 1
         },
@@ -900,7 +877,7 @@
           "type": "string"
         },
         "take": {
-          "description": "The scene whose pinned take the clip is cut from.",
+          "description": "The scene whose latest successful take the clip is cut from.",
           "type": "string",
           "minLength": 1
         },
@@ -1144,7 +1121,7 @@
       "type": "object",
       "properties": {
         "take": {
-          "description": "The scene whose pinned take it's from.",
+          "description": "The scene whose latest successful take it's from.",
           "type": "string",
           "minLength": 1
         },

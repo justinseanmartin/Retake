@@ -407,10 +407,6 @@ every device type it names, from that type's takes of the same scenes:
 {
   "intent": "The core loop in 20 s: create a note, share it, see it sync.",
   "devices": ["iphone", "ipad"],
-  "takes": {
-    "iphone": { "create-note": 3, "share-note": 1 },
-    "ipad": { "create-note": 2, "share-note": 2 }
-  },
   "music": { "file": "audio/theme.m4a", "volume": 0.6, "fadeOut": 1.5 },
   "tapSound": { "file": "audio/tap.m4a", "volume": 0.5 },
   "background": "#F4F1EA",
@@ -451,9 +447,9 @@ every device type it names, from that type's takes of the same scenes:
 }
 ```
 
-`takes` records the take of each scene the edit was last cut from, per device type. Every cut
-refreshes those pins to the latest successful takes. To cut from an earlier take, delete the takes
-after it with `retake clean --takes`.
+An edit doesn't name its takes: it's always cut from each scene's latest successful take, and the
+video records which those were. Earlier takes stay on disk to compare against; to cut from one,
+delete the takes after it with `retake clean --takes`.
 
 `retake clean --unused` keeps the latest successful take of every scene any edit uses and deletes
 older or failed takes, along with scene definitions and takes no edit uses.

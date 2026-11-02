@@ -146,13 +146,8 @@ enum StatusOutput {
                         print("    \(name(edit))  can't be read: \(problem)")
                         continue
                     }
-                    let pins = edit.pins.map { pin in
-                        var text = "\(pin.scene)@\(pin.take)"
-                        if let problem = pin.problem { text += " (\(problem))" }
-                        if let newer = pin.newer { text += " (take \(newer) is newer)" }
-                        return text
-                    }
-                    print("    \(name(edit))  \(pins.isEmpty ? "pins no takes" : pins.joined(separator: ", "))")
+                    let uses = edit.uses.map { use in use.take.map { "\(use.scene)@\($0)" } ?? "\(use.scene) (no successful take)" }
+                    print("    \(name(edit))  \(uses.isEmpty ? "uses no scenes" : uses.joined(separator: ", "))")
                 }
             }
             if !section.videos.isEmpty {
@@ -185,11 +180,8 @@ enum StatusOutput {
         let edits: [JSONValue] = section.edits.map { edit in
             TakeLog.object([
                 ("name", .string(edit.name)),
-                ("pins", .array(edit.pins.map { pin in
-                    TakeLog.object([
-                        ("scene", .string(pin.scene)), ("take", .number(Double(pin.take))),
-                        ("newer", pin.newer.map { .number(Double($0)) }), ("problem", pin.problem.map(JSONValue.string)),
-                    ])
+                ("uses", .array(edit.uses.map { use in
+                    TakeLog.object([("scene", .string(use.scene)), ("take", use.take.map { .number(Double($0)) })])
                 })),
                 ("problem", edit.problem.map(JSONValue.string)),
             ])

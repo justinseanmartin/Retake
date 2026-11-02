@@ -69,7 +69,7 @@ the first of these that's given:
 written with the default, inside the project's folder. Retake creates the directory when it first
 writes to it. An environment variable that's set but empty counts as not set, for both variables.
 
-It holds the takes edits pin, so moving it somewhere temporary, such as `/tmp` or an agent's scratch
+It holds the takes edits are cut from, so moving it somewhere temporary, such as `/tmp` or an agent's scratch
 directory, suits runs whose takes don't need to outlive it: a take recorded there is gone when the
 directory is cleared, and an edit can't `cut` until its scenes are recorded again.
 
@@ -526,8 +526,8 @@ After the last scene, when any take was `clean` or `cloned`, launches the app on
 the take's copy of its data and the staged set files from the device, as [`clean --on-device`](#retake-clean) does,
 so none is left behind.
 
-A take whose step fails is kept, marked failed, for its footage to show what went wrong; it can't be
-pinned by an edit. Recording carries on with the next scene unless `--stop-on-failure` is given, and
+A take whose step fails is kept, marked failed, for its footage to show what went wrong; no edit is
+cut from it. Recording carries on with the next scene unless `--stop-on-failure` is given, and
 a summary at the end lists each scene's new take or failure.
 
 Existing takes are never changed.
@@ -546,7 +546,7 @@ retake takes [<scene>] [--device <device> | --type <type>] [--json]
 ```
 
 Lists takes, of one scene or all: number, when it was recorded, the app's version and build, the
-device and its model, duration, frames dropped, whether it failed, and the edits that pin it.
+device and its model, duration, frames dropped, whether it failed, and the edits cut from it.
 
 Without `--device` or `--type`, lists takes of both device types.
 
@@ -570,7 +570,7 @@ Deletes takes and cuts, of both device types unless `--type` names one:
 | `retake clean --unused` | Every unreferenced scene definition and take, and old or failed takes of referenced scenes. Keeps each referenced scene's latest successful take. |
 
 `--takes` and `--cuts` can be given together. It lists what it will delete, naming each take an edit
-pins, and asks first, unless `--yes`. Fails (2), deleting nothing, if a scene, take or edit named
+is cut from, and asks first, unless `--yes`. Fails (2), deleting nothing, if a scene, take or edit named
 doesn't exist.
 
 `--unused` derives what is needed from every edit, including scenes used only for stills. It refuses
@@ -588,8 +588,8 @@ mode that deletes them and quits before any of the app's own code runs; iOS then
 again, as from the home screen, and Retake closes it. It never touches the app's real data, nor
 takes or cuts on the Mac.
 
-Edits' old pins are left as they are. After the scenes are recorded again, the next `cut` replaces
-them with the latest successful takes. `retake clean` then `retake record` starts everything over.
+Edits are left as they are: they name no takes. `retake clean` then `retake record` starts everything
+over.
 
 ### `retake cut`
 
@@ -605,11 +605,11 @@ successful take, to
 - `<edit>-<type>-master.mov`, ProRes, and
 - `<edit>-<type>.mp4`, H.264 at the size and frame rate App Store Connect specifies for the type.
 
-Before rendering, `cut` checks every anchor against those takes, records their numbers in the
-edit's `takes`, and rewrites the edit in place. A plain-second time in a never-cut edit becomes an
-anchor against the latest successful take. The rewritten edit keeps its fields' order, and a
-`"$schema"` naming one of Retake's schemas is updated to this Retake's. To use an older take, delete
-the later takes with [`clean --takes`](#retake-clean) before cutting.
+Each video records the takes it was cut from in its [metadata](#a-videos-fields). The edit isn't
+touched, except that a time given in plain seconds becomes an anchor against its scene's latest
+successful take, checked against those takes before the edit is rewritten; the rewritten edit keeps
+its fields' order, and a `"$schema"` naming one of Retake's schemas is updated to this Retake's. To
+cut from an older take, delete the later takes with [`clean --takes`](#retake-clean) before cutting.
 
 `--draft` renders a quick, smaller H.264 alone, `<edit>-<type>-draft.mp4`: for checking timing, and
 for sharing where the full size isn't needed, such as a post on social media. A draft outside App
@@ -632,8 +632,9 @@ retake status [--json]
 Summarizes the project, per device type:
 
 - each scene, its latest take, and when it was recorded;
-- each edit, the takes it pins, and whether a scene has a newer take than the one it pins;
-- each video, and whether its edit or pinned takes have changed since it was rendered.
+- each edit, and the take of each scene it's cut from: the scene's latest successful one;
+- each video, and whether its edit has changed, or a scene it was cut from has a newer take, since
+  it was rendered.
 
 Reports; never fails on what it finds.
 
@@ -675,10 +676,10 @@ Checks the project's files, or the files named, against the schemas, then what a
   edit's scenes, sounds and music;
 - that step ids are unique in a scene, aren't numbers, and aren't `start` or `end`;
 - that every step id an edit references exists in that scene for each device type;
-- with takes recorded, that every anchor resolves in the takes the edit pins, and every element a
-  spotlight or blur names is in the step log at that moment, as `cut` will check. A take the edit
-  doesn't pin, or that isn't recorded here, as in a fresh clone or on CI, is warned about rather
-  than failed, and what's cut from it isn't checked. `--offline` skips this.
+- with takes recorded, that every anchor resolves in each scene's latest successful take, and every
+  element a spotlight or blur names is in the step log at that moment, as `cut` will check. A scene
+  with no successful take here, as in a fresh clone or on CI, is warned about rather than failed,
+  and what's cut from it isn't checked. `--offline` skips this.
 
 Needs no device and changes nothing. Prints every problem, not just the first, and fails (1) if
 there's any. Made for CI and pre-commit hooks, and for an agent checking an edit it changed;

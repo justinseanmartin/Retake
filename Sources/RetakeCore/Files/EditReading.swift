@@ -20,8 +20,10 @@ extension EditFile {
             }
             return devices
         }
-        let takes = root.optional("takes") { readTakes($0, $1, reader) } ?? [:]
-        root.know("$schema", "music", "tapSound", "takeAudioVolume", "background", "turns", "turnBlur", "clips")
+        if root.value("takes") != nil {
+            reader.problem("an edit doesn't name its takes: cut uses each scene's latest successful take, and `retake clean --takes` goes back to an earlier one; delete \"takes\"", at: root.path("takes"))
+        }
+        root.know("$schema", "takes", "music", "tapSound", "takeAudioVolume", "background", "turns", "turnBlur", "clips")
         for type in DeviceType.allCases {
             guard let override = root.value(type.rawValue) else { continue }
             if let devices, !devices.contains(type) {
@@ -31,11 +33,6 @@ extension EditFile {
                 for key in notOverridable where object[key] != nil {
                     reader.problem("\"\(key)\" can't be given for one device type", at: root.path(type.rawValue))
                 }
-            }
-        }
-        if let devices {
-            for type in takes.keys where !devices.contains(type) {
-                reader.problem("pins takes for \(type.rawValue), which isn't one of this edit's devices", at: root.path("takes"))
             }
         }
         root.finish()
@@ -62,19 +59,7 @@ extension EditFile {
             }
         }
         guard reader.problems.count == problemsBefore, let devices, videos.count == devices.count else { return nil }
-        return EditFile(intent: intent, devices: devices, takes: takes, videos: videos, origins: allOrigins)
-    }
-
-    static func readTakes(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> [DeviceType: [Named<Int>]]? {
-        guard var object = reader.object(value, at: path) else { return nil }
-        defer { object.finish() }
-        var takes: [DeviceType: [Named<Int>]] = [:]
-        for type in DeviceType.allCases {
-            takes[type] = object.optional(type.rawValue) { value, path in
-                reader.dictionary(value, at: path) { reader.integer($0, at: $1, atLeast: 1) }?.map { Named($0.key, $0.value) }
-            }
-        }
-        return takes
+        return EditFile(intent: intent, devices: devices, videos: videos, origins: allOrigins)
     }
 
     /// One device type's edit, from its merged object, with the keys that belong only to the base
@@ -391,7 +376,7 @@ enum Overrides {
 
     /// `object` with each object it holds merged for `type`, then its own `type` override laid over
     /// it: objects key by key, lists and plain values replaced. Other device types' overrides are
-    /// dropped. `takes` is left as it is, since its device keys are pins rather than overrides.
+    /// dropped.
     static func merge(
         _ object: JSONObject,
         for type: DeviceType,
@@ -402,9 +387,7 @@ enum Overrides {
     ) -> JSONObject {
         var result = JSONObject()
         for entry in object.entries where !deviceKeys.contains(entry.key) {
-            let value = entry.key == "takes" && source.isRoot
-                ? entry.value
-                : mergeValue(entry.value, for: type, at: source.appending(entry.key), into: merged.appending(entry.key), origins: &origins, reader: reader)
+            let value = mergeValue(entry.value, for: type, at: source.appending(entry.key), into: merged.appending(entry.key), origins: &origins, reader: reader)
             result.entries.append(.init(key: entry.key, value: value))
         }
         guard case .object(let override)? = object[type.rawValue] else {

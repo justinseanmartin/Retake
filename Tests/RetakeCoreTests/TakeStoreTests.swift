@@ -13,7 +13,7 @@ struct TakeStoreTests {
             .resolvingSymlinksInPath()
         project = Project(configuration: root.appending(path: "retake.json"))
         try FileManager.default.createDirectory(at: project.edits, withIntermediateDirectories: true)
-        // Two takes of a, the second pinned by video1; one of b, failed; c's 1 has lost its movie.
+        // Two takes of a, the second, the latest, cut from by video1; one of b, failed; c's 1 has lost its movie.
         try record("a", 1)
         try record("a", 2)
         try record("b", 1, failure: "step 2 didn't run")
@@ -21,7 +21,7 @@ struct TakeStoreTests {
         try record("a", 1, type: .iphone)
         for scene in ["a", "b", "c", "d"] { try write("scenes/ipad/\(scene).json", "{}") }
         try write("scenes/iphone/a.json", "{}")
-        try write("edits/video1.json", #"{ "devices": ["ipad"], "takes": { "ipad": { "a": 2 } }, "clips": [{ "take": "a", "from": { "step": "start" }, "to": { "step": "end" }, "stills": [{ "take": "c", "at": 0 }] }] }"#)
+        try write("edits/video1.json", #"{ "devices": ["ipad"], "clips": [{ "take": "a", "from": { "step": "start" }, "to": { "step": "end" }, "stills": [{ "take": "c", "at": 0 }] }] }"#)
         try write("output/cuts/ipad/video1/video1-ipad.mp4", "")
         try write("output/cuts/ipad/video2/video2-ipad.mp4", "")
     }
@@ -40,11 +40,11 @@ struct TakeStoreTests {
 
     func names(_ takes: [TakeStore.Take]) -> [String] { takes.map { "\($0.type.rawValue) \($0.name)" } }
 
-    @Test func takesAreListedByTypeSceneAndNumberWithWhatPinsThem() {
+    @Test func takesAreListedByTypeSceneAndNumberWithTheEditsCutFromThem() {
         defer { try? FileManager.default.removeItem(at: root) }
         let takes = TakeStore.takes(for: DeviceType.allCases, in: project)
         #expect(names(takes) == ["iphone a@1", "ipad a@1", "ipad a@2", "ipad b@1", "ipad c@1"])
-        #expect(takes.map(\.pinnedBy) == [[], [], ["video1"], [], []])
+        #expect(takes.map(\.usedBy) == [[], [], ["video1"], [], []])
         #expect(takes.map(\.failed) == [false, false, false, true, false])
         #expect(takes[2].recorded?.dropped == 2)
         #expect(takes[4].problem == "output/takes/ipad/c/1.mov is missing")
@@ -61,7 +61,7 @@ struct TakeStoreTests {
 
         let some = try TakeStore.cleaning(takes: [.take("a", 2), .scene("b")], cuts: ["video2"], for: DeviceType.allCases, in: project)
         #expect(names(some.takes) == ["ipad a@2", "ipad b@1"] && some.cuts.map(\.lastPathComponent) == ["video2"])
-        #expect(names(some.pinned) == ["ipad a@2"])
+        #expect(names(some.used) == ["ipad a@2"])
 
         for (takes, cuts) in [([TakeStore.TakeChoice.take("a", 9)], nil), ([.scene("nowhere")], nil), (nil, ["video9"])] {
             #expect(throws: RetakeError.self) { try TakeStore.cleaning(takes: takes, cuts: cuts, for: DeviceType.allCases, in: project) }

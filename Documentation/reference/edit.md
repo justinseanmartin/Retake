@@ -18,7 +18,6 @@ the one it overrides key by key; a list, or a single value, replaces it. At the 
 | `$schema` | string |  | The URL of the schema the file is written against, for editors. Optional; a file is read against this Retake's schema whatever it names. |
 | `intent` | string |  | What the video is there to show. Not read by the render. |
 | `devices` | list of `"iphone"` or `"ipad"`, at least 1, each once | required | The device types it makes a video for. |
-| `takes` | [object](#takes) |  | The take of each scene the edit was last cut from, per device type, as `retake cut` records them. |
 | `music` | [music](#music) |  |  |
 | `tapSound` | [tap-sound](#tap-sound) |  |  |
 | `takeAudioVolume` | number ≥ 0 | `1` | The level of the take's own sound, where a clip plays it. |
@@ -26,15 +25,6 @@ the one it overrides key by key; a list, or a single value, replaces it. At the 
 | `turns` | `"letterboxed"` or `"device"` | `"letterboxed"` | How the video shows the device turning. letterboxed: the app stays upright, landscape letterboxed on the canvas. device: the video stays in the device's frame. |
 | `turnBlur` | [turn-blur](#turn-blur) |  |  |
 | `clips` | list of [clip](#clip), at least 1 | required |  |
-
-### `takes`
-
-The take of each scene the edit was last cut from, per device type, as `retake cut` records them.
-
-| Field | Type | Default | Description |
-| --- | --- | --- | --- |
-| `iphone` | object of names to integer ≥ 1 |  | Each scene's pinned iphone take, by the scene's name: its number. |
-| `ipad` | object of names to integer ≥ 1 |  | Each scene's pinned ipad take, by the scene's name: its number. |
 
 ## Definitions
 
@@ -46,7 +36,7 @@ A stretch of a take, played in order.
 | --- | --- | --- | --- |
 | `id` | string, not empty |  | Names the clip, for a caption to run on into it. Unique in the edit. |
 | `intent` | string |  | What the clip is there to show, for whoever changes the video later. Not read by the render. |
-| `take` | string, not empty | required | The scene whose pinned take the clip is cut from. |
+| `take` | string, not empty | required | The scene whose latest successful take the clip is cut from. |
 | `from` | [anchor](#anchor) | required | Where the clip starts in the take. |
 | `to` | [anchor](#anchor) | required | Where it ends. |
 | `speed` | number > 0 | `1` | How fast it plays: 2 is twice as fast. |
@@ -147,7 +137,7 @@ A frame of another take, popped in over the clip.
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `take` | string, not empty | required | The scene whose pinned take it's from. |
+| `take` | string, not empty | required | The scene whose latest successful take it's from. |
 | `at` | [anchor](#anchor) | required | The moment in that take. |
 
 ### rect

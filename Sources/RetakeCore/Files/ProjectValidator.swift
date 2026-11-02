@@ -2,7 +2,7 @@ import Foundation
 
 /// What `retake validate` checks: every file read strictly, then what a schema can't say, across
 /// the files, and unless `offline`, what only the takes can: that each edit's anchors resolve in
-/// the takes it pins, and the elements it names are on screen there. See Documentation/cli.md, "retake
+/// each scene's latest successful take, and the elements it names are on screen there. See Documentation/cli.md, "retake
 /// validate".
 public struct ProjectValidator {
     public let files: ProjectFiles
@@ -154,9 +154,6 @@ public struct ProjectValidator {
         }
 
         for type in edit.devices {
-            for pinned in edit.takes[type] ?? [] where !exists(files.sceneURL(pinned.name, for: type)) {
-                problem(JSONPath.root.appending("takes").appending(type.rawValue).appending(pinned.name), "there's no scene \"\(pinned.name)\" for \(type.rawValue) (\(project.displayPath(files.sceneURL(pinned.name, for: type))))")
-            }
             guard let video = edit.videos[type] else { continue }
             if let music = video.music { checkFile(music.file, at: JSONPath.root.appending("music").appending("file"), for: type) }
             if let sound = video.tapSound { checkFile(sound.file, at: JSONPath.root.appending("tapSound").appending("file"), for: type) }
@@ -222,7 +219,7 @@ public struct ProjectValidator {
         reported: (JSONPath) -> Bool,
     ) {
         var timelines: [String: TakeTimeline?] = [:]
-        func pinned(_ scene: String, at path: JSONPath) -> TakeTimeline? {
+        func latest(_ scene: String, at path: JSONPath) -> TakeTimeline? {
             if let known = timelines[scene] { return known }
             let take = TakeStore.takes(of: scene, for: [type], in: project).last(where: { $0.successful })
             let found: TakeTimeline?
@@ -259,7 +256,7 @@ public struct ProjectValidator {
         var ranges: [String: ClosedRange<Double>] = [:]
         let clips = video.clips.enumerated().map { index, clip in (index, clip, JSONPath.root.appending("clips").appending(index)) }
         for (index, clip, at) in clips {
-            guard let timeline = pinned(clip.take, at: at.appending("take")) else { continue }
+            guard let timeline = latest(clip.take, at: at.appending("take")) else { continue }
             let from = resolve(clip.from, in: timeline, at: at.appending("from"))
             let to = resolve(clip.to, in: timeline, at: at.appending("to"))
             guard let from, let to else { continue }
@@ -271,7 +268,7 @@ public struct ProjectValidator {
             if let id = clip.id { ranges[id] = from...to }
         }
         for (index, clip, at) in clips {
-            guard let played = stretches[index], let timeline = pinned(clip.take, at: at.appending("take")) else { continue }
+            guard let played = stretches[index], let timeline = latest(clip.take, at: at.appending("take")) else { continue }
             let from = played.lowerBound
             for (index, caption) in clip.captions.enumerated() {
                 let captionAt = at.appending("captions").appending(index)
@@ -279,7 +276,7 @@ public struct ProjectValidator {
                 guard let end = caption.to, let anchor = end.anchor else { continue }
                 if let later = end.clip {
                     guard let laterClip = video.clips.first(where: { $0.id == later }),
-                          let laterTimeline = pinned(laterClip.take, at: captionAt.appending("to")) else { continue }
+                          let laterTimeline = latest(laterClip.take, at: captionAt.appending("to")) else { continue }
                     within(resolve(anchor, in: laterTimeline, at: captionAt.appending("to")), ranges[later], at: captionAt.appending("to"))
                 } else {
                     within(resolve(anchor, in: timeline, at: captionAt.appending("to")), played, at: captionAt.appending("to"))
@@ -305,7 +302,7 @@ public struct ProjectValidator {
             }
             for (index, still) in clip.stills.enumerated() {
                 let stillAt = at.appending("stills").appending(index)
-                guard let stillTimeline = pinned(still.take, at: stillAt.appending("take")) else { continue }
+                guard let stillTimeline = latest(still.take, at: stillAt.appending("take")) else { continue }
                 _ = resolve(still.at, in: stillTimeline, at: stillAt.appending("at"))
             }
         }

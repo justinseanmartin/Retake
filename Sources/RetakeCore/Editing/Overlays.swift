@@ -38,7 +38,7 @@ public struct Overlays: Equatable, Sendable {
         public var end: Double
     }
 
-    /// A frame of a take, popped in over its clip: the `take` scene's pinned take at `at` seconds,
+    /// A frame of a take, popped in over its clip: the `take` scene's latest successful take at `at` seconds,
     /// cropped to `crop`, the `index`th of `count` in its clip.
     public struct Still: Equatable, Sendable {
         public var take: String

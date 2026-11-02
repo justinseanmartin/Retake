@@ -1,7 +1,7 @@
 import Foundation
 
-/// What `retake status` reports, per device type: each scene's latest take, each edit's pins and
-/// whether a newer take is waiting, and each video and whether it's out of date. Reports; never
+/// What `retake status` reports, per device type: each scene's latest take, the take of each scene
+/// each edit is cut from, and each video and whether it's out of date. Reports; never
 /// fails on what it finds. See Documentation/cli.md, "retake status".
 public struct ProjectStatus: Sendable {
     public struct Section: Sendable {
@@ -19,18 +19,16 @@ public struct ProjectStatus: Sendable {
 
     public struct Edit: Sendable {
         public var name: String
-        public var pins: [Pin]
+        public var uses: [Use]
         /// Why the edit can't be read, which `validate` says in full.
         public var problem: String?
     }
 
-    public struct Pin: Sendable {
+    /// A scene an edit uses, and the take it's cut from: its latest successful one.
+    public struct Use: Sendable {
         public var scene: String
-        public var take: Int
-        /// The latest take of the scene that didn't fail, when it's later than the one pinned.
-        public var newer: Int?
-        /// Why the pinned take can't be cut from: it isn't recorded, or failed.
-        public var problem: String?
+        /// Nil when the scene has no successful take.
+        public var take: Int?
     }
 
     public struct Video: Sendable {
@@ -70,21 +68,13 @@ public struct ProjectStatus: Sendable {
 
             for name in (edits.keys.filter { edits[$0]!.devices.contains(type) } + unreadable.keys).sorted() {
                 guard let edit = edits[name] else {
-                    section.edits.append(Edit(name: name, pins: [], problem: unreadable[name]))
+                    section.edits.append(Edit(name: name, uses: [], problem: unreadable[name]))
                     continue
                 }
-                let pins = (edit.takes[type] ?? []).map { pin in
-                    let recorded = takes[pin.name] ?? []
-                    let latest = recorded.last(where: { $0.successful })?.number
-                    var problem: String?
-                    if let take = recorded.first(where: { $0.number == pin.value }) {
-                        if take.failed { problem = take.recorded?.failure.map { "failed: \($0)" } ?? take.problem ?? "failed" }
-                    } else {
-                        problem = "isn't recorded"
-                    }
-                    return Pin(scene: pin.name, take: pin.value, newer: latest.flatMap { $0 > pin.value ? $0 : nil }, problem: problem)
+                let uses = (edit.videos[type]?.scenes ?? []).map { scene in
+                    Use(scene: scene, take: takes[scene]?.last(where: \.successful)?.number)
                 }
-                section.edits.append(Edit(name: name, pins: pins))
+                section.edits.append(Edit(name: name, uses: uses))
             }
 
             for folder in Self.folders(in: project.cuts(for: type)) {
@@ -111,8 +101,8 @@ public struct ProjectStatus: Sendable {
         (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date
     }
 
-    /// A rendered video, and what has changed since: its edit, the takes the edit pins, or a pinned
-    /// take recorded again under the same number.
+    /// A rendered video, and what has changed since: its edit, a newer take of a scene it was cut
+    /// from, or one of its takes recorded again under the same number.
     static func video(
         _ file: URL, of name: String, for type: DeviceType, edits: [String: EditFile], unreadable: [String: String],
         takes: [String: [TakeStore.Take]], files: ProjectFiles, read: (URL) async throws(RetakeError) -> MovieInfo,
@@ -139,15 +129,18 @@ public struct ProjectStatus: Sendable {
         if let rendered, let changed = modified(files.editURL(name)), changed > rendered {
             video.changes.append("its edit has changed")
         }
-        let pins = Dictionary((edit.takes[type] ?? []).map { ($0.name, $0.value) }, uniquingKeysWith: { first, _ in first })
+        let scenes = edit.videos[type]?.scenes ?? []
         if case .array(let records)? = info.json[path: "takes"] {
             for record in records {
                 guard let scene = record[path: "scene"]?.stringValue, case .number(let number)? = record[path: "take"] else { continue }
                 let take = Int(number)
-                if let pinned = pins[scene], pinned != take {
-                    video.changes.append("\(scene) is pinned to take \(pinned) now, not \(take)")
-                } else if pins[scene] == nil {
-                    video.changes.append("\(scene) isn't pinned now")
+                let latest = takes[scene]?.last(where: \.successful)?.number
+                if !scenes.contains(scene) {
+                    video.changes.append("its edit doesn't use \(scene) now")
+                } else if let latest, latest != take {
+                    video.changes.append("\(scene) has take \(latest) now, not \(take)")
+                } else if latest == nil {
+                    video.changes.append("\(scene) has no successful take now")
                 } else if let rendered, let log = takes[scene]?.first(where: { $0.number == take })?.log,
                           let recorded = modified(log), recorded > rendered {
                     video.changes.append("\(scene)@\(take) has been recorded again")

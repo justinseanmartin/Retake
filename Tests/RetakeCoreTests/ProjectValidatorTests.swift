@@ -156,11 +156,11 @@ struct ProjectValidatorTests {
         try write("output/takes/ipad/walk/1.mov", "")
     }
 
-    @Test func anchorsAndElementsAreCheckedInThePinnedTakeOnly() throws {
+    @Test func anchorsAndElementsAreCheckedInTheLatestSuccessfulTake() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try recordWalk()
         try write("edits/video.json", #"""
-            {"devices": ["ipad"], "takes": {"ipad": {"walk": 1}}, "clips": [
+            {"devices": ["ipad"], "clips": [
               {"take": "walk", "from": {"step": "open"}, "to": {"step": "done", "offset": 9},
                "captions": [{"text": "a", "y": 0.1, "color": "#000000", "from": {"step": "start"}}]},
               {"take": "walk", "from": {"step": "done"}, "to": {"step": "open"}},
@@ -187,7 +187,7 @@ struct ProjectValidatorTests {
         #expect(warnings == ["edits/video.json: clips[0].take: there's no successful ipad take of walk, so what's cut from it isn't checked; record it"])
 
         try recordWalk(failure: "step 2 didn't run")
-        try write("edits/video.json", #"{"devices": ["ipad"], "takes": {"ipad": {"walk": 1}}, "clips": [{"take": "walk", "from": {"step": "open"}, "to": {"step": "done"}}]}"#)
+        try write("edits/video.json", #"{"devices": ["ipad"], "clips": [{"take": "walk", "from": {"step": "open"}, "to": {"step": "done"}}]}"#)
         (problems, warnings) = try validateWithTakes()
         #expect(problems.isEmpty)
         #expect(warnings == ["edits/video.json: clips[0].take: there's no successful ipad take of walk, so what's cut from it isn't checked; record it"])

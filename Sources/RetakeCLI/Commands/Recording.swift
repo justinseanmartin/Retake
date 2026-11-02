@@ -352,7 +352,7 @@ enum TakesOutput {
             ].compactMap(\.self)
             if let failure = log.failure { parts.append("failed: \(failure)") }
             if let problem = take.problem { parts.append(problem) }
-            if !take.pinnedBy.isEmpty { parts.append("pinned by \(take.pinnedBy.joined(separator: ", "))") }
+            if !take.usedBy.isEmpty { parts.append("used by \(take.usedBy.joined(separator: ", "))") }
             print("  \(take.number)  \(parts.joined(separator: "  "))")
         }
     }
@@ -378,7 +378,7 @@ enum TakesOutput {
         fields.append(.init(key: "failed", value: .bool(take.failed)))
         if let failure = take.recorded?.failure { fields.append(.init(key: "failure", value: .string(failure))) }
         if let problem = take.problem { fields.append(.init(key: "problem", value: .string(problem))) }
-        fields.append(.init(key: "pinnedBy", value: .array(take.pinnedBy.map(JSONValue.string))))
+        fields.append(.init(key: "usedBy", value: .array(take.usedBy.map(JSONValue.string))))
         return .object(JSONObject(fields))
     }
 }
@@ -392,7 +392,7 @@ struct Clean: AsyncParsableCommand {
             take as <scene>@<take>, only those; --cuts alone every cut, and given edits, only theirs. \
             --unused deletes old takes and scene definitions no edit needs, keeping each needed \
             scene's latest successful take. \
-            Lists what it will delete, naming takes an edit pins, and asks first unless --yes. With \
+            Lists what it will delete, naming takes an edit is cut from, and asks first unless --yes. With \
             --on-device, deletes instead what Retake leaves in the app's container on the device \
             (takes' copies of its data, and staged set files), which record does at the end of a run.
             """,
@@ -479,7 +479,7 @@ struct Clean: AsyncParsableCommand {
         print("Deleted takes' copies of \(bundleID)'s data, and staged set files, from \(target.name).")
     }
 
-    /// What will be deleted: takes by scene, each edit's cuts, and the pins left pointing nowhere.
+    /// What will be deleted: takes by scene, each edit's cuts, and the takes edits were cut from.
     static func describe(_ cleaning: TakeStore.Cleaning, in project: Project) {
         if !cleaning.takes.isEmpty {
             print("Takes:")
@@ -499,8 +499,8 @@ struct Clean: AsyncParsableCommand {
             print("Scenes:")
             for scene in cleaning.scenes { print("  \(project.displayPath(scene))") }
         }
-        for take in cleaning.pinned {
-            Console.warn("\(take.name) (\(take.type.rawValue)) was used by \(take.pinnedBy.joined(separator: ", ")); its next cut will select the latest successful take left.")
+        for take in cleaning.used {
+            Console.warn("\(take.name) (\(take.type.rawValue)) was used by \(take.usedBy.joined(separator: ", ")); its next cut will use the latest successful take left.")
         }
     }
 }
