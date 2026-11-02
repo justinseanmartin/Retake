@@ -745,10 +745,16 @@ build uses exactly that version, and fails without it. TheInsideJob isn't built 
 it's The Button Heist's own release build, which records its Xcode in the bundle's `XCODE_VERSION`.
 
 ```sh
-swift build
+Scripts/build.sh               # builds a runnable retake, and prints its path
 swift test
-Scripts/fetch-insidejob.sh     # downloads the TheInsideJob Retake installs, for the pinned release
 ```
+
+`Scripts/build.sh` is the three steps a source checkout needs before `retake` can install an app,
+each quick when there's nothing new: `swift build -c release`, `Scripts/build-support.sh`, which
+builds Retake's support library for iOS, and `Scripts/fetch-insidejob.sh`, which gets the
+TheInsideJob Retake installs, for the pinned release. It builds into `RETAKE_SCRATCH_PATH`, or
+`.build`, and prints the path of the `retake` it built, last and alone, for a script to run:
+`retake="$(Scripts/build.sh)"` builds once, then `"$retake"` runs it as often as needed.
 
 `swift build` fetches The Button Heist's packages at the pinned release, since Retake links its
 client library directly. `Scripts/fetch-insidejob.sh` downloads the same release's
