@@ -606,6 +606,10 @@ successful take, to
 - `<edit>-<type>-master.mov`, ProRes, and
 - `<edit>-<type>.mp4`, H.264 at the size and frame rate App Store Connect specifies for the type.
 
+Both show the whole edit: its captions, touches, spotlights, stills and sound, and its blurs, an
+edit's and a turn's, so neither shows what a blur hides. An edit with blurs takes a little longer to
+cut, since its master is written twice: once as the edit is composed, and again with the blurs.
+
 Each video records the takes it was cut from in its [metadata](#a-videos-fields). The edit isn't
 touched, except that a time given in plain seconds becomes an anchor against its scene's latest
 successful take, checked against those takes before the edit is rewritten; the rewritten edit keeps

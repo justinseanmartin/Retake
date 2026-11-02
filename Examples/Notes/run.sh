@@ -158,8 +158,7 @@ step "Cutting $edit"
 # 15 frames a second, since a README shows a GIF but only links to an MP4.
 step "Making small copies"
 command -v ffmpeg >/dev/null || fail "the small copies need ffmpeg: brew install ffmpeg, then run this again with --cut-only."
-# From the App Store file, not the master: cut draws blurs, a clip's and a turn's, only into it.
-source="Retake/output/cuts/$type/$edit/$edit-$type.mp4"
+source="Retake/output/cuts/$type/$edit/$edit-$type-master.mov"
 share="Retake/output/share"
 mkdir -p "$share"
 ffmpeg -v error -y -i "$source" -vf "scale=720:-2:flags=lanczos" \

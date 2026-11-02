@@ -112,7 +112,7 @@ From the repository's root:
 4. Make a copy small enough to share, as `run.sh` does:
 
    ```sh
-   ffmpeg -i Retake/output/cuts/ipad/showcase/showcase-ipad.mp4 -vf scale=720:-2 \
+   ffmpeg -i Retake/output/cuts/ipad/showcase/showcase-ipad-master.mov -vf scale=720:-2 \
        -c:v libx264 -crf 25 -pix_fmt yuv420p -c:a aac -b:a 80k showcase.mp4
    ```
 

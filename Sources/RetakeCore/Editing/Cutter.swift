@@ -123,9 +123,10 @@ public enum Cutter {
         let master = folder.appending(path: "\(base)-master.mov")
         let preview = folder.appending(path: "\(base).mp4")
         report("Rendering the master...")
-        try await PreviewExport.master(composition, audioMix: audioMix, layers: layers, metadata: MovieMetadata.video(record), to: master)
+        try await PreviewExport.master(composition, audioMix: audioMix, layers: layers, blurs: blurs, metadata: MovieMetadata.video(record), to: master)
         report("Encoding for App Store Connect...")
-        try await PreviewExport.preview(from: master, to: preview, spec: spec, blurs: blurs, metadata: MovieMetadata.preview(record))
+        // The master has the blurs already.
+        try await PreviewExport.preview(from: master, to: preview, spec: spec, blurs: [], metadata: MovieMetadata.preview(record))
         let size = (try? FileManager.default.attributesOfItem(atPath: preview.path)[.size] as? Int) ?? 0
         if size > 500_000_000 {
             throw RetakeError(.failed, "\(preview.lastPathComponent) is \(size / 1_000_000) MB; App Store Connect takes at most 500 MB.")

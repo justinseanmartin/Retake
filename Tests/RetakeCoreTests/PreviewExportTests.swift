@@ -59,4 +59,45 @@ struct PreviewExportTests {
         #expect(try JSONParser.parse(text)[path: "edit"] == .string("video1"))
         #expect(try await MovieInfo.read(preview) == MovieInfo.read(master), "info reads the same record from either")
     }
+
+    /// How much brightness changes from each pixel of a frame of `movie` to the next across: high
+    /// where a caption's edges are sharp.
+    func contrast(of movie: URL, at seconds: Double) async throws -> Int {
+        let generator = AVAssetImageGenerator(asset: AVURLAsset(url: movie))
+        generator.requestedTimeToleranceBefore = .zero
+        generator.requestedTimeToleranceAfter = .zero
+        let image = try await generator.image(at: CMTime(seconds: seconds, preferredTimescale: 600)).image
+        var pixels = [UInt8](repeating: 0, count: 64 * 96 * 4)
+        let context = try #require(CGContext(
+            data: &pixels, width: 64, height: 96, bitsPerComponent: 8, bytesPerRow: 64 * 4,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
+        ))
+        context.draw(image, in: CGRect(x: 0, y: 0, width: 64, height: 96))
+        let brightness = stride(from: 0, to: pixels.count, by: 4).map { Int(pixels[$0]) + Int(pixels[$0 + 1]) + Int(pixels[$0 + 2]) }
+        return brightness.indices.filter { $0 % 64 != 63 }.reduce(0) { $0 + abs(brightness[$1] - brightness[$1 + 1]) }
+    }
+
+    @Test func theMasterHidesWhatItsBlursCoverAsThePreviewDoes() async throws {
+        let tests = EditCompositionTests()
+        defer { try? FileManager.default.removeItem(at: tests.folder) }
+        let red = try await tests.movie("red", red: 255, green: 0, blue: 0)
+        let spec = PreviewSpec(width: 64, height: 96, framesPerSecond: 30)
+        let plan = CutPlan(placements: [.init(take: "red", from: 0, to: 1, speed: 1, start: 0, duration: 1, crossfade: 0)])
+        let composition = try await EditComposition.make(plan, movies: ["red": red], spec: spec, background: .black)
+        var overlays = Overlays()
+        overlays.captions = [.init(text: "Hi", color: .black, y: 0.5, symbol: nil, start: 0, end: 1)]
+        let blurs = [PreviewExport.BlurRegion(start: 0, end: 0.5, rect: CGRect(x: 0, y: 0, width: 64, height: 96), sigma: 12)]
+        let record = MovieMetadata.Video(edit: "video1", type: .ipad, bundleID: "com.example.notes", takes: [TakeLogReadingTests.log()])
+
+        let master = tests.folder.appending(path: "video1-ipad-master.mov")
+        try await PreviewExport.master(composition, audioMix: nil, layers: OverlayLayers(overlays, spec: spec), blurs: blurs, metadata: MovieMetadata.video(record), to: master)
+
+        let blurred = try await contrast(of: master, at: 0.25), sharp = try await contrast(of: master, at: 0.75)
+        #expect(blurred * 2 < sharp, "the caption blurred while the blur lasts (\(blurred)), and sharp after it (\(sharp))")
+        let track = try #require(try await AVURLAsset(url: master).loadTracks(withMediaType: .video).first)
+        let format = try #require(try await track.load(.formatDescriptions).first)
+        #expect(CMFormatDescriptionGetMediaSubType(format) == kCMVideoCodecType_AppleProRes422)
+        #expect(try await MovieMetadata.read(master)["retake.edit"] == "video1")
+        #expect(try FileManager.default.contentsOfDirectory(atPath: tests.folder.path).sorted() == ["red.mov", "video1-ipad-master.mov"], "no unblurred copy left")
+    }
 }
