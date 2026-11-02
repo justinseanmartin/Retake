@@ -136,6 +136,7 @@ public struct ResolvedSet: Equatable, Sendable {
     public var environment: [Named<String>]
     public var arguments: [String]
     public var aspect: [DeviceType: SetFile.AspectChoice]
+    public var appearance: SetFile.Appearance?
 
     public init(
         name: String,
@@ -145,6 +146,7 @@ public struct ResolvedSet: Equatable, Sendable {
         environment: [Named<String>] = [],
         arguments: [String] = [],
         aspect: [DeviceType: SetFile.AspectChoice] = [:],
+        appearance: SetFile.Appearance? = nil,
     ) {
         self.name = name
         names = [name]
@@ -154,6 +156,7 @@ public struct ResolvedSet: Equatable, Sendable {
         self.environment = environment
         self.arguments = arguments
         self.aspect = aspect
+        self.appearance = appearance
     }
 
     /// Lays each set over the one before, from the base: a field a set gives replaces the base's,
@@ -168,6 +171,7 @@ public struct ResolvedSet: Equatable, Sendable {
         var environment: [Named<String>] = []
         var arguments: [String] = []
         var aspect: [DeviceType: SetFile.AspectChoice] = [:]
+        var appearance: SetFile.Appearance?
         for set in fromBase {
             state = set.state ?? state
             files = files.overlaid(with: set.files.map { Named($0.destination, $0.source) })
@@ -175,6 +179,7 @@ public struct ResolvedSet: Equatable, Sendable {
             environment = environment.overlaid(with: set.environment)
             arguments += set.arguments
             aspect.merge(set.aspect) { $1 }
+            appearance = set.appearance ?? appearance
         }
         self.state = state
         self.files = files.map { SetFile.FileCopy(destination: $0.name, source: $0.value) }
@@ -182,5 +187,6 @@ public struct ResolvedSet: Equatable, Sendable {
         self.environment = environment
         self.arguments = arguments
         self.aspect = aspect
+        self.appearance = appearance
     }
 }

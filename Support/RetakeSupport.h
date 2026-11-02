@@ -12,6 +12,7 @@
 //   RETAKE_DEFAULTS    the set's defaults, as a JSON object
 //   RETAKE_ASPECT_PORTRAIT, RETAKE_ASPECT_LANDSCAPE
 //                      the shapes the app's windows take, such as 3:4 (README.md, "aspect")
+//   RETAKE_APPEARANCE  light or dark, the appearance the app's window scenes are held to
 //   RETAKE_CLEANUP     1 for a launch that only deletes takes' homes and staged files, then exits
 //
 // and the set's files, which the Mac stages in the app's container, in tmp/RetakeSet/, laid out as
@@ -33,6 +34,9 @@ void RetakeSetUpDefaults(NSDictionary<NSString *, NSString *> *environment);
 
 /// Sizes the app's windows to the preview's shape.
 void RetakeSetUpAspect(NSDictionary<NSString *, NSString *> *environment);
+
+/// Holds the app's window scenes to RETAKE_APPEARANCE, light or dark.
+void RetakeSetUpAppearance(NSDictionary<NSString *, NSString *> *environment);
 
 void RetakeStartClock(void);
 

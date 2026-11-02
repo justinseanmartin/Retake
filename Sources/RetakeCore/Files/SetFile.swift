@@ -59,6 +59,12 @@ public struct SetFile: Equatable, Sendable {
     public var environment: [Named<String>]
     public var arguments: [String]
     public var aspect: [DeviceType: AspectChoice]
+    /// The appearance the app is held to, whatever the device is set to.
+    public var appearance: Appearance?
+
+    public enum Appearance: String, CaseIterable, Sendable {
+        case light, dark
+    }
 
     public init(
         extends: String? = nil,
@@ -68,6 +74,7 @@ public struct SetFile: Equatable, Sendable {
         environment: [Named<String>] = [],
         arguments: [String] = [],
         aspect: [DeviceType: AspectChoice] = [:],
+        appearance: Appearance? = nil,
     ) {
         self.extends = extends
         self.state = state
@@ -76,6 +83,7 @@ public struct SetFile: Equatable, Sendable {
         self.environment = environment
         self.arguments = arguments
         self.aspect = aspect
+        self.appearance = appearance
     }
 
     /// The environment variables Retake sets itself to launch the app, which a set can't.
@@ -95,6 +103,7 @@ extension SetFile {
             environment: object.optional("environment") { readEnvironment($0, $1, reader) } ?? [],
             arguments: object.optional("arguments") { reader.array($0, at: $1, element: reader.string) } ?? [],
             aspect: object.optional("aspect") { readAspects($0, $1, reader) } ?? [:],
+            appearance: object.optional("appearance") { reader.choice($0, at: $1, as: Appearance.self) },
         )
         object.finish()
         return reader.problems.count == problemsBefore ? set : nil

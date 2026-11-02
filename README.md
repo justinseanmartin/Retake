@@ -256,6 +256,13 @@ window, so they still span the screen: a keyboard rises into the band the edit c
 An app that sizes its layout from `UIScreen.main.bounds` rather than its window or its views'
 geometry won't follow; one that reads the screen once at launch and then its geometry will.
 
+### `appearance`: light or dark
+
+`"appearance": "light"` (or `"dark"`) holds the app's windows to that appearance, whatever the device
+is set to, so a take looks the same on any device. The launch screen is the system's, drawn before
+the app runs, so it still follows the device: on a device in dark mode, a `light` take starts dark
+and turns light as the app's first frame comes up.
+
 ### Things a set can't control
 
 On a physical device, nothing outside the app can grant permissions in advance, change the clock, or

@@ -18,6 +18,7 @@ Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.
 | `environment` | object of names to string |  | Environment variables added to the launch, for the app's own flags. DYLD_, INSIDEJOB_ and RETAKE_ are Retake's own. |
 | `arguments` | list of string |  | Arguments added to the launch, such as -AppleLanguages (en). |
 | `aspect` | [object](#aspect) |  | The preview's shape for a device type: the app's window is sized to it, and the edit crops the band left below. |
+| `appearance` | `"light"` or `"dark"` |  | Holds the app to light or dark, whatever the device is set to. The launch screen, drawn before the app runs, still follows the device. |
 
 ### `aspect`
 

@@ -28,6 +28,15 @@ struct SupportLibraryTests {
         #expect(environment["RETAKE_ASPECT_PORTRAIT"] == nil)
     }
 
+    @Test func aSetsAppearanceHoldsTheAppToIt() {
+        #expect(SupportLibrary.environment(for: ResolvedSet(name: "plain"), type: .ipad, take: "t")["RETAKE_APPEARANCE"] == nil)
+        let light = ResolvedSet(name: "a", appearance: .light)
+        #expect(SupportLibrary.environment(for: light, type: .ipad, take: "t")["RETAKE_APPEARANCE"] == "light")
+        let reader = JSONReader(file: "sets/a.json")
+        #expect(SetFile.read(#"{"appearance": "dark"}"#, with: reader)?.appearance == .dark)
+        #expect(SetFile.read(#"{"appearance": "sepia"}"#, with: reader) == nil)
+    }
+
     @Test func aSetsAspectForTheDeviceTypeBecomesItsShapes() {
         let set = ResolvedSet(name: "a", aspect: [
             .ipad: SetFile.AspectChoice(portrait: .init(width: 3, height: 4)),

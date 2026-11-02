@@ -94,6 +94,10 @@ extension SetFile {
                     "The preview's shape for a device type: the app's window is sized to it, and the edit crops the band left below.",
                     DeviceType.allCases.map { .init($0.rawValue, choice) },
                 )),
+                .init("appearance", .choice(
+                    "Holds the app to light or dark, whatever the device is set to. The launch screen, drawn before the app runs, still follows the device.",
+                    SetFile.Appearance.allCases.map(\.rawValue),
+                )),
             ],
         )
         return FileSchema(kind: "set", title: "A set", root: root, definitions: [])

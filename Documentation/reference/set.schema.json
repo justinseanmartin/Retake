@@ -146,6 +146,11 @@
         }
       },
       "additionalProperties": false
+    },
+    "appearance": {
+      "description": "Holds the app to light or dark, whatever the device is set to. The launch screen, drawn before the app runs, still follows the device.",
+      "type": "string",
+      "enum": ["light", "dark"]
     }
   },
   "additionalProperties": false
