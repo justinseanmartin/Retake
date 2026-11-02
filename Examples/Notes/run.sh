@@ -158,13 +158,14 @@ step "Cutting $edit"
 # 15 frames a second, since a README shows a GIF but only links to an MP4.
 step "Making small copies"
 command -v ffmpeg >/dev/null || fail "the small copies need ffmpeg: brew install ffmpeg, then run this again with --cut-only."
-master="Retake/output/cuts/$type/$edit/$edit-$type-master.mov"
+# From the App Store file, not the master: cut draws blurs, a clip's and a turn's, only into it.
+source="Retake/output/cuts/$type/$edit/$edit-$type.mp4"
 share="Retake/output/share"
 mkdir -p "$share"
-ffmpeg -v error -y -i "$master" -vf "scale=720:-2:flags=lanczos" \
+ffmpeg -v error -y -i "$source" -vf "scale=720:-2:flags=lanczos" \
     -c:v libx264 -preset veryslow -crf 25 -pix_fmt yuv420p -tune animation -movflags +faststart \
     -c:a aac -b:a 80k -ac 1 -map_metadata -1 "$share/$edit-$type.mp4"
-ffmpeg -v error -y -i "$master" -vf "fps=15,scale=540:-2:flags=lanczos,split[a][b];[a]palettegen=max_colors=160:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" \
+ffmpeg -v error -y -i "$source" -vf "fps=15,scale=540:-2:flags=lanczos,split[a][b];[a]palettegen=max_colors=160:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" \
     "$share/$edit-$type.gif"
 if $readme; then
     mkdir -p "$ROOT/Documentation/media"

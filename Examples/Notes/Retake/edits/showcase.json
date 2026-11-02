@@ -47,7 +47,7 @@
       "from": { "step": "share", "offset": -0.2 },
       "to": { "step": "sent", "offset": 0.7 },
       "crossfade": 0.3,
-      "blurs": [{ "element": { "hint": "Sends the note to Alex" }, "from": { "step": "share", "offset": 0.01 }, "to": { "step": "send" }, "radius": 12 }],
+      "blurs": [{ "element": { "hint": "Sends the note to Alex" }, "from": { "step": "share", "offset": 0.35 }, "to": { "step": "send", "offset": 0.15 }, "radius": 12 }],
       "sounds": [{ "file": "audio/whoosh.m4a", "at": { "step": "send" }, "volume": 0.6 }],
       "captions": [
         { "text": "Blur anything private", "y": 0.08, "color": "#1F6FEB", "symbol": { "name": "eye.slash" } }

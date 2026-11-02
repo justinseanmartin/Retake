@@ -5,7 +5,7 @@
     { "tap": { "label": "New Note" }, "hold": 0.8, "id": "new-note" },
     { "type": { "text": "Groceries\n", "into": { "value": "Title" } }, "id": "type-title" },
     { "waitFor": { "label": "Synced" }, "hold": 1, "id": "synced" },
-    { "tap": { "label": "Share" }, "hold": 0.6, "id": "share" },
+    { "tap": { "label": "Share" }, "hold": 1.2, "id": "share" },
     { "tap": { "hint": "Sends the note to Alex" }, "id": "send" },
     { "waitFor": { "label": "Sent" }, "hold": 1, "id": "sent" },
     { "tap": { "label": "Done" } },
