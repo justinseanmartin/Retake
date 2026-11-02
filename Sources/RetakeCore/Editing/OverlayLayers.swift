@@ -23,6 +23,7 @@ public struct OverlayLayers: @unchecked Sendable {
         video.frame = parent.frame
         parent.addSublayer(video)
 
+        for background in overlays.stillsBackgrounds { parent.addSublayer(Self.stillsBackground(background, canvas: canvas)) }
         for (still, image) in zip(overlays.stills, stills) {
             parent.addSublayer(Self.still(still, image: image.cropping(to: still.crop.integral) ?? image, canvas: canvas))
         }
@@ -141,6 +142,21 @@ public struct OverlayLayers: @unchecked Sendable {
     }
 
     // MARK: Stills
+
+    /// How long a clip's stillsBackground takes to fade in.
+    static let stillsBackgroundFade = 0.25
+
+    /// The canvas filled with a colour, fading in, under the stills and what's drawn over them.
+    static func stillsBackground(_ background: Overlays.StillsBackground, canvas: CGSize) -> CALayer {
+        let layer = CALayer()
+        layer.frame = CGRect(origin: .zero, size: canvas)
+        layer.backgroundColor = cgColor(background.color, alpha: background.color.alpha)
+        layer.opacity = 0
+        let length = background.end - background.start
+        let fade = min(stillsBackgroundFade, length)
+        layer.add(animation("opacity", values: [0, 1, 1], keyTimes: [0, fade, length], at: background.start), forKey: "opacity")
+        return layer
+    }
 
     /// One of a grid of rounded frames, popping in on a spring.
     static func still(_ still: Overlays.Still, image: CGImage, canvas: CGSize) -> CALayer {

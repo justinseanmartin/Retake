@@ -111,6 +111,25 @@ struct OverlaysTests {
         }
     }
 
+    @Test func aStillsBackgroundHasFadedInAsTheFirstStillPopsInAndStaysToTheClipsEnd() throws {
+        let placed = try overlays(#"""
+            {"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "stillsBackground": "#F4F1EA",
+             "stills": [{"take": "walk", "at": 1}, {"take": "walk", "at": 2}]}
+            """#)
+        // The clip plays 1–6 s of the take as 0–5 s.
+        let background = try #require(placed.stillsBackgrounds.first)
+        #expect(placed.stillsBackgrounds.count == 1 && background.color == Color(hex: "#F4F1EA"))
+        #expect(abs(background.start + OverlayLayers.stillsBackgroundFade - placed.stills[0].start) < 1e-9 && background.end == 5)
+        let layers = OverlayLayers(placed, spec: spec, stills: [Self.pixel, Self.pixel])
+        #expect(layers.parent.sublayers?[1].backgroundColor != nil, "over the picture, under the stills")
+    }
+
+    /// A one-pixel image, standing in for a still's frame.
+    static let pixel: CGImage = {
+        let context = CGContext(data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        return context.makeImage()!
+    }()
+
     @Test func eachIsALayerOverThePicture() {
         var overlays = Overlays()
         overlays.captions = [.init(text: "Hi", color: .black, y: 0.25, symbol: Edit.Symbol(name: "rotate.right", rotation: .init(degrees: 90, duration: 0.4)), start: 0, end: 1)]

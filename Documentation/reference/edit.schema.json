@@ -271,6 +271,10 @@
             "$ref": "#/$defs/still"
           }
         },
+        "stillsBackground": {
+          "$ref": "#/$defs/color",
+          "description": "A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture."
+        },
         "turns": {
           "description": "How this clip shows the device turning; the edit's turns when not given.",
           "type": "string",
@@ -1020,6 +1024,10 @@
           "items": {
             "$ref": "#/$defs/still"
           }
+        },
+        "stillsBackground": {
+          "$ref": "#/$defs/color-override",
+          "description": "A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture."
         },
         "turns": {
           "description": "How this clip shows the device turning; the edit's turns when not given.",

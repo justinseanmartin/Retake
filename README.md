@@ -539,7 +539,7 @@ and a 6.9-inch iPhone, naming the takes on each.
 - **Carry captions**, any number, each up between two moments; see [captions](#captions).
 - **Spotlight** an element, dimming the rest, with a pulsing ring around it.
 - **Blur** an element over a stretch of the take, for anything private it shows.
-- **Pop in stills** from other takes.
+- **Pop in stills** from other takes, over the clip or over a colour of their own (`stillsBackground`).
 - **Cue sound effects**, which play at normal speed however fast the clip plays, or play the take's
   own sound; see [sound](#sound).
 - **Show the device turning**, when a scene turns it; see [turns](#turns).

@@ -167,13 +167,17 @@ extension EditFile {
         let spotlight = object.optional("spotlight") { readSpotlight($0, $1, reader) }
         let blurs = object.optional("blurs") { reader.array($0, at: $1) { readBlur($0, $1, reader) } } ?? []
         let stills = object.optional("stills") { reader.array($0, at: $1) { readStill($0, $1, reader) } } ?? []
+        let stillsBackground = object.optional("stillsBackground") { readColor($0, $1, reader) }
+        if stillsBackground != nil, stills.isEmpty {
+            reader.problem("the clip has no stills for it to go behind", at: object.path("stillsBackground"))
+        }
         let turns = object.optional("turns") { reader.choice($0, at: $1, as: Edit.Turns.self) }
         let turnBlur = object.optional("turnBlur") { readTurnBlur($0, $1, reader) }
         guard reader.problems.count == problemsBefore, let take, let from, let to else { return nil }
         return Edit.Clip(
             id: id, intent: intent, take: take, from: from, to: to, speed: speed, crossfade: crossfade,
             audioCrossfade: audioCrossfade, touches: touches, touchColor: touchColor, touchColors: touchColors, takeAudio: takeAudio, captions: captions, sounds: sounds,
-            spotlight: spotlight, blurs: blurs, stills: stills, turns: turns, turnBlur: turnBlur,
+            spotlight: spotlight, blurs: blurs, stills: stills, stillsBackground: stillsBackground, turns: turns, turnBlur: turnBlur,
         )
     }
 

@@ -233,6 +233,7 @@ extension EditFile {
             .init("spotlight", .ref("spotlight")),
             .init("blurs", .array("Blurs over a stretch of the take, for anything private it shows.", of: .ref("blur"))),
             .init("stills", .array("Frames of other takes, popped in over the clip.", of: .ref("still"))),
+            .init("stillsBackground", .ref("color", "A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture.")),
             .init("turns", turns.described("How this clip shows the device turning; the edit's turns when not given.")),
             .init("turnBlur", .ref("turn-blur")),
         ], required: ["take", "from", "to"])

@@ -56,6 +56,14 @@ public struct Overlays: Equatable, Sendable {
     public var spotlights: [Spotlight] = []
     public var blurs: [Blur] = []
     public var stills: [Still] = []
+    /// A clip's stillsBackground, from when it fades in to the clip's end.
+    public var stillsBackgrounds: [StillsBackground] = []
+
+    public struct StillsBackground: Equatable, Sendable {
+        public var color: Color
+        public var start: Double
+        public var end: Double
+    }
 
     /// The overlays of `video`, as `plan` places its clips, each framed as `framings` says (from
     /// `EditComposition`), its anchors and elements resolved in its scene's take in `timelines`.
@@ -184,10 +192,17 @@ public struct Overlays: Equatable, Sendable {
                 // They pop in one after another, as the clip starts, and stay to its end.
                 overlays.stills.append(Still(
                     take: still.take, at: at, crop: framings[index][0].framing.cropRect, index: stillIndex, count: clip.stills.count,
-                    start: placement.start + 0.35 + Double(stillIndex) * 0.22, end: placement.end,
+                    start: placement.start + Overlays.firstStill + Double(stillIndex) * 0.22, end: placement.end,
                 ))
+            }
+            if let color = clip.stillsBackground, !clip.stills.isEmpty {
+                // Faded in by the time the first still pops in.
+                overlays.stillsBackgrounds.append(StillsBackground(color: color, start: placement.start + Overlays.firstStill - OverlayLayers.stillsBackgroundFade, end: placement.end))
             }
         }
         return overlays
     }
+
+    /// Seconds into its clip the first still pops in.
+    static let firstStill = 0.35
 }

@@ -118,6 +118,8 @@ public struct Edit: Equatable, Sendable {
         public var spotlight: Spotlight?
         public var blurs: [Blur]
         public var stills: [Still]
+        /// A colour filling the canvas behind the stills, over the clip's picture; none when nil.
+        public var stillsBackground: Color? = nil
         /// The edit's when nil.
         public var turns: Turns?
         public var turnBlur: TurnBlur?
