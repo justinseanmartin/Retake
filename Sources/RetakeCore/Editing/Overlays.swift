@@ -135,7 +135,7 @@ public struct Overlays: Equatable, Sendable {
                     overlays.touches.append(Touch(
                         from: CGPoint(x: touch.x, y: touch.y).applying(toCanvas),
                         to: step.touchEnd.map { CGPoint(x: $0.x, y: $0.y).applying(toCanvas) },
-                        start: at, duration: (step.end - step.start) / placement.speed,
+                        start: at, duration: (step.touchDuration ?? (step.end - step.start)) / placement.speed,
                     ))
                 }
             }

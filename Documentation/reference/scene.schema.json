@@ -67,7 +67,7 @@
       "type": "object",
       "properties": {
         "tap": {
-          "description": "Touches a point, x and y, or an element. A tap by point is drawn in the video; one on an element isn't.",
+          "description": "Touches a point, x and y, or an element. An element is touched at its activation point, which the step log records, so either is drawn in the video.",
           "oneOf": [
             {
               "type": "object",

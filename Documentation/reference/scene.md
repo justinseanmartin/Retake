@@ -28,7 +28,7 @@ One thing the scene does, led by what it does, and the pause after it. A step ca
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `tap` | [object](#steptap-with-x), or [element](#element) |  | Touches a point, x and y, or an element. A tap by point is drawn in the video; one on an element isn't. |
+| `tap` | [object](#steptap-with-x), or [element](#element) |  | Touches a point, x and y, or an element. An element is touched at its activation point, which the step log records, so either is drawn in the video. |
 | `drag` | [object](#stepdrag) |  | A straight one-finger drag from one point to another. |
 | `type` | [object](#steptype) |  | Types text key by key on the on-screen keyboard. |
 | `activate` | [element](#element) |  | An accessibility activation of an element, with no touch, for getting somewhere off camera. |

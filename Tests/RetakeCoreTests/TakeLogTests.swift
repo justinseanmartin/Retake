@@ -7,10 +7,10 @@ struct TakeLogTests {
 
     func close(_ a: Double, _ b: Double) -> Bool { abs(a - b) < 1e-6 }
 
-    func timing(sent: Double, received: Double, began: Double? = nil, ended: Double? = nil) -> Player.Timing {
+    func timing(sent: Double, received: Double, began: Double? = nil, ended: Double? = nil, touched: Point? = nil, interaction: Double? = nil) -> Player.Timing {
         Player.Timing(
             sent: start.addingTimeInterval(sent), received: start.addingTimeInterval(received),
-            evidence: StepEvidence(began: began.map(start.addingTimeInterval), ended: ended.map(start.addingTimeInterval)),
+            evidence: StepEvidence(began: began.map(start.addingTimeInterval), ended: ended.map(start.addingTimeInterval), touched: touched, interaction: interaction),
         )
     }
 
@@ -32,16 +32,24 @@ struct TakeLogTests {
         #expect(close(placed.start, 5) && close(placed.end, 5.4) && !placed.byDevice)
     }
 
-    @Test func aTapByPointAndADragRecordWhereTheyTouchedAndATapOnAnElementDoesnt() {
+    @Test func tapsAndDragsRecordWhereTheyTouched() {
         let clock = MovieClock(start: start, deviceAhead: nil)
-        func entry(_ step: Step) -> TakeLog.Entry {
-            TakeLog.entry(Player.Played(isSetup: false, number: 1, count: 1, step: step), timing(sent: 1, received: 2), on: clock)
+        func entry(_ step: Step, touched: Point? = nil) -> TakeLog.Entry {
+            TakeLog.entry(Player.Played(isSetup: false, number: 1, count: 1, step: step), timing(sent: 1, received: 2, touched: touched), on: clock)
         }
         #expect(entry(Step(.tapPoint(Point(x: 195, y: 410)))).touch == Point(x: 195, y: 410))
         let drag = entry(Step(.drag(from: Point(x: 1, y: 2), to: Point(x: 3, y: 4), duration: 0.5)))
         #expect(drag.touch == Point(x: 1, y: 2) && drag.touchEnd == Point(x: 3, y: 4) && drag.action == "drag")
-        #expect(entry(Step(.tapElement(ElementTarget(label: "Share")))).touch == nil, "only a tap by point is drawn")
+        #expect(entry(Step(.tapElement(ElementTarget(label: "Share"))), touched: Point(x: 30, y: 40)).touch == Point(x: 30, y: 40))
+        #expect(entry(Step(.activate(ElementTarget(label: "Share"))), touched: Point(x: 30, y: 40)).touch == nil, "activating touches nothing")
         #expect(entry(Step(nil, hold: 2)).action == "hold")
+        let timed = TakeLog.entry(
+            Player.Played(isSetup: false, number: 1, count: 1, step: Step(.drag(from: Point(x: 1, y: 2), to: Point(x: 3, y: 4), duration: 0.5))),
+            timing(sent: 1, received: 2, interaction: 0.52), on: clock,
+        )
+        #expect(timed.touchDuration == 0.52)
+        let held = TakeLog.entry(Player.Played(isSetup: false, number: 1, count: 1, step: Step(nil, hold: 2)), timing(sent: 1, received: 2, interaction: 0.1), on: clock)
+        #expect(held.touchDuration == nil, "only a touch has a touch's duration")
     }
 
     @Test func theLogIsWrittenToTheMillisecondLeavingOutWhatItDoesntHave() throws {
@@ -79,6 +87,8 @@ struct TakeLogTests {
         #expect(evidence.ended == Date(timeIntervalSinceReferenceDate: 814733819.31155))
         let labels = try #require(evidence.elements).compactMap(\.label)
         #expect(labels.contains("Add one"))
+        #expect(evidence.touched == Point(x: 417.25, y: 493.25), "the tapped element's activation point")
+        #expect(evidence.interaction == 0.131, "the touch's own time, without the wait for the screen to settle")
     }
 }
 

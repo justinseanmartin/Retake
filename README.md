@@ -298,8 +298,8 @@ project's `defaultSet` unless it names one:
 
 Each step does one thing, led by what it does:
 
-- **`tap`** touches a point, `x` and `y`, or an element. A tap by point is drawn in the video; a tap
-  on an element isn't.
+- **`tap`** touches a point, `x` and `y`, or an element, at its activation point. Either is drawn in
+  the video.
 - **`drag`** is a straight one-finger drag `from` one point `to` another, over `duration` seconds,
   0.5 unless given.
 - **`type`** types `text` key by key on the on-screen keyboard, where `\n` presses return, into the
@@ -587,7 +587,7 @@ A video's sound is the edit's music, under the sound of its clips:
   the speed the clip plays; the edit's `takeAudioVolume` sets its level for every clip that plays
   it.
 - **The edit's `tapSound`** plays as each touch a clip draws (`touches`) lands, at its `volume`: on
-  each tap by point, and at the start of each drag, where its finger comes down.
+  each tap, and at the start of each drag, where its finger comes down.
 
 Sound files are paths relative to the directory holding the configuration file, as every path in an
 edit is.

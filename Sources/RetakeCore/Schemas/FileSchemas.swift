@@ -107,7 +107,7 @@ extension SceneFile {
             .init("y", .number("Screen points from the top.", atLeast: 0)),
         ], required: ["x", "y"])
         let actions: [Schema.Property] = [
-            .init("tap", .oneOf("Touches a point, x and y, or an element. A tap by point is drawn in the video; one on an element isn't.", [point, .ref("element")])),
+            .init("tap", .oneOf("Touches a point, x and y, or an element. An element is touched at its activation point, which the step log records, so either is drawn in the video.", [point, .ref("element")])),
             .init("drag", .object("A straight one-finger drag from one point to another.", [
                 .init("from", point.described("Where the finger comes down.")),
                 .init("to", point.described("Where it lifts.")),

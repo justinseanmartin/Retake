@@ -83,9 +83,12 @@ public struct TakeLog: Equatable, Sendable {
         /// Whether `start` and `end` are the device's own times, or when the Mac sent the step and
         /// heard back, which a round trip either side widens.
         public var timedByDevice: Bool
-        /// Where it touched the screen, in screen points: a tap by point, and a drag's two ends.
+        /// Where it touched the screen, in screen points: a tap, by point or on an element, and a
+        /// drag's two ends.
         public var touch: Point?
         public var touchEnd: Point?
+        /// How long the finger was on the screen, from `start`, as The Button Heist timed it.
+        public var touchDuration: Double? = nil
         /// What was on screen when it ended.
         public var elements: [ScreenElement]?
     }
@@ -127,12 +130,14 @@ extension TakeLog {
         var touch: Point?, touchEnd: Point?
         switch played.step.action {
         case .tapPoint(let point): touch = point
+        case .tapElement: touch = timing.evidence.touched
         case .drag(let from, let to, _): (touch, touchEnd) = (from, to)
         default: break
         }
         return Entry(
             number: played.number, id: played.step.id, action: played.step.action?.key ?? "hold",
-            start: start, end: end, timedByDevice: byDevice, touch: touch, touchEnd: touchEnd, elements: timing.evidence.elements,
+            start: start, end: end, timedByDevice: byDevice, touch: touch, touchEnd: touchEnd,
+            touchDuration: touch == nil ? nil : timing.evidence.interaction, elements: timing.evidence.elements,
         )
     }
 
@@ -207,6 +212,7 @@ extension TakeLog.Entry {
             ("timedBy", .string(timedByDevice ? "device" : "mac")),
             ("touch", touch.map(\.json)),
             ("touchEnd", touchEnd.map(\.json)),
+            ("touchDuration", touchDuration.map { TakeLog.number($0) }),
             ("elements", elements.map { .array($0.map(\.json)) }),
         ])
     }
@@ -332,11 +338,12 @@ extension TakeLog {
                 }
                 let touch = object.optional("touch", point)
                 let touchEnd = object.optional("touchEnd", point)
+                let touchDuration = object.optional("touchDuration") { reader.number($0, at: $1, .atLeast(0)) }
                 let elements = object.optional("elements") { value, path in
                     reader.array(value, at: path) { value, path in ScreenElement.read(value, at: path, with: reader) }
                 }
                 guard let number, let action, let start, let end, let timedBy else { return nil }
-                return Entry(number: number, id: id, action: action, start: start, end: end, timedByDevice: timedBy, touch: touch, touchEnd: touchEnd, elements: elements)
+                return Entry(number: number, id: id, action: action, start: start, end: end, timedByDevice: timedBy, touch: touch, touchEnd: touchEnd, touchDuration: touchDuration, elements: elements)
             }
         }
         let shapes = root.required("shapes") { value, path in
