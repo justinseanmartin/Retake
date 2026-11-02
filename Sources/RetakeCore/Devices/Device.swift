@@ -63,6 +63,10 @@ public struct Device: Equatable, Sendable {
     /// An iPhone or iPad Retake could record, connected by USB.
     public var isRecordable: Bool { isConnectedByUSB && type != nil }
 
+    /// Plugged in by USB but with no CoreDevice tunnel yet, as a paired device is until something
+    /// asks for one: the first time after it's plugged in, macOS asks before allowing it.
+    public var awaitsTunnel: Bool { transport == .wired && state == .disconnected && isPaired && type != nil }
+
     /// The iOS version and build, as metadata records it: `26.6.2 (23G90)`.
     public var osDescription: String? {
         guard let osVersion else { return nil }
@@ -81,7 +85,19 @@ public protocol DeviceControl: Sendable {
 public struct Devicectl: DeviceControl {
     public init() {}
 
+    /// Opens the tunnel to each device that awaits one first, which `list devices` alone never
+    /// does, so a device plugged in by USB shows as connected.
     public func devices() throws(RetakeError) -> [Device] {
+        let listed = try list()
+        let awaiting = listed.filter(\.awaitsTunnel)
+        guard !awaiting.isEmpty else { return listed }
+        for device in awaiting {
+            _ = try? run(["device", "info", "details", "--device", device.udid, "--timeout", "30"])
+        }
+        return try list()
+    }
+
+    private func list() throws(RetakeError) -> [Device] {
         let data = try run(["list", "devices"])
         do {
             return try DeviceList.parse(data)

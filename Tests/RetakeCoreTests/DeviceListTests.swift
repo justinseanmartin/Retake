@@ -43,6 +43,14 @@ struct DeviceListTests {
         #expect(devices.filter(\.isRecordable).map(\.name) == ["Sam’s iPad (2)"])
     }
 
+    @Test func onlyAPairedIPhoneOrIPadPluggedInWithNoTunnelAwaitsOne() {
+        #expect(Device(udid: "1", name: "Sam’s iPhone", type: .iphone, transport: .wired, state: .disconnected).awaitsTunnel)
+        #expect(!Device(udid: "2", name: "Sam’s iPad", type: .ipad, transport: .wired, state: .connected).awaitsTunnel)
+        #expect(!Device(udid: "3", name: "Sam’s iPhone", type: .iphone, transport: .network, state: .disconnected).awaitsTunnel)
+        #expect(!Device(udid: "4", name: "Sam’s iPhone", type: .iphone, transport: .wired, state: .disconnected, isPaired: false).awaitsTunnel)
+        #expect(!Device(udid: "5", name: "Sam’s Apple Watch", type: nil, transport: .wired, state: .disconnected).awaitsTunnel)
+    }
+
     @Test func theOlderFieldsAreReadWhenTheNewOnesArentThere() throws {
         let json = #"""
             {"result": {"devices": [{
