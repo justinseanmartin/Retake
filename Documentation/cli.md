@@ -166,7 +166,7 @@ and exits with the worst status among them.
 | Command | Does |
 | --- | --- |
 | [`init`](#retake-init) | Creates a project. |
-| [`doctor`](#retake-doctor) | Checks the setup end to end. |
+| [`doctor`](#retake-doctor) | Checks the setup end to end, to find why a command failed. |
 | [`devices`](#retake-devices) | Lists devices, and names them. |
 | [`install`](#retake-install) | Builds the app if asked, embeds Retake in it, and installs it. |
 | [`embed`](#retake-embed) | Adds what Retake needs to a built app, for installing it yourself. |
@@ -227,7 +227,8 @@ current directory would already find a project, so `init` run inside one doesn't
 retake doctor [--device <device>] [--json]
 ```
 
-Checks, in order, and reports each as passed, warned or failed, or skipped when it needs one that
+For when something fails and its message doesn't say why; the other commands check what they need
+as they go. Checks, in order, and reports each as passed, warned or failed, or skipped when it needs one that
 failed, such as the app's installation when there's no device:
 
 1. Xcode, `devicectl` and `codesign` are available.

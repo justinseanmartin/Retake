@@ -67,11 +67,8 @@ Retake is a single command for macOS, released with everything it needs:
 mise use github:justinseanmartin/Retake   # from GitHub Releases
 ```
 
-Then check your setup:
-
-```sh
-retake doctor
-```
+When a command fails and its message doesn't say why, `retake doctor` checks each part of the setup
+in turn, to find which.
 
 **You need:**
 
