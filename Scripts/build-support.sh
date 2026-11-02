@@ -11,7 +11,7 @@ CONTRACT="$(sed -n 's/^#define RETAKE_SUPPORT_CONTRACT \([0-9][0-9]*\)$/\1/p' "$
 DESTINATION="$CACHE/$CONTRACT"
 mkdir -p "$DESTINATION"
 xcrun -sdk iphoneos clang -arch arm64 -miphoneos-version-min=17.0 -dynamiclib -fobjc-arc -fmodules -O2 -Wall -Werror \
-    -framework Foundation -framework UIKit \
+    -framework Foundation -framework UIKit -framework AVFoundation \
     -install_name "@executable_path/Frameworks/RetakeSupport.dylib" \
     -current_version "$CONTRACT" -compatibility_version "$CONTRACT" \
     "$ROOT"/Support/*.m -o "$DESTINATION/RetakeSupport.dylib"

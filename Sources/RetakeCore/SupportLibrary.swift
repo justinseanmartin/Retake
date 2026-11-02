@@ -5,7 +5,7 @@ import Foundation
 /// Support/, and what Retake and it expect of each other is in Support/RetakeSupport.h.
 public struct SupportLibrary: Equatable, Sendable {
     /// The contract version, as Support/RetakeSupport.h defines it; a test keeps the two equal.
-    public static let contractVersion = 1
+    public static let contractVersion = 2
 
     /// The file name it's embedded under, in the app's `Frameworks/`.
     public static let fileName = "RetakeSupport.dylib"

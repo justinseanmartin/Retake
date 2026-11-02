@@ -40,9 +40,9 @@ struct SupportLibraryTests {
     }
 
     @Test func theLaunchReportIsCheckedAgainstTheTakeAndTheContract() throws {
-        let data = Data(#"{"contract":1,"home":"~/tmp/RetakeTakes/a2","milliseconds":5.49,"state":"clean","take":"a2"}"#.utf8)
+        let data = Data(#"{"contract":2,"home":"~/tmp/RetakeTakes/a2","milliseconds":5.49,"state":"clean","take":"a2"}"#.utf8)
         let report = try #require(LaunchReport.parse(data))
-        #expect(report == LaunchReport(contract: 1, take: "a2", state: "clean", milliseconds: 5.49))
+        #expect(report == LaunchReport(contract: 2, take: "a2", state: "clean", milliseconds: 5.49))
         try report.check(take: "a2")
         #expect(throws: RetakeError.self) { try report.check(take: "a3") }
         #expect(throws: RetakeError.self) { try LaunchReport(contract: 99, take: "a2", state: "clean").check(take: "a2") }

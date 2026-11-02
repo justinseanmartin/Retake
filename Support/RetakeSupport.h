@@ -19,7 +19,7 @@
 // real home, for Retake to copy back.
 #import <Foundation/Foundation.h>
 
-#define RETAKE_SUPPORT_CONTRACT 1
+#define RETAKE_SUPPORT_CONTRACT 2
 
 /// The app's real home, before the take's redirects it.
 extern NSString *RetakeRealHome;
@@ -34,6 +34,9 @@ void RetakeSetUpDefaults(NSDictionary<NSString *, NSString *> *environment);
 void RetakeSetUpAspect(NSDictionary<NSString *, NSString *> *environment);
 
 void RetakeStartClock(void);
+
+/// Plays silence for as long as the app runs, so its sound output never idles and restarts.
+void RetakeKeepAudioRunning(void);
 
 /// Writes the launch report; `home` is the take's, or nil when it has none.
 void RetakeWriteReport(NSDictionary<NSString *, NSString *> *environment, NSString *home);

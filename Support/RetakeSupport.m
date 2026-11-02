@@ -1,5 +1,6 @@
 // The library's one constructor, running each part in order: the take's home first, so that the
-// defaults are set up for the home the take will use, then the windows' shape, then the report.
+// defaults are set up for the home the take will use, then the windows' shape, the sound kept
+// running, then the report.
 #import "RetakeSupport.h"
 
 NSString *RetakeRealHome;
@@ -14,5 +15,6 @@ static void RetakeSupportStart(void) {
     RetakeSetUpState(environment);
     RetakeSetUpDefaults(environment);
     RetakeSetUpAspect(environment);
+    RetakeKeepAudioRunning();
     RetakeWriteReport(environment, NSHomeDirectory());
 }
