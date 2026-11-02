@@ -312,7 +312,9 @@ Each step does one thing, led by what it does:
   to `timeout` seconds, 10 unless given. The step fails if it doesn't happen.
 
 After what it does, a step can give its `hold`, the pause after it, so the take has room to breathe;
-the edit trims what it doesn't need. It's the scene's `defaultHold` unless given, which is 0 unless
+the edit trims what it doesn't need. A tap's hold runs from when the tap is sent, so taps land a
+hold apart however long the app takes to settle after each; every other step's runs from when it
+ends. It's the scene's `defaultHold` unless given, which is 0 unless
 the scene gives one. A step can be only a `hold`, a pause. Last comes its `id`, below.
 
 A step names an element as VoiceOver knows it: by its `label`, its `value` (a text field's

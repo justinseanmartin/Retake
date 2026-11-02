@@ -138,7 +138,7 @@ extension SceneFile {
         var step = Schema.object(
             "One thing the scene does, led by what it does, and the pause after it. A step can be only a hold.",
             actions + [
-                .init("hold", .number("Seconds to pause after the step; the scene's defaultHold when not given.", atLeast: 0)),
+                .init("hold", .number("Seconds to pause after the step, or for a tap, from when it's sent; the scene's defaultHold when not given.", atLeast: 0)),
                 .init("id", id),
             ],
         )

@@ -110,6 +110,7 @@ public struct Player: Sendable {
     func play(_ played: Played, in scene: String, orientation: inout SceneFile.Orientation, holding: Bool, on driver: some AppDriver) async throws(RetakeError) {
         report(.started(played))
         let sent = Date()
+        let sentAt = now()
         var evidence = StepEvidence()
         do {
             switch try StepPlay.make(for: played.step) {
@@ -135,7 +136,13 @@ public struct Player: Sendable {
             throw RetakeError(error.status, "\(scene): \(played.name), \(played.step.summary), didn't run: \(error.message)")
         }
         report(.finished(played, Timing(sent: sent, received: Date(), evidence: evidence)))
-        if holding, let hold = played.step.hold, hold > 0 { await pause(hold) }
+        if holding, let hold = played.step.hold {
+            // A tap's hold runs from when it was sent, as the touch lands then: The Button Heist's
+            // reply waits for the screen to settle, which would otherwise stretch every gap between
+            // taps by however long the app animates.
+            let remaining = played.step.action?.key == "tap" ? hold - (now() - sentAt) : hold
+            if remaining > 0 { await pause(remaining) }
+        }
     }
 
     /// The Button Heist's failure for an element that matches several, said in a scene's terms, or

@@ -13,10 +13,13 @@ final class FakeDriver: AppDriver {
     var runs = 0
     /// What `elements()` returns, one after another; the last stays.
     var screens: [[ScreenElement]] = [[]]
+    /// How long each run takes to answer, on `time`'s clock.
+    var answering: (time: FakeTime, seconds: Double)?
 
     func run(_ plan: HeistPlan) async throws(RetakeError) -> StepEvidence {
         defer { runs += 1 }
         done.append("run")
+        if let answering { answering.time.now += answering.seconds }
         if runs == failingRun { throw RetakeError(.failed, "No match for: label=\"Send\"") }
         return StepEvidence()
     }
@@ -75,6 +78,19 @@ struct PlayerTests {
         )
         try await time.player().play(scene, named: "create-note", on: FakeDriver())
         #expect(time.pauses == [0.5, 2], "a's default; b's own; c's own 0; the setup's none")
+    }
+
+    @Test func aTapsHoldRunsFromWhenItWasSentAndADragsFromWhenItAnswered() async throws {
+        let time = FakeTime()
+        let driver = FakeDriver()
+        driver.answering = (time, 0.4)
+        let scene = SceneFile(steps: [
+            Step(tap.action, hold: 1),
+            Step(.drag(from: Point(x: 1, y: 2), to: Point(x: 3, y: 4), duration: 0.5), hold: 1),
+            Step(tap.action, hold: 0.3),
+        ])
+        try await time.player().play(scene, named: "create-note", on: driver)
+        #expect(time.pauses.map { ($0 * 1000).rounded() / 1000 } == [0.6, 1], "the last tap's answer outlasts its hold")
     }
 
     @Test func theFirstStepThatDoesntRunStopsThePlayNamingIt() async {

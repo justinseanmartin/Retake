@@ -290,7 +290,7 @@
           ]
         },
         "hold": {
-          "description": "Seconds to pause after the step; the scene's defaultHold when not given.",
+          "description": "Seconds to pause after the step, or for a tap, from when it's sent; the scene's defaultHold when not given.",
           "type": "number",
           "minimum": 0
         },

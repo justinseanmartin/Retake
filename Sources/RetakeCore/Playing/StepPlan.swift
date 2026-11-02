@@ -48,11 +48,14 @@ public enum StepPlay: Equatable, Sendable {
         }
     }
 
-    /// An action as a plan of its own, with The Button Heist's default expectation: the action
-    /// settles, whether or not it changed anything.
+    /// An action as a plan of its own, expecting nothing of it. The default expectation, that the
+    /// action settles, reads the app's accessibility tree on its main thread until it does, which
+    /// freezes the recording for up to half a second after a tap on an animating screen.
     static func plan(_ command: HeistActionCommand) throws -> HeistPlan {
-        try HeistPlan(body: [.action(ActionStep(command: command))])
+        try HeistPlan(body: [.action(ActionStep(command: command, expectationPolicy: .waived(try ActionExpectationWaiver(validating: Self.waiver))))])
     }
+
+    static let waiver = "A recording can't wait for the app to settle: reading the screen freezes it."
 
     static func screenPoint(_ point: Point) throws -> ScreenPoint {
         ScreenPoint(x: try FiniteCoordinate(validating: point.x), y: try FiniteCoordinate(validating: point.y))
