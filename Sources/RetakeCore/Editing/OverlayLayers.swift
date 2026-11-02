@@ -26,7 +26,7 @@ public struct OverlayLayers: @unchecked Sendable {
         for (still, image) in zip(overlays.stills, stills) {
             parent.addSublayer(Self.still(still, image: image.cropping(to: still.crop.integral) ?? image, canvas: canvas))
         }
-        for touch in overlays.touches { parent.addSublayer(Self.touch(touch)) }
+        for touch in overlays.touches { Self.touch(touch).forEach(parent.addSublayer) }
         for spotlight in overlays.spotlights {
             for layer in Self.spotlight(spotlight, canvas: canvas) { parent.addSublayer(layer) }
         }
@@ -36,34 +36,63 @@ public struct OverlayLayers: @unchecked Sendable {
     // MARK: Touches
 
     /// A dot where the touch landed, pressed and let go, or for a drag, moving with it.
-    static func touch(_ touch: Overlays.Touch) -> CALayer {
-        let diameter = 92.0
-        let dot = CALayer()
-        dot.bounds = CGRect(x: 0, y: 0, width: diameter, height: diameter)
-        dot.position = touch.from
-        dot.cornerRadius = diameter / 2
-        dot.backgroundColor = NSColor.white.withAlphaComponent(0.45).cgColor
-        dot.borderColor = NSColor.white.withAlphaComponent(0.9).cgColor
-        dot.borderWidth = 5
-        dot.shadowOpacity = 0.25
-        dot.shadowRadius = 8
-        dot.shadowOffset = .zero
-        dot.opacity = 0
+    static let touchDiameter = 92.0
+    /// A drag's circle while it moves, as a share of a tap's: a fingertip pressed and sliding.
+    static let draggingScale = 0.75
+    /// How long each of a drag's tail circles takes to shrink away.
+    static let tailLife = 0.25
+    static let tailRate = 30.0
 
-        // Held for the drag's length on screen; a tap is a press and a release.
-        let dragging = touch.to == nil ? 0 : max(0.2, touch.duration - 0.15)
-        let pressed = 0.12 + dragging
-        dot.add(animation("opacity", values: [0, 1, 1, 0], keyTimes: [0, 0.08, pressed, pressed + 0.3], at: touch.start), forKey: "opacity")
-        dot.add(animation("transform.scale", values: [0.6, 1, 1, 1.25], keyTimes: [0, 0.12, pressed, pressed + 0.3], at: touch.start), forKey: "scale")
-        if let to = touch.to {
-            let move = animation(
-                "position", values: [NSValue(point: touch.from), NSValue(point: touch.from), NSValue(point: to), NSValue(point: to)],
-                keyTimes: [0, 0.1, 0.1 + dragging, pressed + 0.3], at: touch.start,
-            )
-            move.timingFunctions = [CAMediaTimingFunction(name: .linear), CAMediaTimingFunction(name: .easeInEaseOut), CAMediaTimingFunction(name: .linear)]
-            dot.add(move, forKey: "position")
+    /// A tap pops in and fades out as it's lifted. A drag goes down and comes up where and when the
+    /// finger did, shrinking while it moves and leaving a short tail of circles that shrink away
+    /// where it passed.
+    static func touch(_ touch: Overlays.Touch) -> [CALayer] {
+        let dot = circle(touch.color, at: touch.from)
+        guard let to = touch.to else {
+            dot.add(animation("opacity", values: [0, 1, 1, 0], keyTimes: [0, 0.08, 0.12, 0.42], at: touch.start), forKey: "opacity")
+            dot.add(animation("transform.scale", values: [0.6, 1, 1, 1.25], keyTimes: [0, 0.12, 0.12, 0.42], at: touch.start), forKey: "scale")
+            return [dot]
         }
-        return dot
+        let moving = max(touch.duration, 0.001)
+        let lifted = moving + 0.3
+        dot.add(animation("opacity", values: [0, 1, 1, 0], keyTimes: [0, min(0.06, moving), moving, lifted], at: touch.start), forKey: "opacity")
+        dot.add(animation(
+            "transform.scale", values: [1, draggingScale, draggingScale, 1.25],
+            keyTimes: [0, min(0.08, moving), moving, lifted], at: touch.start,
+        ), forKey: "scale")
+        dot.add(animation(
+            "position", values: [NSValue(point: touch.from), NSValue(point: to), NSValue(point: to)],
+            keyTimes: [0, moving, lifted], at: touch.start,
+        ), forKey: "position")
+
+        let count = Int(moving * tailRate)
+        let tail = (1 ..< max(count, 1)).map { index -> CALayer in
+            let share = Double(index) / Double(count)
+            let point = CGPoint(x: touch.from.x + (to.x - touch.from.x) * share, y: touch.from.y + (to.y - touch.from.y) * share)
+            let ghost = circle(touch.color, at: point, shadow: false)
+            let at = touch.start + moving * share
+            ghost.add(animation("opacity", values: [0, 1, 1, 0], keyTimes: [0, 0.001, tailLife * 0.8, tailLife], at: at), forKey: "opacity")
+            ghost.add(animation("transform.scale", values: [draggingScale, 0.1], keyTimes: [0, tailLife], at: at), forKey: "scale")
+            return ghost
+        }
+        return tail + [dot]
+    }
+
+    static func circle(_ color: Color, at point: CGPoint, shadow: Bool = true) -> CALayer {
+        let circle = CALayer()
+        circle.bounds = CGRect(x: 0, y: 0, width: touchDiameter, height: touchDiameter)
+        circle.position = point
+        circle.cornerRadius = touchDiameter / 2
+        circle.backgroundColor = cgColor(color, alpha: 0.45 * color.alpha)
+        circle.borderColor = cgColor(color, alpha: 0.9 * color.alpha)
+        circle.borderWidth = 5
+        if shadow {
+            circle.shadowOpacity = 0.25
+            circle.shadowRadius = 8
+            circle.shadowOffset = .zero
+        }
+        circle.opacity = 0
+        return circle
     }
 
     // MARK: Spotlights

@@ -24,6 +24,7 @@ the one it overrides key by key; a list, or a single value, replaces it. At the 
 | `background` | [color](#color) | `"#000000"` | The colour of letterbox bands, and of the corners a turn uncovers. |
 | `turns` | `"letterboxed"` or `"device"` | `"letterboxed"` | How the video shows the device turning. letterboxed: the app stays upright, landscape letterboxed on the canvas. device: the video stays in the device's frame. |
 | `turnBlur` | [turn-blur](#turn-blur) |  |  |
+| `touchColor` | [color](#color) | `"#FFFFFF"` | The colour touches are drawn in: a filled ring, its fill at 45% of the colour's opacity and its rim at 90%. |
 | `clips` | list of [clip](#clip), at least 1 | required |  |
 
 ## Definitions
@@ -42,7 +43,9 @@ A stretch of a take, played in order.
 | `speed` | number > 0 | `1` | How fast it plays: 2 is twice as fast. |
 | `crossfade` | number ≥ 0 | `0` | Seconds it cross-fades in over the clip before. |
 | `audioCrossfade` | number ≥ 0 |  | Seconds its sound fades in over, when longer than crossfade. |
-| `touches` | boolean | `false` | Draws the take's touches, from the step log. |
+| `touches` | boolean | `true` | Draws the take's touches, from the step log. |
+| `touchColor` | [color](#color) |  | The colour of the clip's touches; the edit's touchColor when not given. |
+| `touchColors` | list of [object](#cliptouchcolors) |  | Colours for single touches, over the clip's or the edit's. |
 | `takeAudio` | boolean | `false` | Plays the take's own sound with the clip. |
 | `captions` | list of [caption](#caption) |  |  |
 | `sounds` | list of [sound](#sound) |  | Sound effects, played at normal speed however fast the clip plays. |
@@ -51,6 +54,13 @@ A stretch of a take, played in order.
 | `stills` | list of [still](#still) |  | Frames of other takes, popped in over the clip. |
 | `turns` | `"letterboxed"` or `"device"` |  | How this clip shows the device turning; the edit's turns when not given. |
 | `turnBlur` | [turn-blur](#turn-blur) |  |  |
+
+#### `clip.touchColors`
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `step` | string, not empty, or integer, not 0 | required | A step's id, its number from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. |
+| `color` | [color](#color) | required |  |
 
 ### caption
 

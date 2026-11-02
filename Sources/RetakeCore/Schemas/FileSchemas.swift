@@ -201,6 +201,10 @@ extension EditFile {
         let from = Schema.ref("anchor", "When it starts; the clip's from when not given.")
         let to = Schema.ref("anchor", "When it ends; the clip's to when not given.")
 
+        let stepReference = Schema.oneOf("A step's id, its number from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames.", [
+            .string(nil, nonEmpty: true),
+            { var number = Schema.integer(); number.not = [{ var zero = Schema(); zero.choices = [0]; return zero }()]; return number }(),
+        ])
         let clip = Schema.object("A stretch of a take, played in order.", [
             .init("id", .string("Names the clip, for a caption to run on into it. Unique in the edit.", nonEmpty: true)),
             .init("intent", .string("What the clip is there to show, for whoever changes the video later. Not read by the render.")),
@@ -210,7 +214,12 @@ extension EditFile {
             .init("speed", .number("How fast it plays: 2 is twice as fast.", above: 0).defaulting(to: 1)),
             .init("crossfade", .number("Seconds it cross-fades in over the clip before.", atLeast: 0).defaulting(to: 0)),
             .init("audioCrossfade", .number("Seconds its sound fades in over, when longer than crossfade.", atLeast: 0)),
-            .init("touches", .bool("Draws the take's touches, from the step log.").defaulting(to: false)),
+            .init("touches", .bool("Draws the take's touches, from the step log.").defaulting(to: true)),
+            .init("touchColor", .ref("color", "The colour of the clip's touches; the edit's touchColor when not given.")),
+            .init("touchColors", .array("Colours for single touches, over the clip's or the edit's.", of: .object(nil, [
+                .init("step", stepReference),
+                .init("color", .ref("color")),
+            ], required: ["step", "color"]))),
             .init("takeAudio", .bool("Plays the take's own sound with the clip.").defaulting(to: false)),
             .init("captions", .array(nil, of: .ref("caption"))),
             .init("sounds", .array("Sound effects, played at normal speed however fast the clip plays.", of: .ref("sound"))),
@@ -233,10 +242,7 @@ extension EditFile {
         ], required: ["text", "y", "color"])
 
         var stepAnchor = Schema.object("A step, and where to go from it.", [
-            .init("step", .oneOf("A step's id, its number from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames.", [
-                .string(nil, nonEmpty: true),
-                { var number = Schema.integer(); number.not = [{ var zero = Schema(); zero.choices = [0]; return zero }()]; return number }(),
-            ])),
+            .init("step", stepReference),
             .init("offset", .number("Seconds to move: forward from the step's end, or back from its start.")),
             .init("fraction", .number("A share of the gap to the neighbouring step to move: forward from the step's end toward the next step's start, or back from its start toward the previous step's end.", atLeast: -1, atMost: 1)),
             .init("edge", .choice("Counts the offset or fraction from the step's other edge.", Anchor.Edge.allCases.map(\.rawValue))),
@@ -317,6 +323,7 @@ extension EditFile {
                 .init("background", .ref("color", "The colour of letterbox bands, and of the corners a turn uncovers.").defaulting(to: "#000000")),
                 .init("turns", turns.defaulting(to: "letterboxed")),
                 .init("turnBlur", .ref("turn-blur")),
+                .init("touchColor", .ref("color", "The colour touches are drawn in: a filled ring, its fill at 45% of the colour's opacity and its rim at 90%.").defaulting(to: "#FFFFFF")),
                 .init("clips", .array(nil, of: .ref("clip"), minItems: 1)),
             ],
             required: ["devices", "clips"],

@@ -49,6 +49,11 @@
     "turnBlur": {
       "$ref": "#/$defs/turn-blur"
     },
+    "touchColor": {
+      "$ref": "#/$defs/color",
+      "description": "The colour touches are drawn in: a filled ring, its fill at 45% of the colour's opacity and its rim at 90%.",
+      "default": "#FFFFFF"
+    },
     "clips": {
       "type": "array",
       "items": {
@@ -86,6 +91,10 @@
         },
         "turnBlur": {
           "$ref": "#/$defs/turn-blur-override"
+        },
+        "touchColor": {
+          "$ref": "#/$defs/color-override",
+          "description": "The colour touches are drawn in: a filled ring, its fill at 45% of the colour's opacity and its rim at 90%."
         },
         "clips": {
           "type": "array",
@@ -127,6 +136,10 @@
         },
         "turnBlur": {
           "$ref": "#/$defs/turn-blur-override"
+        },
+        "touchColor": {
+          "$ref": "#/$defs/color-override",
+          "description": "The colour touches are drawn in: a filled ring, its fill at 45% of the colour's opacity and its rim at 90%."
         },
         "clips": {
           "type": "array",
@@ -188,7 +201,40 @@
         "touches": {
           "description": "Draws the take's touches, from the step log.",
           "type": "boolean",
-          "default": false
+          "default": true
+        },
+        "touchColor": {
+          "$ref": "#/$defs/color",
+          "description": "The colour of the clip's touches; the edit's touchColor when not given."
+        },
+        "touchColors": {
+          "description": "Colours for single touches, over the clip's or the edit's.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "step": {
+                "description": "A step's id, its number from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames.",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "integer",
+                    "not": {
+                      "enum": [0]
+                    }
+                  }
+                ]
+              },
+              "color": {
+                "$ref": "#/$defs/color"
+              }
+            },
+            "required": ["step", "color"],
+            "additionalProperties": false
+          }
         },
         "takeAudio": {
           "description": "Plays the take's own sound with the clip.",
@@ -907,6 +953,39 @@
         "touches": {
           "description": "Draws the take's touches, from the step log.",
           "type": "boolean"
+        },
+        "touchColor": {
+          "$ref": "#/$defs/color-override",
+          "description": "The colour of the clip's touches; the edit's touchColor when not given."
+        },
+        "touchColors": {
+          "description": "Colours for single touches, over the clip's or the edit's.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "step": {
+                "description": "A step's id, its number from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames.",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "integer",
+                    "not": {
+                      "enum": [0]
+                    }
+                  }
+                ]
+              },
+              "color": {
+                "$ref": "#/$defs/color"
+              }
+            },
+            "required": ["step", "color"],
+            "additionalProperties": false
+          }
         },
         "takeAudio": {
           "description": "Plays the take's own sound with the clip.",

@@ -509,7 +509,9 @@ and a 6.9-inch iPhone, naming the takes on each.
 
 - **Play faster or slower**, to skip waits without cutting them.
 - **Cross-fade** into the clip before, with its sound fading over a longer time if needed.
-- **Draw the take's touches**, from the step log.
+- **Draw the take's touches**, from the step log: every tap and drag, unless the clip sets `"touches": false`.
+  They're white unless the edit's `touchColor` says otherwise; a clip's `touchColor` changes its
+  own, and its `touchColors` a single touch's, by the step that made it.
 - **Carry captions**, any number, each up between two moments; see [captions](#captions).
 - **Spotlight** an element, dimming the rest, with a pulsing ring around it.
 - **Blur** an element over a stretch of the take, for anything private it shows.

@@ -44,6 +44,8 @@ public struct Edit: Equatable, Sendable {
     public var background: Color
     public var turns: Turns
     public var turnBlur: TurnBlur?
+    /// The colour touches are drawn in, unless a clip or a touch gives its own.
+    public var touchColor: Color
     public var clips: [Clip]
 
     /// Every scene it plays or takes a still from, in the order it first does.
@@ -59,6 +61,7 @@ public struct Edit: Equatable, Sendable {
         background: Color = .black,
         turns: Turns = .letterboxed,
         turnBlur: TurnBlur? = nil,
+        touchColor: Color = .white,
         clips: [Clip],
     ) {
         self.intent = intent
@@ -68,6 +71,7 @@ public struct Edit: Equatable, Sendable {
         self.background = background
         self.turns = turns
         self.turnBlur = turnBlur
+        self.touchColor = touchColor
         self.clips = clips
     }
 
@@ -104,6 +108,10 @@ public struct Edit: Equatable, Sendable {
         /// Seconds its sound fades in over, when longer than the picture's cross-fade.
         public var audioCrossfade: Double?
         public var touches: Bool
+        /// The colour of this clip's touches; the edit's when nil.
+        public var touchColor: Color? = nil
+        /// Colours for single touches, by the step that made them, over the clip's or the edit's.
+        public var touchColors: [TouchColor] = []
         public var takeAudio: Bool
         public var captions: [Caption]
         public var sounds: [Effect]
@@ -113,6 +121,11 @@ public struct Edit: Equatable, Sendable {
         /// The edit's when nil.
         public var turns: Turns?
         public var turnBlur: TurnBlur?
+    }
+
+    public struct TouchColor: Equatable, Sendable {
+        public var step: Anchor.StepReference
+        public var color: Color
     }
 
     public struct Caption: Equatable, Sendable {

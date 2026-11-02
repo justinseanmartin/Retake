@@ -23,7 +23,7 @@ extension EditFile {
         if root.value("takes") != nil {
             reader.problem("an edit doesn't name its takes: cut uses each scene's latest successful take, and `retake clean --takes` goes back to an earlier one; delete \"takes\"", at: root.path("takes"))
         }
-        root.know("$schema", "takes", "music", "tapSound", "takeAudioVolume", "background", "turns", "turnBlur", "clips")
+        root.know("$schema", "takes", "music", "tapSound", "takeAudioVolume", "background", "turns", "turnBlur", "touchColor", "clips")
         for type in DeviceType.allCases {
             guard let override = root.value(type.rawValue) else { continue }
             if let devices, !devices.contains(type) {
@@ -83,6 +83,7 @@ extension EditFile {
         let background = root.optional("background") { readColor($0, $1, reader) } ?? .black
         let turns = root.optional("turns") { reader.choice($0, at: $1, as: Edit.Turns.self) } ?? .letterboxed
         let turnBlur = root.optional("turnBlur") { readTurnBlur($0, $1, reader) }
+        let touchColor = root.optional("touchColor") { readColor($0, $1, reader) } ?? .white
         let clips = root.required("clips") { value, path -> [Edit.Clip]? in
             guard let clips = reader.array(value, at: path, element: { readClip($0, $1, reader) }) else { return nil }
             if case .array(let values) = value, values.isEmpty { reader.problem("needs at least one clip", at: path) }
@@ -95,7 +96,7 @@ extension EditFile {
         guard reader.problems.count == problemsBefore, let clips else { return nil }
         return Edit(
             intent: intent, music: music, tapSound: tapSound, takeAudioVolume: takeAudioVolume, background: background,
-            turns: turns, turnBlur: turnBlur, clips: clips,
+            turns: turns, turnBlur: turnBlur, touchColor: touchColor, clips: clips,
         )
     }
 
@@ -148,7 +149,18 @@ extension EditFile {
                 at: object.path("audioCrossfade"),
             )
         }
-        let touches = object.optional("touches", reader.bool) ?? false
+        let touches = object.optional("touches", reader.bool) ?? true
+        let touchColor = object.optional("touchColor") { readColor($0, $1, reader) }
+        let touchColors = object.optional("touchColors") { value, path in
+            reader.array(value, at: path) { value, path -> Edit.TouchColor? in
+                guard var entry = reader.object(value, at: path) else { return nil }
+                defer { entry.finish() }
+                let step = entry.required("step") { readStepReference($0, $1, reader) }
+                let color = entry.required("color") { readColor($0, $1, reader) }
+                guard let step, let color else { return nil }
+                return Edit.TouchColor(step: step, color: color)
+            }
+        } ?? []
         let takeAudio = object.optional("takeAudio", reader.bool) ?? false
         let captions = object.optional("captions") { reader.array($0, at: $1) { readCaption($0, $1, reader) } } ?? []
         let sounds = object.optional("sounds") { reader.array($0, at: $1) { readEffect($0, $1, reader) } } ?? []
@@ -160,7 +172,7 @@ extension EditFile {
         guard reader.problems.count == problemsBefore, let take, let from, let to else { return nil }
         return Edit.Clip(
             id: id, intent: intent, take: take, from: from, to: to, speed: speed, crossfade: crossfade,
-            audioCrossfade: audioCrossfade, touches: touches, takeAudio: takeAudio, captions: captions, sounds: sounds,
+            audioCrossfade: audioCrossfade, touches: touches, touchColor: touchColor, touchColors: touchColors, takeAudio: takeAudio, captions: captions, sounds: sounds,
             spotlight: spotlight, blurs: blurs, stills: stills, turns: turns, turnBlur: turnBlur,
         )
     }
@@ -305,6 +317,25 @@ extension EditFile {
         return color
     }
 
+    /// A step: its id, its number from 1 or from the last as -1, or the take's start or end.
+    static func readStepReference(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> Anchor.StepReference? {
+        switch value {
+        case .string("start"): return .start
+        case .string("end"): return .end
+        case .string(let id) where !id.isEmpty: return .id(id)
+        case .number:
+            guard let number = reader.integer(value, at: path) else { return nil }
+            guard number != 0 else {
+                reader.problem("steps are numbered from 1, or from the last as -1; there's no step 0", at: path)
+                return nil
+            }
+            return .number(number)
+        default:
+            reader.problem("expected a step's id, its number, \"start\" or \"end\", found \(value.kind)", at: path)
+            return nil
+        }
+    }
+
     /// An anchor: plain seconds from the take's start, or a step and where to go from it.
     public static func readAnchor(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> Anchor? {
         if case .number = value {
@@ -312,23 +343,7 @@ extension EditFile {
         }
         guard var object = reader.object(value, at: path) else { return nil }
         defer { object.finish() }
-        let step = object.required("step") { value, path -> Anchor.StepReference? in
-            switch value {
-            case .string("start"): return .start
-            case .string("end"): return .end
-            case .string(let id) where !id.isEmpty: return .id(id)
-            case .number:
-                guard let number = reader.integer(value, at: path) else { return nil }
-                guard number != 0 else {
-                    reader.problem("steps are numbered from 1, or from the last as -1; there's no step 0", at: path)
-                    return nil
-                }
-                return .number(number)
-            default:
-                reader.problem("expected a step's id, its number, \"start\" or \"end\", found \(value.kind)", at: path)
-                return nil
-            }
-        }
+        let step = object.required("step") { readStepReference($0, $1, reader) }
         let offset = object.optional("offset") { reader.number($0, at: $1) }
         let fraction = object.optional("fraction") { reader.number($0, at: $1, .within(-1...1)) }
         let edge = object.optional("edge") { reader.choice($0, at: $1, as: Anchor.Edge.self) }

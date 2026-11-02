@@ -20,9 +20,9 @@ struct OverlaysTests {
         return TakeTimeline(log)
     }
 
-    func overlays(_ clips: String, screen: CGSize? = CGSize(width: 834, height: 1194)) throws -> Overlays {
+    func overlays(_ clips: String, edit: String = "", screen: CGSize? = CGSize(width: 834, height: 1194)) throws -> Overlays {
         let reader = JSONReader(file: "edits/video.json")
-        let video = try #require(EditFile.read(#"{"devices": ["ipad"], "clips": [\#(clips)]}"#, with: reader)?.videos[.ipad], "\(reader.problems)")
+        let video = try #require(EditFile.read(#"{"devices": ["ipad"], \#(edit)"clips": [\#(clips)]}"#, with: reader)?.videos[.ipad], "\(reader.problems)")
         let timelines = ["walk": timeline(screen: screen)]
         let plan = try CutPlan.make(video, timelines: timelines)
         let framing = ClipFraming.framing(spec.size, stored: CGSize(width: 1200, height: 1718), turned: 0, aspect: .init(portrait: .init(width: 3, height: 4)), turns: .letterboxed, screen: screen)
@@ -63,9 +63,34 @@ struct OverlaysTests {
         #expect(placed.blurs[0].start == 1 && placed.blurs[0].end == 2)
     }
 
+    @Test func touchesAreDrawnUnlessAClipTurnsThemOff() throws {
+        let drawn = try overlays(#"{"take": "walk", "from": {"step": "start"}, "to": {"step": "end"}}"#)
+        let hidden = try overlays(#"{"take": "walk", "from": {"step": "start"}, "to": {"step": "end"}, "touches": false}"#)
+        #expect(drawn.touches.count == 1)
+        #expect(hidden.touches.isEmpty)
+    }
+
+    @Test func aTouchsColourIsItsStepsOverItsClipsOverTheEdits() throws {
+        let walk = #""take": "walk", "from": {"step": "start"}, "to": {"step": "end"}"#
+        let red = Color(hex: "#FF0000")!, green = Color(hex: "#00FF00")!, blue = Color(hex: "#0000FF80")!
+        #expect(try overlays("{\(walk)}").touches.map(\.color) == [.white])
+        #expect(try overlays("{\(walk)}", edit: ##""touchColor": "#FF0000", "##).touches.map(\.color) == [red])
+        let clipColour = try overlays(##"{\##(walk), "touchColor": "#00FF00"}"##, edit: ##""touchColor": "#FF0000", "##)
+        #expect(clipColour.touches.map(\.color) == [green])
+        let stepColour = try overlays(##"{\##(walk), "touchColor": "#00FF00", "touchColors": [{"step": "a", "color": "#0000FF80"}]}"##)
+        #expect(stepColour.touches.map(\.color) == [blue])
+    }
+
+    @Test func aTouchColourForAStepThatDoesntTouchSaysSo() {
+        let error = #expect(throws: RetakeError.self) {
+            try overlays(##"{"take": "walk", "from": {"step": "start"}, "to": {"step": "end"}, "touchColors": [{"step": "b", "color": "#000000"}]}"##)
+        }
+        #expect(error?.message == "clips[0].touchColors[0].step: it doesn't touch the screen within the clip.")
+    }
+
     @Test(arguments: [
         (#"{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "touches": true}"#, "clips[0]: the take of walk doesn't record its screen's size, so its touches can't be drawn; record it again."),
-        (#"{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "spotlight": {"rect": {"x": 0, "y": 0, "width": 1, "height": 1}}}"#, "clips[0].spotlight: the take of walk doesn't record its screen's size; record it again."),
+        (#"{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "touches": false, "spotlight": {"rect": {"x": 0, "y": 0, "width": 1, "height": 1}}}"#, "clips[0].spotlight: the take of walk doesn't record its screen's size; record it again."),
     ])
     func whatCantBePlacedWithoutTheScreensSizeSaysSo(_ clip: String, _ message: String) throws {
         do {
@@ -92,8 +117,10 @@ struct OverlaysTests {
         overlays.touches = [.init(from: CGPoint(x: 10, y: 10), to: CGPoint(x: 50, y: 50), start: 0.5, duration: 0.4)]
         overlays.spotlights = [.init(rect: CGRect(x: 10, y: 10, width: 20, height: 20), color: .white, start: 0, end: 1)]
         let layers = OverlayLayers(overlays, spec: spec)
-        // The picture, a touch, a spotlight's dimming and ring, and a caption, in that order.
-        #expect(layers.parent.sublayers?.count == 5)
+        // The picture; the drag's tail, a circle every thirtieth of a second it moves bar the first,
+        // and its own circle; a spotlight's dimming and ring; and a caption, in that order.
+        let expected = 1 + 11 + 1 + 2 + 1
+        #expect(layers.parent.sublayers?.count == expected)
         let caption = layers.parent.sublayers!.last!
         #expect(caption.position == CGPoint(x: 600, y: 400) && caption.sublayers?.count == 2, "its text and its symbol")
     }

@@ -22,6 +22,7 @@ public struct Overlays: Equatable, Sendable {
         public var to: CGPoint?
         public var start: Double
         public var duration: Double
+        public var color: Color = .white
     }
 
     public struct Spotlight: Equatable, Sendable {
@@ -126,6 +127,21 @@ public struct Overlays: Equatable, Sendable {
             }
 
             if clip.touches {
+                var stepColors: [Int: Color] = [:]
+                for (colorIndex, entry) in clip.touchColors.enumerated() {
+                    let what = "\(name).touchColors[\(colorIndex)]"
+                    let start: Double
+                    do {
+                        start = try timeline.place(of: entry.step).start
+                    } catch {
+                        throw RetakeError(.failed, "\(what).step: \(error.message).")
+                    }
+                    guard let step = timeline.steps.first(where: { $0.start == start && $0.touch != nil }),
+                          step.start >= placement.from, step.start < placement.to else {
+                        throw RetakeError(.failed, "\(what).step: it doesn't touch the screen within the clip.")
+                    }
+                    stepColors[step.number] = entry.color
+                }
                 for step in timeline.log.steps where step.start >= placement.from && step.start < placement.to {
                     guard let touch = step.touch else { continue }
                     let at = placement.videoTime(step.start)
@@ -136,6 +152,7 @@ public struct Overlays: Equatable, Sendable {
                         from: CGPoint(x: touch.x, y: touch.y).applying(toCanvas),
                         to: step.touchEnd.map { CGPoint(x: $0.x, y: $0.y).applying(toCanvas) },
                         start: at, duration: (step.touchDuration ?? (step.end - step.start)) / placement.speed,
+                        color: stepColors[step.number] ?? clip.touchColor ?? video.touchColor,
                     ))
                 }
             }
