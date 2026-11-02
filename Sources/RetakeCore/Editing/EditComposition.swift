@@ -64,7 +64,9 @@ public struct EditComposition: @unchecked Sendable {
                 let range = CMTimeRange(start: time(placement.from), end: time(placement.to))
                 let at = time(placement.start)
                 try tracks[index % 2].insertTimeRange(range, of: source, at: at)
-                tracks[index % 2].scaleTimeRange(CMTimeRange(start: at, duration: range.duration), toDuration: time(placement.duration))
+                // Scaled to end where its instruction does, each rounded once: rounding the length
+                // on its own can leave a sliver between clips that a frame falls in, drawn black.
+                tracks[index % 2].scaleTimeRange(CMTimeRange(start: at, duration: range.duration), toDuration: time(placement.end) - at)
             }
         } catch let error as RetakeError {
             throw error
