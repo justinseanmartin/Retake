@@ -85,6 +85,29 @@ struct TakeWriterTests {
         #expect(summary.frames == 2 && summary.outOfOrder == 1)
     }
 
+    @Test func aStillScreensFrameIsWrittenAgainUntilTheNextComes() async throws {
+        defer { try? FileManager.default.removeItem(at: movie) }
+        let writer = TakeWriter(writingTo: movie, live: false)
+        writer.appendVideo(try frame(width: 64, height: 96, at: 0))
+        writer.appendVideo(try frame(width: 64, height: 96, at: 15))
+        let summary = try await writer.finish()
+        #expect(summary.frames == 2, "the device's own frames")
+        let asset = AVURLAsset(url: movie)
+        let track = try #require(try await asset.loadTracks(withMediaType: .video).first)
+        let reader = try AVAssetReader(asset: asset)
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: nil)
+        reader.add(output)
+        reader.startReading()
+        var times: Set<Double> = []
+        // Read in decode order, with markers that have no time of their own among them.
+        while let sample = output.copyNextSampleBuffer() {
+            if sample.presentationTimeStamp.isNumeric { times.insert(sample.presentationTimeStamp.seconds) }
+        }
+        let shown = times.sorted()
+        let gaps = zip(shown, shown.dropFirst()).map { $1 - $0 }
+        #expect((shown.last ?? 0) >= 0.5 && (gaps.max() ?? 1) < 0.02, "the half second between them, a frame each sixtieth")
+    }
+
     @Test func theMovieSaysHowItWasMade() async throws {
         defer { try? FileManager.default.removeItem(at: movie) }
         let log = TakeLog(

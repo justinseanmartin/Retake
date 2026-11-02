@@ -61,6 +61,8 @@ public final class TakeWriter: @unchecked Sendable {
     /// The first frame's time, which the movie starts at.
     public private(set) var start: CMTime?
     private var lastVideo = CMTime.invalid
+    /// The last frame written, to write again while the screen is still.
+    private var held: CVPixelBuffer?
     private var lastAudio = CMTime.invalid
     /// Where the sound written so far ends. The device sends nothing while it's silent, and the
     /// encoder would close the gap, pulling every later sound earlier than its frame.
@@ -119,16 +121,38 @@ public final class TakeWriter: @unchecked Sendable {
         if shapes.last.map({ $0.width != width || $0.height != height }) ?? true {
             shapes.append(ShapeChange(at: (time - start).seconds, width: width, height: height, turn: turn))
         }
-        // Not live, as in tests, the writer is waited for, but not forever: with nothing written to
-        // its sound input, it can stop taking video until sound comes.
-        let deadline = Date().addingTimeInterval(2)
-        while !live, !video.isReadyForMoreMediaData, writer?.status == .writing, Date() < deadline { usleep(1000) }
-        guard video.isReadyForMoreMediaData, let fitted = fitted(pixels, turning: turn), adaptor.append(fitted, withPresentationTime: time) else {
+        guard let fitted = fitted(pixels, turning: turn) else {
+            dropped += 1
+            return
+        }
+        // The device sends nothing while its screen is still, and a clip cut from inside such a
+        // stretch would have no picture until the next frame came: black, under its overlays. So
+        // the last frame is written again every sixtieth of a second until this one.
+        if let held, lastVideo.isValid {
+            var at = lastVideo + Self.repeatEvery
+            while at + Self.repeatEvery <= time {
+                guard ready(video), adaptor.append(held, withPresentationTime: at) else { break }
+                at = at + Self.repeatEvery
+            }
+        }
+        guard ready(video), adaptor.append(fitted, withPresentationTime: time) else {
             dropped += 1
             return
         }
         lastVideo = time
+        held = fitted
         frames += 1
+    }
+
+    /// How often a still screen's frame is written again.
+    static let repeatEvery = CMTime(value: 1, timescale: 60)
+
+    /// Whether `input` takes more now. Not live, as in tests, the writer is waited for, but not
+    /// forever: with nothing written to its sound input, it can stop taking video until sound comes.
+    private func ready(_ input: AVAssetWriterInput) -> Bool {
+        let deadline = Date().addingTimeInterval(2)
+        while !live, !input.isReadyForMoreMediaData, writer?.status == .writing, Date() < deadline { usleep(1000) }
+        return input.isReadyForMoreMediaData
     }
 
     public func appendAudio(_ sample: CMSampleBuffer) {
