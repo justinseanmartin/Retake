@@ -1,0 +1,92 @@
+{
+  "intent": "What Retake can do, in twenty seconds: each clip shows one of its features, and its caption says which.",
+  "devices": ["ipad"],
+  "background": "#F4F1EA",
+  "music": { "file": "audio/music.m4a", "volume": 0.45, "fadeOut": 1.5 },
+  "tapSound": { "file": "audio/tap.m4a", "volume": 0.7 },
+  "touchColor": "#1F6FEB",
+  "turnBlur": { "duration": 0.5 },
+  "clips": [
+    {
+      "id": "launch",
+      "intent": "The app launching on the device, and its welcome screen's button tapped, drawn as a touch.",
+      "take": "first-launch",
+      "from": { "step": "welcome", "offset": -0.4 },
+      "to": { "step": "library", "offset": 0.6 },
+      "captions": [
+        { "text": "Scenes play on a real device", "y": 0.08, "color": "#1F6FEB", "symbol": { "name": "ipad" } }
+      ]
+    },
+    {
+      "id": "type",
+      "intent": "A new note and its title typed; cut before the wait for it to sync.",
+      "take": "create-note",
+      "from": { "step": "new-note", "offset": -0.4 },
+      "to": { "step": "type-title", "offset": 0.3 },
+      "crossfade": 0.4,
+      "captions": [
+        { "text": "Cut the waiting out", "y": 0.08, "color": "#1F6FEB", "symbol": { "name": "scissors" } }
+      ]
+    },
+    {
+      "id": "synced",
+      "intent": "Straight to the moment it syncs, spotlit, with a chime.",
+      "take": "create-note",
+      "from": { "step": "synced", "offset": -0.3, "edge": "end" },
+      "to": { "step": "synced", "offset": 0.8 },
+      "spotlight": { "element": { "label": "Synced" }, "padding": 10, "color": "#1F6FEB", "from": { "step": "synced", "offset": 0.01 } },
+      "sounds": [{ "file": "audio/chime.m4a", "at": { "step": "synced", "offset": 0.01 }, "volume": 0.8 }],
+      "captions": [
+        { "text": "Spotlight what matters", "y": 0.08, "color": "#1F6FEB", "symbol": { "name": "scope" } }
+      ]
+    },
+    {
+      "id": "share",
+      "intent": "The note shared: who it goes to blurred, and a whoosh as it's sent.",
+      "take": "create-note",
+      "from": { "step": "share", "offset": -0.2 },
+      "to": { "step": "sent", "offset": 0.7 },
+      "crossfade": 0.3,
+      "blurs": [{ "element": { "hint": "Sends the note to Alex" }, "from": { "step": "share", "offset": 0.01 }, "to": { "step": "send" }, "radius": 12 }],
+      "sounds": [{ "file": "audio/whoosh.m4a", "at": { "step": "send" }, "volume": 0.6 }],
+      "captions": [
+        { "text": "Blur anything private", "y": 0.08, "color": "#1F6FEB", "symbol": { "name": "eye.slash" } }
+      ]
+    },
+    {
+      "id": "reorder",
+      "intent": "A note dragged up the library, then the iPad turned to landscape, letterboxed, and a note opened beside the library.",
+      "take": "reorder",
+      "from": { "step": "reorder", "offset": -0.4 },
+      "to": { "step": "turn-back", "offset": -0.1 },
+      "crossfade": 0.4,
+      "captions": [
+        { "text": "Drags, drawn with a tail", "y": 0.08, "color": "#1F6FEB", "to": { "step": "turn", "offset": -0.3 }, "symbol": { "name": "hand.draw" } },
+        {
+          "text": "Turns, kept upright",
+          "y": 0.08,
+          "color": "#1F6FEB",
+          "from": { "step": "turn", "offset": -0.3 },
+          "symbol": { "name": "rotate.right", "animation": { "rotate": { "degrees": 90, "duration": 0.8 } } }
+        }
+      ]
+    },
+    {
+      "id": "montage",
+      "intent": "Back to the library, with frames of the other takes popped in over it.",
+      "take": "create-note",
+      "from": { "step": "library", "offset": -0.3 },
+      "to": { "step": "end" },
+      "crossfade": 0.4,
+      "stills": [
+        { "take": "first-launch", "at": { "step": "welcome", "offset": 0.5 } },
+        { "take": "create-note", "at": { "step": "synced", "offset": 0.3 } },
+        { "take": "create-note", "at": { "step": "sent", "offset": 0.3 } },
+        { "take": "reorder", "at": { "step": "reorder", "offset": 0.5 } }
+      ],
+      "captions": [
+        { "text": "Re-cut from new takes in one command", "y": 0.08, "color": "#1F6FEB", "symbol": { "name": "film.stack" } }
+      ]
+    }
+  ]
+}

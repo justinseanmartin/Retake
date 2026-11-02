@@ -161,10 +161,12 @@ struct EditFileTests {
     @Test func theExamplesEditsRead() throws {
         let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/Notes").standardizedFileURL
         let files = ProjectFiles(project: try Project.locate(configuration: nil, currentDirectory: example))
-        #expect(files.names(in: files.project.edits) == ["tour"])
+        #expect(files.names(in: files.project.edits) == ["showcase", "tour"])
         let report = ProjectFiles.Report()
         let edit = files.readEdit("tour", into: report)
+        let showcase = files.readEdit("showcase", into: report)
         #expect(report.problems.isEmpty && report.warnings.isEmpty, "\(report.problems)")
+        #expect(showcase?.devices == [.ipad])
         #expect(edit?.videos[.ipad]?.clips[0].captions[0].y == 0.08 && edit?.videos[.iphone]?.clips[0].captions[0].y == 0.1, "the iPad's override")
     }
 

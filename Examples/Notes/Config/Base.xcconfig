@@ -1,11 +1,21 @@
-// Notes signs for development with your own team. Copy Signing.example.xcconfig to
-// Signing.local.xcconfig, which isn't checked in, and fill in your team and a bundle ID prefix of
-// your own: bundle IDs are unique across Apple's developer accounts, so the example's can't be.
+// Notes signs for development with your own team, which nothing checked in names. run.sh, beside
+// the project, finds it and writes it to Signing.local.xcconfig, which isn't checked in; or copy
+// Signing.example.xcconfig there and fill it in. Bundle IDs are unique across Apple's developer
+// accounts, so the app's is made from the team's, unless that file gives a prefix of its own.
 
-BUNDLE_ID_PREFIX = com.example.retake
 DEVELOPMENT_TEAM =
+BUNDLE_ID_PREFIX = com.example.retake.$(DEVELOPMENT_TEAM:lower)
 
 #include? "Signing.local.xcconfig"
 
 PRODUCT_BUNDLE_IDENTIFIER = $(BUNDLE_ID_PREFIX).notes
 CODE_SIGN_STYLE = Automatic
+
+// With no team, Xcode would stop before building and ask for one in Signing & Capabilities,
+// which changes the project. Instead the build skips signing, and NotesApp.swift's #error says how
+// to give one. NOTES_TEAM is MISSING without a team, so the settings named for it apply.
+NOTES_TEAM = $(DEVELOPMENT_TEAM:default=MISSING)
+CODE_SIGNING_ALLOWED = $(NOTES_SIGNING_ALLOWED_$(NOTES_TEAM):default=YES)
+NOTES_SIGNING_ALLOWED_MISSING = NO
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) $(NOTES_CONDITION_$(NOTES_TEAM))
+NOTES_CONDITION_MISSING = NOTES_NEEDS_TEAM

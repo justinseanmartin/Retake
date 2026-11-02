@@ -12,6 +12,12 @@ renders the edit into a video ready to upload to App Store Connect.
 When the app changes, you record the scenes again and render the same edits. There's no screen
 recording by hand, no editing timeline to rebuild, and no guessing which frames you used last time.
 
+[![The example's showcase, cut by Retake: touches, cuts, a spotlight, a blur, a drag, a turn and a montage, each captioned](Documentation/media/showcase.gif)](Documentation/media/showcase.mp4)
+
+Every frame above is Retake's: the example app, recorded on an iPad and cut from its
+[`showcase`](Examples/Notes/Retake/edits/showcase.json) edit. [The MP4](Documentation/media/showcase.mp4)
+has its music and sound effects.
+
 > **Status:** in design. Retake is being extracted from a pipeline that has made shipping App Store
 > previews for iPhone and iPad. This README describes what Retake will do; it is not usable yet.
 
@@ -96,15 +102,20 @@ retake cut video1                        # render the video, for each device typ
 **The way to start is the example**, [`Examples/Notes`](Examples/Notes): a small notes app with no Retake code in
 it, and its `Retake/` project, ready to run. Its sets start the app on a first launch and on a
 returning user's notes; its scenes, for iPhone and iPad, walk through getting started, writing a
-note, syncing and sharing it; and its edit, `tour`, cuts them into a preview. Sign it with your own
-team first: copy `Config/Signing.example.xcconfig` to `Config/Signing.local.xcconfig`, which Git
-ignores, and give your team's ID and a bundle ID prefix. Then connect a device by USB, and from
-`Examples/Notes`:
+note, syncing and sharing it; and its edits cut them into a preview, `tour`, and on an iPad into
+`showcase`, the video above. From a fresh clone, with a device connected by USB, one script builds
+Retake, signs the example with your team, and records and cuts it:
 
 ```sh
-retake doctor                            # checks Xcode, the device, signing and a launch
+Examples/Notes/run.sh
+```
+
+[Examples/README.md](Examples/README.md) says what it does, step by step. By hand, once
+`run.sh --setup` has signed it, from `Examples/Notes`:
+
+```sh
 retake install                           # builds the example, embeds Retake, installs it
-retake record --for tour                 # records the scenes the tour uses
+retake record                            # records each scene, for the device's type
 retake cut tour                          # renders it, for the device's type
 ```
 

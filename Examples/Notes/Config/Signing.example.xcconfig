@@ -1,7 +1,9 @@
-// Copy to Signing.local.xcconfig, beside this file, and fill in your own.
+// Copy to Signing.local.xcconfig, beside this file, and fill in your own; run.sh, beside the
+// project, writes it for you.
 
 // Your team's ID, from developer.apple.com, or Xcode's Signing & Capabilities.
 DEVELOPMENT_TEAM = ABCDE12345
 
-// A prefix only you use; the app's bundle ID is this with ".notes" after it.
-BUNDLE_ID_PREFIX = com.yourname.retake
+// Optional: a prefix of your own for the app's bundle ID, which is this with ".notes" after it.
+// Without one, it's com.example.retake. and your team's ID.
+// BUNDLE_ID_PREFIX = com.yourname.retake
