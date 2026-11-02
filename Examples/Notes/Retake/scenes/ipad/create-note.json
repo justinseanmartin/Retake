@@ -2,6 +2,7 @@
   "set": "returning-user",
   "tail": 1.5,
   "steps": [
+    { "waitFor": { "label": "New Note" }, "hold": 0.5 },
     { "tap": { "label": "New Note" }, "hold": 0.8, "id": "new-note" },
     { "type": { "text": "Groceries\n", "into": { "value": "Title" } }, "id": "type-title" },
     { "waitFor": { "label": "Synced" }, "hold": 1, "id": "synced" },

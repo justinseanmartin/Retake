@@ -14,7 +14,7 @@
       "from": { "step": "welcome", "offset": -0.4 },
       "to": { "step": "library", "offset": 0.6 },
       "captions": [
-        { "text": "Scenes play on a real device", "y": 0.08, "color": "#1F6FEB", "symbol": { "name": "ipad" } }
+        { "text": "Scenes play on a real device", "y": 0.8, "color": "#1F6FEB", "symbol": { "name": "ipad" } }
       ]
     },
     {
@@ -25,32 +25,32 @@
       "to": { "step": "type-title", "offset": 0.3 },
       "crossfade": 0.4,
       "captions": [
-        { "text": "Cut the waiting out", "y": 0.08, "color": "#1F6FEB", "symbol": { "name": "scissors" } }
+        { "text": "Cut the waiting out", "y": 0.8, "color": "#1F6FEB", "symbol": { "name": "scissors" } }
       ]
     },
     {
       "id": "synced",
-      "intent": "Straight to the moment it syncs, spotlit, with a chime.",
+      "intent": "Straight to the moment it syncs, its cloud and Synced spotlit rather than their whole row, with a chime.",
       "take": "create-note",
       "from": { "step": "synced", "offset": -0.3, "edge": "end" },
       "to": { "step": "synced", "offset": 0.8 },
-      "spotlight": { "element": { "label": "Synced" }, "padding": 10, "color": "#1F6FEB", "from": { "step": "synced", "offset": 0.01 } },
+      "spotlight": { "rect": { "x": 39, "y": 348, "width": 97, "height": 18 }, "padding": 10, "color": "#1F6FEB", "from": { "step": "synced", "offset": 0.01 } },
       "sounds": [{ "file": "audio/chime.m4a", "at": { "step": "synced", "offset": 0.01 }, "volume": 0.8 }],
       "captions": [
-        { "text": "Spotlight what matters", "y": 0.08, "color": "#1F6FEB", "symbol": { "name": "scope" } }
+        { "text": "Spotlight what matters", "y": 0.8, "color": "#1F6FEB", "symbol": { "name": "scope" } }
       ]
     },
     {
       "id": "share",
-      "intent": "The note shared: who it goes to blurred, and a whoosh as it's sent.",
+      "intent": "The note shared, from once its sheet has settled, so the name of who it goes to, in Send to Alex, is blurred from the first frame, and a whoosh as it's sent.",
       "take": "create-note",
-      "from": { "step": "share", "offset": -0.2 },
+      "from": { "step": "share", "offset": 0.35 },
       "to": { "step": "sent", "offset": 0.7 },
       "crossfade": 0.3,
-      "blurs": [{ "element": { "hint": "Sends the note to Alex" }, "from": { "step": "share", "offset": 0.35 }, "to": { "step": "send", "offset": 0.15 }, "radius": 12 }],
+      "blurs": [{ "rect": { "x": 431, "y": 706, "width": 36, "height": 19 }, "to": { "step": "send", "offset": 0.15 }, "radius": 6 }],
       "sounds": [{ "file": "audio/whoosh.m4a", "at": { "step": "send" }, "volume": 0.6 }],
       "captions": [
-        { "text": "Blur anything private", "y": 0.08, "color": "#1F6FEB", "symbol": { "name": "eye.slash" } }
+        { "text": "Blur anything private", "y": 0.8, "color": "#1F6FEB", "symbol": { "name": "eye.slash" } }
       ]
     },
     {
@@ -61,10 +61,10 @@
       "to": { "step": "turn-back", "offset": -0.1 },
       "crossfade": 0.4,
       "captions": [
-        { "text": "Drags, drawn with a tail", "y": 0.08, "color": "#1F6FEB", "to": { "step": "turn", "offset": -0.3 }, "symbol": { "name": "hand.draw" } },
+        { "text": "Drags, drawn with a tail", "y": 0.8, "color": "#1F6FEB", "to": { "step": "turn", "offset": -0.3 }, "symbol": { "name": "hand.draw" } },
         {
           "text": "Turns, kept upright",
-          "y": 0.08,
+          "y": 0.8,
           "color": "#1F6FEB",
           "from": { "step": "turn", "offset": -0.3 },
           "symbol": { "name": "rotate.right", "animation": { "rotate": { "degrees": 90, "duration": 0.8 } } }
@@ -72,12 +72,26 @@
       ]
     },
     {
-      "id": "montage",
-      "intent": "Back to the library, with frames of the other takes popped in over it.",
+      "id": "colors",
+      "intent": "The tap back to the library, its touch and caption in a color of their own, held for a moment to read.",
       "take": "create-note",
-      "from": { "step": "library", "offset": -0.3 },
+      "from": { "step": "library", "offset": -0.5 },
+      "to": { "step": "library", "offset": 1.5 },
+      "crossfade": 0.4,
+      "touchColor": "#F76707",
+      "captions": [
+        { "text": "Touches and captions in your colors", "y": 0.8, "color": "#F76707", "symbol": { "name": "paintpalette" } }
+      ]
+    },
+    {
+      "id": "montage",
+      "intent": "Frames of the other takes popped in on a plain background, after the library is back.",
+      "take": "create-note",
+      "from": { "step": "library", "offset": 0.6 },
       "to": { "step": "end" },
       "crossfade": 0.4,
+      "touches": false,
+      "stillsBackground": "#1B2A4E",
       "stills": [
         { "take": "first-launch", "at": { "step": "welcome", "offset": 0.5 } },
         { "take": "create-note", "at": { "step": "synced", "offset": 0.3 } },
@@ -85,7 +99,7 @@
         { "take": "reorder", "at": { "step": "reorder", "offset": 0.5 } }
       ],
       "captions": [
-        { "text": "Re-cut from new takes in one command", "y": 0.08, "color": "#1F6FEB", "symbol": { "name": "film.stack" } }
+        { "text": "A montage of moments from other takes", "y": 0.8, "color": "#1F6FEB", "symbol": { "name": "square.grid.2x2" } }
       ]
     }
   ]
