@@ -196,7 +196,8 @@ that keeps its data in Documents or Application Support starts on a known state 
 Their sources are relative to `retake.json`; `..` can reach a fixture shared with the app project or
 another Retake project, while absolute paths are rejected so the project stays portable.
 `defaults` are what `UserDefaults.standard` holds at launch: strings, numbers, booleans, and lists
-and dictionaries of them, as JSON has; a `Data` or `Date` value can't be given yet. `environment`
+and dictionaries of them, as JSON has; a `Data` or `Date` value can't be given yet. Give defaults
+this way, not as a plist in `files`: one copied into `Library/Preferences` isn't read. `environment`
 and `arguments` are added to the launch, for your app's own Debug-only flags and for the language
 and locale. `extends` builds on another set, so what every set shares is written once, and a flag
 only one scene needs goes in a small set of its own that extends the one it builds on. `state` and
