@@ -4,7 +4,7 @@ This is the contract for Retake's command line: each command, what it reads and 
 fails. How the files fit together is in the [README](../README.md), and every field of every file is in the
 [reference](reference/), generated from Retake's schemas.
 
-Retake is in design, so this describes the command as it will be.
+Retake hasn't had its first release yet; this describes the command as it's built.
 
 ## Conventions
 
@@ -16,9 +16,9 @@ at the root of the repository, so the project's files are in one place, apart fr
 What each person's Retake keeps for itself, their builds and device aliases, is outside any project,
 in `~/Library/Caches/retake/`.
 
-Every command except `init`, `version` and `devices` runs in a project, named by its configuration
-file, under any name. (`devices` reads one when there is one, for its aliases and `device`.) The
-first of these that's given names it:
+Every command except `init`, `devices`, `embed`, `info`, `check`, `schema` and `version` runs in a
+project, named by its configuration file, under any name. (`devices` reads one when there is one,
+for its aliases and `device`.) The first of these that's given names it:
 
 1. `--config <path>`;
 2. the `RETAKE_CONFIG` environment variable;
@@ -130,7 +130,8 @@ reading it.
 ### Output
 
 Commands print progress for people. Those that report something — `devices`, `takes`, `status`,
-`doctor`, `version` — take `--json` for a stable, machine-readable form instead.
+`doctor`, `embed`, `info`, `validate`, `version` — take `--json` for a stable, machine-readable
+form instead, and `compose --json` answers each action with a line of JSON.
 
 ### Environment variables
 
@@ -173,7 +174,7 @@ and exits with the worst status among them.
 | [`compose`](#retake-compose) | Writes a scene a step at a time, on the device. |
 | [`record`](#retake-record) | Records takes, or with `--dry-run`, plays scenes without recording them. |
 | [`takes`](#retake-takes) | Lists takes. |
-| [`clean`](#retake-clean) | Deletes takes and cuts. |
+| [`clean`](#retake-clean) | Deletes takes and cuts, or take data left on the device. |
 | [`cut`](#retake-cut) | Renders videos. |
 | [`status`](#retake-status) | Summarizes scenes, takes, edits and videos. |
 | [`info`](#retake-info) | Prints how a take or video was made. |
@@ -235,7 +236,8 @@ failed, such as the app's installation when there's no device:
 2. The device is connected by USB, paired, and offered for screen capture.
 3. A development signing identity is in the keychain, and a provisioning profile covers the app's
    bundle ID and the device.
-4. The app is installed on the device, with Retake embedded (by `retake install` or `retake embed`).
+4. The app is installed on the device. Whether Retake is embedded in it, by `retake install` or
+   `retake embed`, is the next check's to find.
 5. The app launches, Retake's support library and The Button Heist's server answer, and both are
    [compatible](#compatibility-with-an-embedded-app) with this Retake. It launches on the project's `defaultSet`, or with none, on
    nothing but Retake's own `clean` state, and cleans up after itself as `record` does.
@@ -700,10 +702,12 @@ there's any. Made for CI and pre-commit hooks, and for an agent checking an edit
 ### `retake schema`
 
 ```
-retake schema [retake | set | scene | edit] [--output <dir>]
+retake schema (retake | set | scene | edit)
+retake schema --output <dir>
 ```
 
-Prints the schema for one kind of file, or with `--output` writes all of them there, as
+Prints the schema for one kind of file, or with `--output` writes all of them there, one or the
+other, as
 `<kind>.schema.json`. They are the same schemas the files' `"$schema"` URLs name, for this version
 of Retake.
 
@@ -748,7 +752,7 @@ changes a project's own files:
 | `retake.json`, `sets/`, `scenes/iphone/`, `scenes/ipad/`, `edits/` | Created by `init`. |
 | `.gitignore` | Created by `init`, or added to, naming the output directory. An output directory outside the project's folder goes in the current directory's `.gitignore` instead. |
 | `scenes/<type>/*.json` | Written by `compose`. |
-| `edits/*.json` | Rewritten by `cut` to record its takes and normalize plain-second times. |
+| `edits/*.json` | Rewritten by `cut` when it turns times in plain seconds into anchors, keeping a `"$schema"` that names one of Retake's up to date. |
 
 **In the output directory**, `output/` in the project's folder unless [moved](#the-output-directory), and gitignored.
 What's worth keeping, and nothing that's rewritten wholesale:
@@ -776,7 +780,7 @@ a repository:
 | `builds/<project>/DerivedData/` | The app as `install` builds it with `xcodebuild`. |
 | `builds/<project>/installed/` | The copy `install` embeds Retake in and installs, replaced each time. |
 | `devices.json` | Device aliases, from `devices add`, `devices remove` and `init`. |
-| `insidejob/<version>/` | TheInsideJob for the Button Heist version Retake is built against, for a Retake built from source (`Scripts/fetch-insidejob.sh`); a release carries its own. |
+| `insidejob/<version>/` | TheInsideJob for the Button Heist version Retake is built against, for a Retake built from source (`Scripts/fetch-insidejob.sh`), or `insidejob/clone/` for one built from a clone of The Button Heist; a release carries its own. |
 | `support/<contract>/` | Retake's support library, by its contract version, for a Retake built from source; a release carries its own. |
 | `screen-capture-released` | When Retake last let go of a device's screen, so the next command waits out the 8 seconds macOS takes to offer it again. |
 

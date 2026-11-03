@@ -86,9 +86,9 @@ struct ProjectOptions: ParsableArguments {
 
     @Option(
         help: ArgumentHelp(
-            "Where to write takes, cuts and builds (default: $RETAKE_OUTPUT_DIR, then the configuration "
-                + "file's output, then output/ beside it). It holds the takes edits pin, so somewhere temporary "
-                + "loses them when it's cleared.",
+            "Where to write takes and cuts (default: $RETAKE_OUTPUT_DIR, then the configuration "
+                + "file's output, then output/ beside it). It holds the takes edits are cut from, so somewhere "
+                + "temporary loses them when it's cleared.",
             valueName: "dir",
         ),
         completion: .directory,

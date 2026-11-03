@@ -6,7 +6,7 @@ public struct Project: Sendable, Equatable {
     public static let configurationFileName = "retake.json"
     /// The folder `init` makes a project in, and commands look in, in the current directory.
     public static let defaultFolderName = "Retake"
-    /// Where takes, cuts and builds go unless the command or the configuration file says otherwise.
+    /// Where takes and cuts go unless the command or the configuration file says otherwise.
     public static let defaultOutputDirectoryName = "output"
 
     /// The project's configuration file. Everything else in the project, and every relative path
@@ -17,8 +17,8 @@ public struct Project: Sendable, Equatable {
     /// What reading the configuration file warned about, for the command to print.
     public var warnings: [FileProblem]
 
-    /// Where Retake writes takes, cuts and builds: what the command names, else the configuration
-    /// file's `output`, else `output/` beside it. It holds the takes edits pin, so one that's
+    /// Where Retake writes takes and cuts: what the command names, else the configuration file's
+    /// `output`, else `output/` beside it. It holds the takes edits are cut from, so one that's
     /// thrown away takes them with it.
     public var output: URL
 

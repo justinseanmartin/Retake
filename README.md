@@ -19,8 +19,10 @@ recorded on an iPhone and an iPad, and cut for each from the one
 [`showcase`](Examples/Notes/Retake/edits/showcase.json) edit, which turns the iPad and puts a card
 in the iPhone's place.
 
-> **Status:** in design. Retake is being extracted from a pipeline that has made shipping App Store
-> previews for iPhone and iPad. This README describes what Retake will do; it is not usable yet.
+> **Status:** before its first release. Retake is extracted from a pipeline that has made shipping
+> App Store previews for iPhone and iPad, and works as this README describes when
+> [built from source](#building-from-source); the release the [Install](#install) section describes
+> isn't published yet.
 
 ## Contents
 
@@ -53,8 +55,8 @@ The full command reference is [Documentation/cli.md](Documentation/cli.md), and 
    yourself, `retake embed` does just the embedding.)
 2. **`retake record <scene>`** launches the app on the scene's set, plays its steps, and records the
    device's screen and sound. Each recording is a new numbered take; earlier takes are kept.
-3. **`retake cut <edit>`** renders the edit from the takes it names, to a ProRes master and an
-   `.mp4` for App Store Connect.
+3. **`retake cut <edit>`** renders the edit from each scene's latest successful take, to a ProRes
+   master and an `.mp4` for App Store Connect.
 
 An edit's times are anchored to the scene's steps, so one edit cuts the same video from any take of
 its scenes. `retake cut` always selects the latest successful takes, and the same edit serves iPhone
@@ -488,9 +490,9 @@ older or failed takes, along with scene definitions and takes no edit uses.
 
 ### Anchors: times that follow the app
 
-Every time in an edit — a clip's `from` and `to`, a caption's `from` and `to`, a sound's `at`, a
-blur's `from` and `to`, a still's `at` — is an anchor: a moment in the clip's take, given by a step
-and where to go from it.
+Every time in an edit — a clip's `from` and `to`, a caption's, spotlight's, blur's or card's
+`from` and `to`, a sound's `at`, a still's `at` and `stillsOut` — is an anchor: a moment in the
+clip's take, given by a step and where to go from it.
 
 An anchor's `step` is a step's `id`, its number from 1, or a negative number counting back from the
 last (`-1` is the last step); `start` and `end` are the take's first and last frames, lead-in and

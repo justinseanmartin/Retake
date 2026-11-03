@@ -25,7 +25,7 @@ struct Init: AsyncParsableCommand {
 
     @Option(
         help: ArgumentHelp(
-            "Where the project's takes, cuts and builds go (default: output/ beside the configuration "
+            "Where the project's takes and cuts go (default: output/ beside the configuration "
                 + "file), written into retake.json as its output.",
             valueName: "dir",
         ),
