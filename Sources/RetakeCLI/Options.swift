@@ -140,6 +140,14 @@ struct DeviceOptions: ParsableArguments {
     ) -> DeviceChoice? {
         DeviceChoice.choose(named: named(environment: environment), configuration: configuration, connected: connected)
     }
+
+    /// The device to use, and the listing it was found in, as `choice` picks it; listed again for a
+    /// few seconds while it's missing, as `DeviceDirectory.resolving` says.
+    func target(configuration: (device: String, file: URL)?) throws(RetakeError) -> (directory: DeviceDirectory, device: Device) {
+        try DeviceDirectory.resolving(list: DeviceDirectory.current) { directory in
+            choice(configuration: configuration, connected: directory.recordable.map(\.udid))
+        }
+    }
 }
 
 /// `--identity <identity>` and `--profile <path>`, which re-sign an app with something other than

@@ -153,11 +153,7 @@ struct Doctor: AsyncParsableCommand {
             add(.skipped("device", needing: "Xcode's tools"))
         } else {
             do {
-                let found = try DeviceDirectory.current()
-                let chosen = try found.resolve(device.choice(
-                    configuration: located.settings.device.map { ($0, located.configuration) },
-                    connected: found.recordable.map(\.udid),
-                ))
+                let (found, chosen) = try device.target(configuration: located.settings.device.map { ($0, located.configuration) })
                 add(Self.device(chosen, in: found))
                 if checks.last?.outcome != .failed { target = chosen }
             } catch {
@@ -527,11 +523,7 @@ struct Install: AsyncParsableCommand {
         let located = try project.locate()
         let current = URL(filePath: FileManager.default.currentDirectoryPath, directoryHint: .isDirectory)
         func given(_ path: String) -> URL { URL(filePath: path, relativeTo: current).standardizedFileURL }
-        let directory = try DeviceDirectory.current()
-        let target = try directory.resolve(device.choice(
-            configuration: located.settings.device.map { ($0, located.configuration) },
-            connected: directory.recordable.map(\.udid),
-        ))
+        let target = try device.target(configuration: located.settings.device.map { ($0, located.configuration) }).device
         let scheme = self.scheme.map { scheme in
             ProjectSettings.SchemeBuild(
                 scheme: scheme,

@@ -98,8 +98,11 @@ Commands that use a device take `--device <device>`, where `<device>` is:
 
 Without `--device`, Retake uses the `RETAKE_DEVICE` environment variable, then the configuration
 file's `device`, and failing those the one device connected by USB. With several connected and none
-named, the command stops and lists them. `RETAKE_DEVICE` comes before the configuration file because
-devices belong to people, and the file is shared: it suits a session spent on one device.
+named, the command stops and lists them. A device that's missing, none connected or the one named
+not among them, is looked for again for up to 3 seconds before the command fails, since `devicectl`
+leaves a connected device out of its list now and then, for a moment. `RETAKE_DEVICE` comes before
+the configuration file because devices belong to people, and the file is shared: it suits a session
+spent on one device.
 
 The device's **type** — `iphone` or `ipad`, asked of the device itself — picks the folders a command
 works in: `scenes/<type>/` and `output/takes/<type>/`.

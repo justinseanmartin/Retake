@@ -29,11 +29,7 @@ struct Compose: AsyncParsableCommand {
 
     func run() async throws {
         let located = try project.locate()
-        let directory = try DeviceDirectory.current()
-        let target = try directory.resolve(device.choice(
-            configuration: located.settings.device.map { ($0, located.configuration) },
-            connected: directory.recordable.map(\.udid),
-        ))
+        let target = try device.target(configuration: located.settings.device.map { ($0, located.configuration) }).device
         let input = LineInput(prompt: json ? nil : "> ")
         // Control-C ends composing as `quit` does, so the device is still cleaned up.
         let interruption = Interruption()
@@ -220,11 +216,7 @@ struct Record: AsyncParsableCommand {
 
     func run() async throws {
         let located = try project.locate()
-        let directory = try DeviceDirectory.current()
-        let target = try directory.resolve(device.choice(
-            configuration: located.settings.device.map { ($0, located.configuration) },
-            connected: directory.recordable.map(\.udid),
-        ))
+        let (directory, target) = try device.target(configuration: located.settings.device.map { ($0, located.configuration) })
         guard let type = target.type else {
             throw RetakeError(.environment, "Retake can't tell whether \(target.name) is an iPhone or an iPad.")
         }
@@ -313,8 +305,7 @@ struct Takes: AsyncParsableCommand {
         let located = try project.locate()
         var types = type.map { [$0] } ?? DeviceType.allCases
         if device.named() != nil {
-            let directory = try DeviceDirectory.current()
-            let target = try directory.resolve(device.choice(configuration: nil, connected: directory.recordable.map(\.udid)))
+            let target = try device.target(configuration: nil).device
             guard let deviceType = target.type else {
                 throw RetakeError(.environment, "Retake can't tell whether \(target.name) is an iPhone or an iPad.")
             }
@@ -474,11 +465,7 @@ struct Clean: AsyncParsableCommand {
             print("Deleted.")
             return
         }
-        let directory = try DeviceDirectory.current()
-        let target = try directory.resolve(device.choice(
-            configuration: located.settings.device.map { ($0, located.configuration) },
-            connected: directory.recordable.map(\.udid),
-        ))
+        let target = try device.target(configuration: located.settings.device.map { ($0, located.configuration) }).device
         let bundleID = try Installer.bundleID(for: located)
         try Launcher.cleanUp(bundleID: bundleID, on: target)
         print("Deleted takes' copies of \(bundleID)'s data, and staged set files, from \(target.name).")

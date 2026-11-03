@@ -24,6 +24,28 @@ struct DeviceNamingTests {
         }
     }
 
+    @Test func aDeviceMissingFromOneListingIsListedAgainBeforeFailing() throws {
+        let named = DeviceAlias(name: "ipad", udid: ipad.udid, captureID: ipadScreen.uniqueID, deviceName: ipad.name, type: .ipad, model: nil)
+        func listings(_ devices: [[Device]]) -> () throws(RetakeError) -> DeviceDirectory {
+            var remaining = devices
+            return { DeviceDirectory(devices: remaining.count > 1 ? remaining.removeFirst() : remaining[0], aliases: DeviceAliases([named])) }
+        }
+        var slept = 0.0
+        // The alias's iPad, left out of the first two listings, as devicectl does now and then.
+        let found = try DeviceDirectory.resolving(list: listings([[], [iphone], [ipad, iphone]]), choose: { _ in
+            DeviceChoice(device: "ipad", source: .commandLine)
+        }, sleep: { slept += $0 })
+        #expect(found.device == ipad && slept == 1)
+        // Nothing connected for longer than its patience fails as before, having waited it out.
+        slept = 0
+        #expect(status { _ = try DeviceDirectory.resolving(list: listings([[]]), choose: { _ in nil }, sleep: { slept += $0 }) } == .environment)
+        #expect(slept == 3)
+        // What isn't a device going missing, such as one on the network, fails at once.
+        slept = 0
+        #expect(status { _ = try DeviceDirectory.resolving(list: listings([[networked]]), choose: { _ in DeviceChoice(device: networked.udid, source: .commandLine) }, sleep: { slept += $0 }) } == .environment)
+        #expect(slept == 0)
+    }
+
     @Test func initOffersEachUnnamedRecordableDeviceItsTypeOrTheNextFree() {
         let otherIPad = Device(udid: "00008103-0000000000000005", name: "Sam’s Other iPad", type: .ipad)
         let named = DeviceAlias(name: "ipad", udid: ipad.udid, captureID: ipadScreen.uniqueID, deviceName: ipad.name, type: .ipad, model: nil)

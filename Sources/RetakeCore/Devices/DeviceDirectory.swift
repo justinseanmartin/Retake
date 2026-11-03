@@ -43,6 +43,41 @@ public struct DeviceDirectory: Sendable {
         return nil
     }
 
+    /// The device `choose` picks from a listing, listed again every `interval` seconds for up to
+    /// `patience` while it's missing: none connected, or the one chosen not connected or not known.
+    /// `devicectl` leaves a connected device out of its list now and then, for a moment, so a
+    /// command shouldn't fail on one listing. Anything else `resolve` fails on fails at once.
+    public static func resolving(
+        patience: Double = 3,
+        interval: Double = 0.5,
+        list: () throws(RetakeError) -> DeviceDirectory,
+        choose: (DeviceDirectory) -> DeviceChoice?,
+        sleep: (Double) -> Void = { Thread.sleep(forTimeInterval: $0) },
+    ) throws(RetakeError) -> (directory: DeviceDirectory, device: Device) {
+        var waited = 0.0
+        while true {
+            let directory = try list()
+            let choice = choose(directory)
+            if waited < patience, directory.isMissing(choice) {
+                sleep(interval)
+                waited += interval
+                continue
+            }
+            return (directory, try directory.resolve(choice))
+        }
+    }
+
+    /// Whether what's chosen isn't in this listing at all: nothing chosen and nothing connected, a
+    /// name that matches nothing, or an alias whose device isn't connected.
+    func isMissing(_ choice: DeviceChoice?) -> Bool {
+        guard let choice else { return recordable.isEmpty }
+        switch match(choice.device) {
+        case nil: return true
+        case .alias(_, let connected)?: return connected?.state != .connected
+        case .device(let device)?: return device.state != .connected
+        }
+    }
+
     /// The device a command uses, connected by USB, from what chose it; otherwise a failure saying
     /// why: misuse (2) for a name that's nothing, an environment problem (3) for a device that isn't
     /// connected by USB, or for none or several connected with nothing chosen.
