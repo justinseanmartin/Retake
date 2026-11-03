@@ -4,6 +4,10 @@ import Foundation
 /// Recording one take of a scene: its movie and its step log. See Documentation/cli.md, "retake record",
 /// steps 1 to 4.
 public enum TakeRecording {
+    /// Seconds a device takes to finish turning, so a take recorded from before launch starts
+    /// after it.
+    static let turnSettles = 1.0
+
     /// Where a take is written, and what it's of.
     public struct Target: Sendable {
         public var scene: String
@@ -79,6 +83,10 @@ public enum TakeRecording {
                 // Recording from before launch catches the launch screen, and everything up to the
                 // first step, which the launch marks place.
                 if scene.recordsLaunch, !collected.recording {
+                    // Turned first, and given a moment to settle, so the take doesn't open on the
+                    // device turning from however the last one left it.
+                    try Launcher.turn(device, to: scene.orientation)
+                    try? await Task.sleep(for: .seconds(Self.turnSettles))
                     try await recorder.start(writingTo: target.movie, describing: header)
                     collected.startRecording(at: recorder.startedAt)
                 }
