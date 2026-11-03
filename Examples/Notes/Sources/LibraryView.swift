@@ -81,7 +81,9 @@ struct LibraryView: View {
 
     private var editor: AnyView? {
         guard let open, let note = library.notes.first(where: { $0.id == open }) else { return nil }
-        return AnyView(NoteEditorView(note: note) { self.open = nil })
+        // A note of its own for each note opened: the editor keeps the note it was made with, so
+        // one opened beside another would otherwise go on showing the first.
+        return AnyView(NoteEditorView(note: note) { self.open = nil }.id(note.id))
     }
 
     private var placeholder: some View {
