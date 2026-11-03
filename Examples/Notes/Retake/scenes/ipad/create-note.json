@@ -2,16 +2,16 @@
   "set": "returning-user",
   "tail": 1.5,
   "steps": [
-    { "waitFor": { "label": "New Note" }, "hold": 0.5 },
-    { "tap": { "label": "New Note" }, "hold": 0.8, "id": "new-note" },
-    { "type": { "text": "Groceries\n", "into": { "value": "Title" } }, "id": "type-title" },
-    { "waitFor": { "label": "Synced" }, "hold": 1, "id": "synced" },
-    { "tap": { "label": "Share" }, "hold": 1.2, "id": "share" },
+    { "waitFor": { "label": "New Note" }, "hold": 1 },
+    { "tap": { "label": "New Note" }, "hold": 1.5, "id": "new-note" },
+    { "type": { "text": "Groceries\n", "into": { "value": "Title" } }, "hold": 0.5, "id": "type-title" },
+    { "waitFor": { "label": "Synced" }, "hold": 2, "id": "synced" },
+    { "tap": { "label": "Share" }, "hold": 1.5, "id": "share" },
     { "tap": { "hint": "Sends the note to Alex" }, "id": "send" },
-    { "waitFor": { "label": "Sent" }, "hold": 1, "id": "sent" },
+    { "waitFor": { "label": "Sent" }, "hold": 2, "id": "sent" },
     { "tap": { "label": "Done" } },
-    { "waitFor": { "label": "Done", "gone": true }, "hold": 0.5 },
-    { "tap": { "label": "Library", "traits": ["button"] }, "id": "library" },
-    { "waitFor": { "label": "New Note" }, "hold": 1 }
+    { "waitFor": { "label": "Done", "gone": true }, "hold": 1 },
+    { "tap": { "label": "Library", "traits": ["button"] }, "hold": 1, "id": "library" },
+    { "waitFor": { "label": "New Note" }, "hold": 7, "id": "end-card" }
   ]
 }

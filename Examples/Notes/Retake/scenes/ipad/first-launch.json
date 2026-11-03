@@ -2,8 +2,8 @@
   "set": "first-launch",
   "recordsLaunch": true,
   "steps": [
-    { "waitFor": { "label": "Get Started" }, "hold": 1.5, "id": "welcome" },
+    { "waitFor": { "label": "Get Started" }, "hold": 2, "id": "welcome" },
     { "tap": { "label": "Get Started" }, "id": "get-started" },
-    { "waitFor": { "label": "New Note" }, "hold": 1, "id": "library" }
+    { "waitFor": { "label": "New Note" }, "hold": 2, "id": "library" }
   ]
 }

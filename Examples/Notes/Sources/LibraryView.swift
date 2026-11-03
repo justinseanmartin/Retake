@@ -102,11 +102,22 @@ struct NoteRow: View {
     /// From one row to the next: its height and the gap after it.
     static let pitch: CGFloat = height + 8
 
+    private var title: String { note.title.isEmpty ? "Untitled" : note.title }
+
     var body: some View {
         HStack {
-            Text(note.title.isEmpty ? "Untitled" : note.title).font(.headline)
-            Spacer()
+            // The row, but for its handle, is one element: the note, to open.
+            HStack {
+                Text(title).font(.headline)
+                Spacer()
+            }
+            .contentShape(.rect)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(title)
+            .accessibilityAddTraits(.isButton)
+            // Its own element, so a scene can drag a note by it.
             Image(systemName: "line.3.horizontal")
+                .accessibilityLabel("Reorder \(title)")
                 .foregroundStyle(.secondary)
                 .frame(width: 44, height: Self.height)
                 .contentShape(.rect)
@@ -126,7 +137,6 @@ struct NoteRow: View {
         // The dragged row follows the finger; the others spring aside.
         .animation(dragged ? nil : .spring(duration: 0.25), value: offset)
         .zIndex(dragged ? 1 : 0)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(note.title.isEmpty ? "Untitled" : note.title)
+        .accessibilityElement(children: .contain)
     }
 }

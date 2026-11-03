@@ -1,11 +1,11 @@
 {
   "set": "returning-user",
   "steps": [
-    { "waitFor": { "label": "Book club" }, "hold": 0.5 },
-    { "drag": { "from": { "x": 780, "y": 834 }, "to": { "x": 780, "y": 186 }, "duration": 0.6 }, "hold": 1, "id": "reorder" },
-    { "orientation": "landscape-left", "hold": 1.5, "id": "turn" },
-    { "tap": { "label": "Book club" }, "id": "open" },
-    { "waitFor": { "label": "Share" }, "hold": 1 },
-    { "orientation": "portrait", "hold": 1, "id": "turn-back" }
+    { "waitFor": { "label": "Book club" }, "hold": 1 },
+    { "drag": { "from": { "label": "Reorder Book club" }, "to": { "label": "Reorder Weekend plans" }, "duration": 0.6 }, "hold": 1.5, "id": "reorder" },
+    { "orientation": "landscape-left", "hold": 2, "id": "turn" },
+    { "tap": { "label": "Book club" }, "hold": 0.5, "id": "open" },
+    { "waitFor": { "label": "Share" }, "hold": 2 },
+    { "orientation": "portrait", "hold": 1.5, "id": "turn-back" }
   ]
 }
