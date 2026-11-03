@@ -22,10 +22,13 @@ play, in `audio/`. Run Retake's commands from `Examples/Notes/`, or from inside 
 It has two edits:
 
 - `tour`, for iPhone and iPad: getting started, then a note written, synced, shared and filed.
-- `showcase`, for iPad: every feature of an edit, one to a clip, each captioned with what it shows.
-  It's the video at the top of Retake's README: touches and taps with a sound, a cut, a spotlight
-  and a chime, a blur and a whoosh, a drag's tail, a letterboxed turn with an animated symbol, and
-  a montage of other takes, with cross-fades between them and music under it all.
+- `showcase`, for iPhone and iPad: every feature of an edit, one to a clip, each captioned with what
+  it shows. It's the video at the top of Retake's README, the iPhone's and the iPad's side by side:
+  touches and taps with a sound, a cut, a spotlight and a chime, a blur and a whoosh, a drag's tail,
+  a letterboxed turn with an animated symbol, touches and captions in a color of their own, and a
+  montage of other takes that ends on a credit, with cross-fades between them and music under it
+  all. One edit makes both: it names steps and elements, not times or points, so each device's
+  takes fill it in.
 
 The music and sounds are made by `Retake/audio/generate.py`, so none of them is anyone else's.
 
@@ -33,15 +36,16 @@ The music and sounds are made by `Retake/audio/generate.py`, so none of them is 
 
 You need a Mac with Xcode, an Apple account signed in to Xcode (Settings > Accounts; a free one
 works), an iPhone or iPad with Developer Mode on, connected by USB and trusted, and, for the small
-copies at the end, `ffmpeg` (`brew install ffmpeg`). Then, from the repository's root:
+copy at the end, `ffmpeg` (`brew install ffmpeg`). Then, from the repository's root:
 
 ```sh
 Examples/Notes/run.sh
 ```
 
 It does each step below, and finishes with the video's master and App Store files in
-`Notes/Retake/output/cuts/`, and small copies of it, an MP4 with sound and a GIF, in
-`Notes/Retake/output/share/`. Run it again to record and cut again. Its options:
+`Notes/Retake/output/cuts/`, and a small copy of it, an MP4 with sound, in
+`Notes/Retake/output/share/`; once an iPhone's and an iPad's are both cut, the two side by side
+too. Run it again to record and cut again. Its options:
 
 | Option | |
 | --- | --- |
@@ -49,7 +53,7 @@ It does each step below, and finishes with the video's master and App Store file
 | `--device <device>` | The device, by alias, UDID or name, when several are connected. |
 | `--setup` | Only build Retake and sign the example, then say what to run. |
 | `--cut-only` | Cut from the takes already recorded, without a device: after changing an edit. |
-| `--readme` | Write the iPad's small copies to `Documentation/media/`, for the README. |
+| `--readme` | Write the iPhone's and iPad's side by side to `Documentation/media/`, for the README. |
 
 Nothing it writes is checked in, except with `--readme`: the build is in `.build/` (or
 `RETAKE_SCRATCH_PATH`), the team in `Config/Signing.local.xcconfig`, and the rest in
@@ -96,7 +100,7 @@ From the repository's root:
    retake devices add iphone        # or ipad: names the connected device, for you only
    retake install
    retake record                    # every scene for the device's type
-   retake cut showcase --open       # on an iPhone: retake cut tour --open
+   retake cut showcase --open
    ```
 
    `install` stops with Xcode's or the device's own error when it can't sign the app for the

@@ -12,11 +12,12 @@ renders the edit into a video ready to upload to App Store Connect.
 When the app changes, you record the scenes again and render the same edits. There's no screen
 recording by hand, no editing timeline to rebuild, and no guessing which frames you used last time.
 
-[![The example's showcase, cut by Retake: touches, cuts, a spotlight, a blur, a drag, a turn and a montage, each captioned](Documentation/media/showcase.gif)](Documentation/media/showcase.mp4)
+<video src="Documentation/media/showcase.mp4" controls muted playsinline width="100%" title="The example's showcase, cut by Retake: touches, cuts, a spotlight, a blur, a drag, a turn, a card and a montage, each captioned"></video>
 
-Every frame above is Retake's: the example app, recorded on an iPad and cut from its
-[`showcase`](Examples/Notes/Retake/edits/showcase.json) edit. [The MP4](Documentation/media/showcase.mp4)
-has its music and sound effects.
+Every frame of [the showcase](Documentation/media/showcase.mp4) is Retake's: the example app,
+recorded on an iPhone and an iPad, and cut for each from the one
+[`showcase`](Examples/Notes/Retake/edits/showcase.json) edit, which turns the iPad and puts a card
+in the iPhone's place.
 
 > **Status:** in design. Retake is being extracted from a pipeline that has made shipping App Store
 > previews for iPhone and iPad. This README describes what Retake will do; it is not usable yet.
@@ -99,8 +100,8 @@ retake cut video1                        # render the video, for each device typ
 **The way to start is the example**, [`Examples/Notes`](Examples/Notes): a small notes app with no Retake code in
 it, and its `Retake/` project, ready to run. Its sets start the app on a first launch and on a
 returning user's notes; its scenes, for iPhone and iPad, walk through getting started, writing a
-note, syncing and sharing it; and its edits cut them into a preview, `tour`, and on an iPad into
-`showcase`, the video above. From a fresh clone, with a device connected by USB, one script builds
+note, syncing and sharing it; and its edits cut them into a preview, `tour`, and into `showcase`,
+the video above. From a fresh clone, with a device connected by USB, one script builds
 Retake, signs the example with your team, and records and cuts it:
 
 ```sh

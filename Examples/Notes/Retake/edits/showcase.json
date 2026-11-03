@@ -1,7 +1,7 @@
 {
   "intent": "What Retake can do, in twenty seconds: each clip shows one of its features, and its caption says which.",
-  "devices": ["ipad"],
-  "background": "#F4F1EA",
+  "devices": ["iphone", "ipad"],
+  "background": "#1B2A4E",
   "music": { "file": "audio/music.m4a", "volume": 0.45, "fadeOut": 1.5 },
   "tapSound": { "file": "audio/tap.m4a", "volume": 0.7 },
   "touchColor": "#1F6FEB",
@@ -34,7 +34,7 @@
       "take": "create-note",
       "from": { "step": "synced", "offset": -0.3, "edge": "end" },
       "to": { "step": "synced", "offset": 1.6 },
-      "spotlight": { "element": { "label": "Synced" }, "part": { "x": 19, "y": 17, "width": 97, "height": 18 }, "padding": 10, "color": "#1F6FEB", "from": { "step": "synced", "offset": 0.01 } },
+      "spotlight": { "element": { "label": "Synced" }, "part": { "x": 19, "y": 17, "width": 97, "height": 18 }, "padding": 10, "color": "#1F6FEB", "from": { "step": "synced", "offset": 0.01 }, "iphone": { "part": { "width": 107 } } },
       "sounds": [{ "file": "audio/chime.m4a", "at": { "step": "synced", "offset": 0.01 }, "volume": 0.8 }],
       "captions": [
         { "text": "Spotlight what matters", "y": 0.8, "color": "#1F6FEB", "symbol": { "name": "scope" } }
@@ -48,6 +48,10 @@
       "to": { "step": "sent", "offset": 1.5 },
       "crossfade": 0.3,
       "blurs": [{ "element": { "hint": "Sends the note to Alex" }, "part": { "x": "62%", "width": "31%" }, "to": { "step": "send", "offset": 0.15 }, "radius": 6 }],
+      "iphone": {
+        "intent": "On the iPhone, the step log reads the button while its sheet is still rising, 17 points above where it settles.",
+        "blurs": [{ "element": { "hint": "Sends the note to Alex" }, "part": { "x": "58%", "y": 17, "width": "35%" }, "to": { "step": "send", "offset": 0.15 }, "radius": 6 }]
+      },
       "sounds": [{ "file": "audio/whoosh.m4a", "at": { "step": "send" }, "volume": 0.6 }],
       "captions": [
         { "text": "Blur anything private", "y": 0.8, "color": "#1F6FEB", "symbol": { "name": "eye.slash" } }
@@ -55,10 +59,10 @@
     },
     {
       "id": "reorder",
-      "intent": "A note dragged up the library, then the iPad turned to landscape, letterboxed, and a note opened beside the library.",
+      "intent": "A note dragged up the library, then the iPad turned to landscape, letterboxed, and held there; cut before a note is opened beside the library.",
       "take": "reorder",
       "from": { "step": "reorder", "offset": -0.4 },
-      "to": { "step": "turn-back", "offset": -0.1 },
+      "to": { "step": "open", "offset": -0.1 },
       "crossfade": 0.4,
       "captions": [
         { "text": "Drags, drawn with a tail", "y": 0.8, "color": "#1F6FEB", "to": { "step": "turn", "offset": -0.3 }, "symbol": { "name": "hand.draw" } },
@@ -69,6 +73,27 @@
           "from": { "step": "turn", "offset": -0.3 },
           "symbol": { "name": "rotate.right", "animation": { "rotate": { "degrees": 90, "duration": 0.8 } } }
         }
+      ],
+      "iphone": {
+        "intent": "A note dragged up the library, cut before the iPhone turns.",
+        "to": { "step": "turn", "offset": -0.3 },
+        "captions": [
+          { "text": "Drags, drawn with a tail", "y": 0.8, "color": "#1F6FEB", "symbol": { "name": "hand.draw" } }
+        ]
+      }
+    },
+    {
+      "id": "per-device",
+      "intent": "In the iPhone's video only, where the iPad's turns: a bright card saying each device's cut is its own, its caption up as long as the iPad's Turns caption, 2.66 s. Its picture never shows, so it's any stretch of the take before the turn.",
+      "devices": ["iphone"],
+      "take": "reorder",
+      "from": { "step": "reorder", "offset": -0.73 },
+      "to": { "step": "turn", "offset": -0.1 },
+      "crossfade": 0.4,
+      "touches": false,
+      "card": { "color": "#FFD43B" },
+      "captions": [
+        { "text": "Customize the cut for each device", "y": 0.5, "color": "#1B2A4E", "symbol": { "name": "slider.horizontal.3" } }
       ]
     },
     {

@@ -15,10 +15,12 @@ Usage: Examples/Notes/run.sh [--team <id>] [--device <device>] [--setup | --cut-
   --setup            Stop once retake is built and Notes can be signed, and say what to run next.
   --cut-only         Cut from the takes already recorded, with no device: after changing an edit.
                      Give --device or set RETAKE_DEVICE_TYPE (iphone or ipad) to say whose.
-  --readme           Write the iPad's small copies to Documentation/media/, which the README shows.
+  --readme           Write the iPhone's and iPad's showcases, side by side, to Documentation/media/,
+                     which the README shows: both devices' cuts are needed.
 
-On an iPad it cuts edits/showcase.json, every feature in one video; on an iPhone, edits/tour.json.
-The small copies, an MP4 with sound and a GIF, are written to Retake/output/share/.
+It cuts edits/showcase.json, every feature in one video, for the device's type. A small copy, an
+MP4 with sound, is written to Retake/output/share/, and once both an iPhone's and an iPad's are
+cut, the two side by side too.
 EOF
 }
 
@@ -113,7 +115,7 @@ Set up. From Examples/Notes, with a device connected by USB:
   retake devices add ipad          # or iphone; names the connected device
   retake install
   retake record                    # every scene for the device's type
-  retake cut showcase --open       # or: retake cut tour --open
+  retake cut showcase --open
 EOF
     exit 0
 fi
@@ -136,12 +138,8 @@ else:
     sys.exit("the device chosen, " + uses + ", isn\x27t an iPhone or iPad")
 ' <<<"$devices")" || fail "couldn't choose a device; see retake devices."
 fi
-case "$type" in
-    ipad) edit=showcase ;;
-    iphone) edit=tour ;;
-    *) fail "RETAKE_DEVICE_TYPE is iphone or ipad, not \"$type\"." ;;
-esac
-$readme && [[ "$edit" != showcase ]] && fail "--readme's video is the iPad's showcase; give an iPad with --device."
+[[ "$type" == iphone || "$type" == ipad ]] || fail "RETAKE_DEVICE_TYPE is iphone or ipad, not \"$type\"."
+edit=showcase
 
 if ! $cut_only; then
     step "Installing Notes"
@@ -154,24 +152,28 @@ fi
 step "Cutting $edit"
 "$retake" cut "$edit" --type "$type"
 
-# Small enough to check in, and still sharp: 720 points wide for the MP4, and a GIF at 540 and
-# 15 frames a second, since a README shows a GIF but only links to an MP4.
-step "Making small copies"
-command -v ffmpeg >/dev/null || fail "the small copies need ffmpeg: brew install ffmpeg, then run this again with --cut-only."
-source="Retake/output/cuts/$type/$edit/$edit-$type-master.mov"
+# Small enough to check in, and still sharp: 720 points wide.
+step "Making a small copy"
+command -v ffmpeg >/dev/null || fail "the small copy needs ffmpeg: brew install ffmpeg, then run this again with --cut-only."
 share="Retake/output/share"
 mkdir -p "$share"
-ffmpeg -v error -y -i "$source" -vf "scale=720:-2:flags=lanczos" \
-    -c:v libx264 -preset veryslow -crf 25 -pix_fmt yuv420p -tune animation -movflags +faststart \
-    -c:a aac -b:a 80k -ac 1 -map_metadata -1 "$share/$edit-$type.mp4"
-ffmpeg -v error -y -i "$source" -vf "fps=15,scale=540:-2:flags=lanczos,split[a][b];[a]palettegen=max_colors=160:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" \
-    "$share/$edit-$type.gif"
-if $readme; then
-    mkdir -p "$ROOT/Documentation/media"
-    cp "$share/$edit-$type.mp4" "$ROOT/Documentation/media/showcase.mp4"
-    cp "$share/$edit-$type.gif" "$ROOT/Documentation/media/showcase.gif"
-    share="$ROOT/Documentation/media"
-    ls -l "$share/showcase.mp4" "$share/showcase.gif"
-else
-    ls -l "$share/$edit-$type.mp4" "$share/$edit-$type.gif"
+mp4() { ffmpeg -v error -y "$@" -c:v libx264 -preset veryslow -crf 25 -pix_fmt yuv420p -tune animation -movflags +faststart -c:a aac -b:a 80k -ac 1 -map_metadata -1; }
+master() { echo "Retake/output/cuts/$1/$edit/$edit-$1-master.mov"; }
+mp4 -i "$(master "$type")" -vf "scale=720:-2:flags=lanczos" "$share/$edit-$type.mp4"
+made=("$share/$edit-$type.mp4")
+
+# Both devices' cuts of the one edit side by side, the iPhone's on the left, on the edit's own
+# background, with the iPad's sound.
+if [[ -f "$(master iphone)" && -f "$(master ipad)" ]]; then
+    side() { echo "[0:v]scale=-2:$1:flags=lanczos,pad=iw+$2*2:ih+$2*2:$2:$2:color=0x1B2A4E[a];[1:v]scale=-2:$1:flags=lanczos,pad=iw+$2:ih+$2*2:0:$2:color=0x1B2A4E[b];[a][b]hstack"; }
+    mp4 -i "$(master iphone)" -i "$(master ipad)" -filter_complex "$(side 960 24)[v]" -map "[v]" -map 1:a "$share/$edit-both.mp4"
+    made+=("$share/$edit-both.mp4")
 fi
+
+if $readme; then
+    [[ -f "$share/$edit-both.mp4" ]] || fail "--readme shows the iPhone's and the iPad's side by side: record and cut on both, then run this again with --cut-only --readme."
+    mkdir -p "$ROOT/Documentation/media"
+    cp "$share/$edit-both.mp4" "$ROOT/Documentation/media/showcase.mp4"
+    made=("$ROOT/Documentation/media/showcase.mp4")
+fi
+ls -l "${made[@]}"

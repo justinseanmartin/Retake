@@ -1,3 +1,4 @@
 {
-  "arguments": ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+  "arguments": ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"],
+  "appearance": "light"
 }

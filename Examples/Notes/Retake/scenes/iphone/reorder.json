@@ -1,0 +1,11 @@
+{
+  "set": "returning-user",
+  "steps": [
+    { "waitFor": { "label": "Reading list" }, "hold": 1 },
+    { "drag": { "from": { "label": "Reorder Reading list" }, "to": { "label": "Reorder Weekend plans" }, "duration": 0.6 }, "hold": 1.5, "id": "reorder" },
+    { "orientation": "landscape-left", "hold": 2, "id": "turn" },
+    { "tap": { "label": "Reading list" }, "hold": 0.5, "id": "open" },
+    { "waitFor": { "label": "Share" }, "hold": 2 },
+    { "orientation": "portrait", "hold": 1.5, "id": "turn-back" }
+  ]
+}

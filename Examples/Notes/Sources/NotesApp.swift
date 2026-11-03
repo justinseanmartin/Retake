@@ -43,7 +43,7 @@ struct WelcomeView: View {
                 .foregroundStyle(.tint)
             Text("Welcome to RetakeNotes")
                 .font(.largeTitle.bold())
-            Text("Jot something down, share it, and watch it sync.")
+            Text("A demo app used to showcase Retake, a quick App Store preview capture tool.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
             Button("Get Started", action: dismiss)

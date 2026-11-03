@@ -168,7 +168,7 @@ struct EditFileTests {
         let edit = files.readEdit("tour", into: report)
         let showcase = files.readEdit("showcase", into: report)
         #expect(report.problems.isEmpty && report.warnings.isEmpty, "\(report.problems)")
-        #expect(showcase?.devices == [.ipad])
+        #expect(showcase?.devices == [.iphone, .ipad])
         #expect(edit?.videos[.ipad]?.clips[0].captions[0].y == 0.08 && edit?.videos[.iphone]?.clips[0].captions[0].y == 0.1, "the iPad's override")
     }
 
