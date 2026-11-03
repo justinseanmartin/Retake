@@ -36,7 +36,7 @@ public struct RetakeVersion: Codable, Equatable, Sendable {
         if InsideJobFramework.isBuiltFromClone {
             let clone = InsideJobFramework.clone(in: cache)
             version.buttonHeist.clonePath = clone?.path ?? "a local clone"
-            version.buttonHeist.commit = clone?.commit ?? "unknown; run Scripts/fetch-insidejob.sh"
+            version.buttonHeist.commit = clone?.commit ?? "unknown; \(SourceCheckout.remedy()) with RETAKE_BUTTONHEIST_PATH set"
         }
         return version
     }
