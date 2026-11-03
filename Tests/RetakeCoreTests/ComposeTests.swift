@@ -211,7 +211,9 @@ struct ComposerSessionTests {
     @Test func atATerminalWhatsMissingIsAskedFor() async throws {
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         // No label, then a value, for the element; then the text, with a return in it.
-        let (_, state, replies) = try await session(["type", "quit"], answers: [#"Groceries\n"#])
+        let driver = FakeDriver()
+        driver.ending = [ScreenElement(value: "Groceries", traits: ["textEntry"])]
+        let (_, state, replies) = try await session(["type", "quit"], answers: [#"Groceries\n"#], driver: driver)
         #expect(replies.failures.isEmpty)
         #expect(state.document.steps == [Step(.type(text: "Groceries\n", into: nil))])
         let (_, asked, _) = try await session(["tap", "quit"], answers: ["", "Title"])

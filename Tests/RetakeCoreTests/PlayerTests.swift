@@ -15,13 +15,17 @@ final class FakeDriver: AppDriver {
     var screens: [[ScreenElement]] = [[]]
     /// How long each run takes to answer, on `time`'s clock.
     var answering: (time: FakeTime, seconds: Double)?
+    /// The screen each run ends with, as its evidence; none unless given.
+    var ending: [ScreenElement]?
 
     func run(_ plan: HeistPlan) async throws(RetakeError) -> StepEvidence {
         defer { runs += 1 }
         done.append("run")
         if let answering { answering.time.now += answering.seconds }
         if runs == failingRun { throw RetakeError(.failed, "No match for: label=\"Send\"") }
-        return StepEvidence()
+        var evidence = StepEvidence()
+        evidence.elements = ending
+        return evidence
     }
 
     func perform(_ command: HeistActionCommand) async throws(RetakeError) -> StepEvidence {
@@ -76,6 +80,42 @@ struct PlayerTests {
         try await time.player().play(scene, named: "create-note", on: driver)
         #expect(driver.done == ["run", "run", "run", "run"])
         #expect(time.pauses == [0.5, 1, 2, 3])
+    }
+
+    @Test func typingThatChangesNothingOnScreenFailsButAnyChangeVoiceOverSeesPasses() async throws {
+        let title = ScreenElement(value: "Title", traits: ["textEntry"])
+        let type = SceneFile(steps: [Step(.type(text: "(555) 010", into: ElementTarget(value: "Title")))])
+        func play(_ ending: [ScreenElement], later: [ScreenElement]? = nil) async -> (failure: String?, pauses: [Double]) {
+            let time = FakeTime()
+            let driver = FakeDriver()
+            driver.screens = [[title]] + (later.map { [$0] } ?? [])
+            driver.ending = ending
+            do {
+                try await time.player().play(type, named: "sign-up", on: driver)
+                return (nil, time.pauses)
+            } catch {
+                return (error.message, time.pauses)
+            }
+        }
+        // As when the field lost its focus before the keys came: the screen as it was.
+        let nothing = await play([title], later: [title])
+        #expect(nothing.failure?.contains("went nowhere: nothing on screen changed") == true, "\(nothing)")
+        #expect(nothing.pauses == [Player.typingSettles], "looked again before failing")
+        // Through a formatter, as a secure field's dots, or only `isEditing` gained or lost.
+        #expect(await play([ScreenElement(value: "(555) 010-", traits: ["textEntry"])]).failure == nil)
+        #expect(await play([ScreenElement(value: "•••••••••", traits: ["textEntry"])]).failure == nil)
+        #expect(await play([ScreenElement(value: "Title", traits: ["isEditing", "textEntry"])]).failure == nil)
+        // Shown a moment after the step ended, or somewhere else on screen.
+        #expect(await play([title], later: [title, ScreenElement(label: "555 010", traits: ["staticText"])]).failure == nil)
+        // Moved, as by the keyboard, and nothing else: still nowhere.
+        #expect(await play([ScreenElement(value: "Title", traits: ["textEntry"], frame: .init(x: 0, y: 100, width: 300, height: 30))], later: [title]).failure != nil)
+        // Only returns, which a field that doesn't handle return ignores, aren't checked.
+        let time = FakeTime()
+        let driver = FakeDriver()
+        driver.screens = [[title]]
+        driver.ending = [title]
+        try await time.player().play(SceneFile(steps: [Step(.type(text: "\n", into: nil))]), named: "sign-up", on: driver)
+        #expect(driver.done == ["run"], "not even looked at")
     }
 
     @Test func aStepWithNoHoldOfItsOwnHoldsForTheScenesDefault() async throws {

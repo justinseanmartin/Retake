@@ -111,6 +111,12 @@ public struct Player: Sendable {
 
     @ButtonHeistActor
     func play(_ played: Played, in scene: String, orientation: inout SceneFile.Orientation, holding: Bool, on driver: some AppDriver) async throws(RetakeError) {
+        // What typing is checked against: whether anything on screen changes. Only returns aren't
+        // checked, since a field that doesn't handle return ignores it, harmlessly, changing nothing.
+        var before: [ScreenElement]?
+        if case .type(let text, _)? = played.step.action, text.contains(where: { $0 != "\n" }) {
+            before = try? await driver.elements()
+        }
         report(.started(played))
         let sent = Date()
         let sentAt = now()
@@ -139,6 +145,12 @@ public struct Player: Sendable {
                 throw RetakeError(.failed, "\(scene): \(played.name) failed: \(what) after \(Step.seconds(timeout)).")
             }
             throw RetakeError(error.status, "\(scene): \(played.name), \(played.step.summary), didn't run: \(error.message)")
+        }
+        if let before, try await !typed(since: before, after: evidence.elements, on: driver) {
+            throw RetakeError(
+                .failed,
+                "\(scene): \(played.name), \(played.step.summary), went nowhere: nothing on screen changed, not even the field's value or whether it's being edited. Is the field still the one being typed in?",
+            )
         }
         report(.finished(played, Timing(sent: sent, received: Date(), evidence: evidence)))
         if holding, let hold = played.step.hold {
@@ -183,6 +195,32 @@ public struct Player: Sendable {
     }
 
     /// The activation point of the one element on screen `target` names.
+    /// Whether typing changed anything on screen since `before`: in the reading the step ended
+    /// with, or, to give the app a moment, one a little later.
+    @ButtonHeistActor
+    func typed(since before: [ScreenElement], after: [ScreenElement]?, on driver: some AppDriver) async throws(RetakeError) -> Bool {
+        if let after, Self.changed(before, after) { return true }
+        await pause(Self.typingSettles)
+        return Self.changed(before, try await driver.elements())
+    }
+
+    /// Seconds to wait for typing to show before deciding it went nowhere.
+    static let typingSettles = 0.3
+
+    /// Whether anything VoiceOver could tell apart changed between two readings: which elements
+    /// there are, or any one's label, value, identifier, hint or traits. A field's value changes as
+    /// it's typed into, through any formatter, and a secure field's as its dots; a field being
+    /// typed in has `isEditing` until return ends it; and a control that shows its input somewhere
+    /// else changes that. Frames are left out, since the keyboard moves things whether or not
+    /// anything was typed.
+    static func changed(_ before: [ScreenElement], _ after: [ScreenElement]) -> Bool {
+        func key(_ element: ScreenElement) -> String {
+            [element.label ?? "", element.value ?? "", element.identifier ?? "", element.hint ?? "", element.traits.sorted().joined(separator: ",")]
+                .joined(separator: "\u{1F}")
+        }
+        return before.map(key).sorted() != after.map(key).sorted()
+    }
+
     static func point(of target: ElementTarget, in elements: [ScreenElement]) throws(RetakeError) -> Point {
         let matches = elements.filter { target.matches($0) && $0.frame != nil }
         let found: ScreenElement

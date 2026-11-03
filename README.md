@@ -334,7 +334,9 @@ Each step does one thing, led by what it does:
   needs no coordinates: `{ "from": { "label": "Reorder Book club" }, "to": { "label": "Reorder
   Weekend plans" } }`.
 - **`type`** types `text` key by key on the on-screen keyboard, where `\n` presses return, into the
-  element `into` names, or the field already being typed in.
+  element `into` names, or the field already being typed in. It fails if typing changed nothing on
+  screen, not a field's value nor whether it's being edited, as when the field lost its focus first;
+  text that's only returns isn't checked, since a field may ignore return.
 - **`activate`** is an accessibility activation of an element, with no touch, for getting somewhere
   off camera.
 - **`orientation`** turns the device, to `portrait`, `portrait-upside-down`, `landscape-left` or
