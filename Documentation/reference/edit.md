@@ -52,6 +52,7 @@ A stretch of a take, played in order.
 | `spotlight` | [spotlight](#spotlight) |  |  |
 | `blurs` | list of [blur](#blur) |  | Blurs over a stretch of the take, for anything private it shows. |
 | `stills` | list of [still](#still) |  | Frames of other takes, popped in over the clip. |
+| `stillsOut` | [anchor](#anchor) |  | When the stills pop out, one after another in the order they popped in; they stay to the clip's end when not given. |
 | `stillsBackground` | [color](#color) |  | A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture. |
 | `turns` | `"letterboxed"` or `"device"` |  | How this clip shows the device turning; the edit's turns when not given. |
 | `turnBlur` | [turn-blur](#turn-blur) |  |  |
@@ -72,8 +73,8 @@ Text over the video, from its from to its to.
 | `text` | string, not empty | required |  |
 | `y` | number from 0 to 1 | required | Its centre, as a share of the video's height: 0 at the top, 1 at the bottom. |
 | `color` | [color](#color) | required |  |
-| `from` | [anchor](#anchor) |  | When it starts; the clip's from when not given. |
-| `to` | [anchor](#anchor), or [caption-end](#caption-end) |  | When it ends: an anchor in its clip's take, or, naming a later clip, in that clip's take; the clip's to when not given. |
+| `from` | [anchor](#anchor) |  | When it starts; once its clip has faded in when not given. |
+| `to` | [anchor](#anchor), or [caption-end](#caption-end) |  | When it ends: an anchor in its clip's take, or, naming a later clip, in that clip's take; as the next clip starts to fade in when not given. |
 | `symbol` | [symbol](#symbol) |  |  |
 
 ### symbol
@@ -120,6 +121,7 @@ Dims the rest of the screen around an element or a rectangle, with a pulsing rin
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `element` | [element](#element) |  | An element, found in the take's step log at the moment. |
+| `part` | [part](#part) |  |  |
 | `rect` | [rect](#rect) |  |  |
 | `padding` | number ≥ 0 | `8` | Points of space around it. |
 | `color` | [color](#color) | `"#FFFFFF"` | The ring's colour. |
@@ -135,6 +137,7 @@ A blur over an element or a rectangle.
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `element` | [element](#element) |  | An element, found in the take's step log at the moment. |
+| `part` | [part](#part) |  |  |
 | `rect` | [rect](#rect) |  |  |
 | `from` | [anchor](#anchor) |  | When it starts; the clip's from when not given. |
 | `to` | [anchor](#anchor) |  | When it ends; the clip's to when not given. |
@@ -153,14 +156,25 @@ A frame of another take, popped in over the clip.
 
 ### rect
 
-A rectangle in screen points.
+A rectangle of the screen, each side in screen points or a percentage of the screen as the device faced.
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `x` | number ≥ 0 | required |  |
-| `y` | number ≥ 0 | required |  |
-| `width` | number > 0 | required |  |
-| `height` | number > 0 | required |  |
+| `x` | number ≥ 0, or string matching `^(100(\.0+)?\|[0-9]{1,2}(\.[0-9]+)?)%$` | required |  |
+| `y` | number ≥ 0, or string matching `^(100(\.0+)?\|[0-9]{1,2}(\.[0-9]+)?)%$` | required |  |
+| `width` | number > 0, or string matching `^(100(\.0+)?\|[0-9]{1,2}(\.[0-9]+)?)%$` | required |  |
+| `height` | number > 0, or string matching `^(100(\.0+)?\|[0-9]{1,2}(\.[0-9]+)?)%$` | required |  |
+
+### part
+
+Part of the element, each side in points from its top-left corner or a percentage of its frame; its whole frame on a side not given, as "part": { "x": "62%", "width": "38%" } is its right 38%.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `x` | number ≥ 0, or string matching `^(100(\.0+)?\|[0-9]{1,2}(\.[0-9]+)?)%$` | `"0%"` |  |
+| `y` | number ≥ 0, or string matching `^(100(\.0+)?\|[0-9]{1,2}(\.[0-9]+)?)%$` | `"0%"` |  |
+| `width` | number > 0, or string matching `^(100(\.0+)?\|[0-9]{1,2}(\.[0-9]+)?)%$` | `"100%"` |  |
+| `height` | number > 0, or string matching `^(100(\.0+)?\|[0-9]{1,2}(\.[0-9]+)?)%$` | `"100%"` |  |
 
 ### music
 
@@ -208,7 +222,7 @@ A step, and where to go from it.
 
 ### caption-end
 
-A later clip, by its id, and an anchor in that clip's take; that clip's to when it gives no step.
+A later clip, by its id, and an anchor in that clip's take; as that clip's next starts to fade in, when it gives no step.
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |

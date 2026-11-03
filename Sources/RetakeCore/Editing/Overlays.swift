@@ -49,6 +49,8 @@ public struct Overlays: Equatable, Sendable {
         public var count: Int
         public var start: Double
         public var end: Double
+        /// Whether it pops out at `end`, rather than staying to its clip's.
+        public var popsOut = false
     }
 
     public var captions: [Caption] = []
@@ -99,8 +101,13 @@ public struct Overlays: Equatable, Sendable {
                 let points: CGRect
                 switch region {
                 case .rect(let rect):
-                    points = CGRect(x: rect.x, y: rect.y, width: rect.width, height: rect.height)
-                case .element(let element):
+                    let takeTime = placement.from + (videoTime - placement.start) * placement.speed
+                    let screen = timeline.screen(at: takeTime)
+                    if rect.hasShare, screen == nil {
+                        throw RetakeError(.failed, "\(name).\(what).rect: the take of \(clip.take) doesn't record its screen's size, which a share of it needs; record it again.")
+                    }
+                    points = rect.within(CGRect(origin: .zero, size: screen ?? .zero))
+                case .element(let element, let part):
                     let takeTime = placement.from + (videoTime - placement.start) * placement.speed
                     let found: ScreenElement
                     do {
@@ -110,24 +117,31 @@ public struct Overlays: Equatable, Sendable {
                     }
                     // `element(_:at:)` finds only what's on screen, so it has a frame.
                     let frame = found.frame ?? ScreenElement.Rect(x: 0, y: 0, width: 0, height: 0)
-                    points = CGRect(x: frame.x, y: frame.y, width: frame.width, height: frame.height)
+                    let whole = CGRect(x: frame.x, y: frame.y, width: frame.width, height: frame.height)
+                    points = part?.within(whole) ?? whole
                 }
                 return try onCanvas(points.insetBy(dx: -padding, dy: -padding), at: videoTime, what)
             }
 
+            // A caption that doesn't say when keeps clear of the cross-fades: it comes up once its
+            // clip has faded in, and goes as the next one starts to fade in over it.
+            func shown(until index: Int) -> Double {
+                let next = plan.placements.indices.contains(index + 1) ? plan.placements[index + 1].crossfade : 0
+                return plan.placements[index].end - next
+            }
             for (captionIndex, caption) in clip.captions.enumerated() {
                 let what = "captions[\(captionIndex)]"
-                let start = try time(caption.from, "\(what).from") ?? placement.start
-                var end = placement.end
+                let start = try time(caption.from, "\(what).from") ?? placement.start + placement.crossfade
+                var end = shown(until: index)
                 if let to = caption.to {
                     if let later = to.clip {
                         guard let laterIndex = indices[later], laterIndex > index else {
                             throw RetakeError(.failed, "\(name).\(what).to: there's no later clip \"\(later)\".")
                         }
                         let laterPlacement = plan.placements[laterIndex]
-                        end = try time(to.anchor, "\(what).to", in: timelines[video.clips[laterIndex].take], of: laterPlacement) ?? laterPlacement.end
+                        end = try time(to.anchor, "\(what).to", in: timelines[video.clips[laterIndex].take], of: laterPlacement) ?? shown(until: laterIndex)
                     } else {
-                        end = try time(to.anchor, "\(what).to") ?? placement.end
+                        end = try time(to.anchor, "\(what).to") ?? shown(until: index)
                     }
                 }
                 guard end > start else { throw RetakeError(.failed, "\(name).\(what) ends before it starts.") }
@@ -179,6 +193,7 @@ public struct Overlays: Equatable, Sendable {
                 overlays.blurs.append(Blur(rect: rect, radius: blur.radius, start: start, end: end))
             }
 
+            let stillsOut = try time(clip.stillsOut, "stillsOut")
             for (stillIndex, still) in clip.stills.enumerated() {
                 guard let stillTimeline = timelines[still.take] else {
                     throw RetakeError(.failed, "\(name).stills[\(stillIndex)]: there's no take of \(still.take) to take it from.")
@@ -189,10 +204,16 @@ public struct Overlays: Equatable, Sendable {
                 } catch {
                     throw RetakeError(.failed, "\(name).stills[\(stillIndex)].at: \(error.message).")
                 }
-                // They pop in one after another, as the clip starts, and stay to its end.
+                // They pop in one after another, as the clip starts, and stay to its end, or pop out
+                // one after another in the same order.
+                let start = placement.start + Overlays.firstStill + Double(stillIndex) * Overlays.stillsApart
+                let end = stillsOut.map { min($0 + Double(stillIndex) * Overlays.stillsApart, placement.end) } ?? placement.end
+                guard end > start + OverlayLayers.stillPopOut else {
+                    throw RetakeError(.failed, "\(name).stillsOut: stills[\(stillIndex)] would pop out before it has popped in, at \(TakeTimeline.seconds(start)) into the video.")
+                }
                 overlays.stills.append(Still(
                     take: still.take, at: at, crop: framings[index][0].framing.cropRect, index: stillIndex, count: clip.stills.count,
-                    start: placement.start + Overlays.firstStill + Double(stillIndex) * 0.22, end: placement.end,
+                    start: start, end: end, popsOut: stillsOut != nil,
                 ))
             }
             if let color = clip.stillsBackground, !clip.stills.isEmpty {
@@ -205,4 +226,6 @@ public struct Overlays: Equatable, Sendable {
 
     /// Seconds into its clip the first still pops in.
     static let firstStill = 0.35
+    /// Seconds between one still popping in, or out, and the next.
+    static let stillsApart = 0.22
 }

@@ -544,7 +544,8 @@ and a 6.9-inch iPhone, naming the takes on each.
 - **Carry captions**, any number, each up between two moments; see [captions](#captions).
 - **Spotlight** an element, dimming the rest, with a pulsing ring around it.
 - **Blur** an element over a stretch of the take, for anything private it shows.
-- **Pop in stills** from other takes, over the clip or over a colour of their own (`stillsBackground`).
+- **Pop in stills** from other takes, over the clip or over a colour of their own (`stillsBackground`),
+  and pop them out again, in the same order, at `stillsOut`.
 - **Cue sound effects**, which play at normal speed however fast the clip plays, or play the take's
   own sound; see [sound](#sound).
 - **Show the device turning**, when a scene turns it; see [turns](#turns).
@@ -560,21 +561,26 @@ spotlight lands on the same button on every device, with no rectangles to measur
 ```
 
 An element is matched as a step's target is, so where several share a label, the same choice picks
-one. The frame used is the element's in the latest snapshot at or before the moment. Something
-moving between snapshots, such as a keyboard sliding up, is better covered by a `rect` in screen
-points, which still works, given per device type where layouts differ.
+one. The frame used is the element's in the latest snapshot at or before the moment. Where only part
+of an element matters, its `part` names it, in points from the element's top-left corner or
+percentages of its frame, the whole frame on any side not given: `"part": { "x": "62%", "width":
+"31%" }` is the word "Alex" in a "Send to Alex" button. Something moving between snapshots, such as
+a keyboard sliding up, is better covered by a `rect`, in screen points or percentages of the screen
+as the device faced, given per device type where layouts differ.
 
 ### Captions
 
 A clip's `captions` are text over the video, each shown from its `from` to its `to`, which are
-anchors and default to the clip's own, so a caption with neither is up for the whole clip. Any
-number can be up at once, and they may overlap; where each sits is the edit's to say.
+anchors. A caption with neither is up for the whole clip, but clear of its cross-fades: it comes up
+once the clip has faded in, and goes as the next clip starts to fade in, so one caption is gone
+before the next arrives. Any number can be up at once, and they may overlap; where each sits is the
+edit's to say.
 
 A caption can run on over the clips after it. Its `to` names a later clip by its `id`, and is then
 an anchor in that clip's take, with everything an anchor takes: a `step`, and an `offset`,
 `fraction` or `edge` from it, as `{ "clip": "sync", "step": "synced", "offset": -0.2 }` does above.
-`{ "clip": "sync" }` alone keeps the caption up to the end of that clip, where its own `to` lands,
-so the caption leaves as the next clip starts to fade in. Only `to` can name another clip: a caption
+`{ "clip": "sync" }` alone keeps the caption up through that clip, leaving as the next clip starts
+to fade in. Only `to` can name another clip: a caption
 that starts in a later clip belongs to that clip.
 
 An anchor outside the part of the take its clip plays fails the `cut`, naming the caption.

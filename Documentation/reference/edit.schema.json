@@ -271,6 +271,10 @@
             "$ref": "#/$defs/still"
           }
         },
+        "stillsOut": {
+          "$ref": "#/$defs/anchor",
+          "description": "When the stills pop out, one after another in the order they popped in; they stay to the clip's end when not given."
+        },
         "stillsBackground": {
           "$ref": "#/$defs/color",
           "description": "A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture."
@@ -314,10 +318,10 @@
         },
         "from": {
           "$ref": "#/$defs/anchor",
-          "description": "When it starts; the clip's from when not given."
+          "description": "When it starts; once its clip has faded in when not given."
         },
         "to": {
-          "description": "When it ends: an anchor in its clip's take, or, naming a later clip, in that clip's take; the clip's to when not given.",
+          "description": "When it ends: an anchor in its clip's take, or, naming a later clip, in that clip's take; as the next clip starts to fade in when not given.",
           "oneOf": [
             {
               "$ref": "#/$defs/anchor"
@@ -454,6 +458,9 @@
           "$ref": "#/$defs/element",
           "description": "An element, found in the take's step log at the moment."
         },
+        "part": {
+          "$ref": "#/$defs/part"
+        },
         "rect": {
           "$ref": "#/$defs/rect"
         },
@@ -502,6 +509,9 @@
         "element": {
           "$ref": "#/$defs/element",
           "description": "An element, found in the take's step log at the moment."
+        },
+        "part": {
+          "$ref": "#/$defs/part"
         },
         "rect": {
           "$ref": "#/$defs/rect"
@@ -565,24 +575,60 @@
       "additionalProperties": false
     },
     "rect": {
-      "description": "A rectangle in screen points.",
+      "description": "A rectangle of the screen, each side in screen points or a percentage of the screen as the device faced.",
       "type": "object",
       "properties": {
         "x": {
-          "type": "number",
-          "minimum": 0
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "description": "A percentage of the screen, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
         },
         "y": {
-          "type": "number",
-          "minimum": 0
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "description": "A percentage of the screen, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
         },
         "width": {
-          "type": "number",
-          "exclusiveMinimum": 0
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "description": "A percentage of the screen, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
         },
         "height": {
-          "type": "number",
-          "exclusiveMinimum": 0
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "description": "A percentage of the screen, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
         },
         "iphone": {
           "$ref": "#/$defs/rect-override",
@@ -594,6 +640,77 @@
         }
       },
       "required": ["x", "y", "width", "height"],
+      "additionalProperties": false
+    },
+    "part": {
+      "description": "Part of the element, each side in points from its top-left corner or a percentage of its frame; its whole frame on a side not given, as \"part\": { \"x\": \"62%\", \"width\": \"38%\" } is its right 38%.",
+      "type": "object",
+      "properties": {
+        "x": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "description": "A percentage of the element, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ],
+          "default": "0%"
+        },
+        "y": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "description": "A percentage of the element, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ],
+          "default": "0%"
+        },
+        "width": {
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "description": "A percentage of the element, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ],
+          "default": "100%"
+        },
+        "height": {
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "description": "A percentage of the element, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ],
+          "default": "100%"
+        },
+        "iphone": {
+          "$ref": "#/$defs/part-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/part-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
       "additionalProperties": false
     },
     "music": {
@@ -740,7 +857,7 @@
       }
     },
     "caption-end": {
-      "description": "A later clip, by its id, and an anchor in that clip's take; that clip's to when it gives no step.",
+      "description": "A later clip, by its id, and an anchor in that clip's take; as that clip's next starts to fade in, when it gives no step.",
       "type": "object",
       "properties": {
         "clip": {
@@ -1025,6 +1142,10 @@
             "$ref": "#/$defs/still"
           }
         },
+        "stillsOut": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "When the stills pop out, one after another in the order they popped in; they stay to the clip's end when not given."
+        },
         "stillsBackground": {
           "$ref": "#/$defs/color-override",
           "description": "A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture."
@@ -1059,10 +1180,10 @@
         },
         "from": {
           "$ref": "#/$defs/anchor-override",
-          "description": "When it starts; the clip's from when not given."
+          "description": "When it starts; once its clip has faded in when not given."
         },
         "to": {
-          "description": "When it ends: an anchor in its clip's take, or, naming a later clip, in that clip's take; the clip's to when not given.",
+          "description": "When it ends: an anchor in its clip's take, or, naming a later clip, in that clip's take; as the next clip starts to fade in when not given.",
           "oneOf": [
             {
               "$ref": "#/$defs/anchor-override"
@@ -1153,6 +1274,9 @@
           "$ref": "#/$defs/element-override",
           "description": "An element, found in the take's step log at the moment."
         },
+        "part": {
+          "$ref": "#/$defs/part-override"
+        },
         "rect": {
           "$ref": "#/$defs/rect-override"
         },
@@ -1183,6 +1307,9 @@
         "element": {
           "$ref": "#/$defs/element-override",
           "description": "An element, found in the take's step log at the moment."
+        },
+        "part": {
+          "$ref": "#/$defs/part-override"
         },
         "rect": {
           "$ref": "#/$defs/rect-override"
@@ -1220,24 +1347,119 @@
       "additionalProperties": false
     },
     "rect-override": {
-      "description": "A rectangle in screen points.",
+      "description": "A rectangle of the screen, each side in screen points or a percentage of the screen as the device faced.",
       "type": "object",
       "properties": {
         "x": {
-          "type": "number",
-          "minimum": 0
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "description": "A percentage of the screen, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
         },
         "y": {
-          "type": "number",
-          "minimum": 0
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "description": "A percentage of the screen, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
         },
         "width": {
-          "type": "number",
-          "exclusiveMinimum": 0
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "description": "A percentage of the screen, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
         },
         "height": {
-          "type": "number",
-          "exclusiveMinimum": 0
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "description": "A percentage of the screen, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "part-override": {
+      "description": "Part of the element, each side in points from its top-left corner or a percentage of its frame; its whole frame on a side not given, as \"part\": { \"x\": \"62%\", \"width\": \"38%\" } is its right 38%.",
+      "type": "object",
+      "properties": {
+        "x": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "description": "A percentage of the element, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
+        },
+        "y": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "description": "A percentage of the element, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
+        },
+        "width": {
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "description": "A percentage of the element, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
+        },
+        "height": {
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "description": "A percentage of the element, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
         }
       },
       "additionalProperties": false
@@ -1347,7 +1569,7 @@
       }
     },
     "caption-end-override": {
-      "description": "A later clip, by its id, and an anchor in that clip's take; that clip's to when it gives no step.",
+      "description": "A later clip, by its id, and an anchor in that clip's take; as that clip's next starts to fade in, when it gives no step.",
       "type": "object",
       "properties": {
         "clip": {

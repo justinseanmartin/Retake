@@ -41,10 +41,27 @@ struct OverlaysTests {
             ]},
             {"id": "later", "take": "walk", "from": {"step": "b"}, "to": {"step": "end"}, "crossfade": 0.5}
             """#)
-        // The first clip plays 1–2 s of the take as 0–1 s; the later one 2–6 s from 0.5 s.
+        // The first clip plays 1–2 s of the take as 0–1 s; the later one 2–6 s from 0.5 s, fading in
+        // over it until 1 s. The whole clip's caption goes as the later one starts to fade in.
         #expect(placed.captions.map(\.start) == [0, 0.75])
-        #expect(placed.captions.map(\.end) == [1, 3.5])
+        #expect(placed.captions.map(\.end) == [0.5, 3.5])
         #expect(placed.captions[1].y == 0.9 && placed.captions[1].color == Color(hex: "#1F6FEB"))
+    }
+
+    @Test func aCaptionThatDoesntSayWhenKeepsClearOfTheCrossfades() throws {
+        let placed = try overlays(#"""
+            {"take": "walk", "from": {"step": "a"}, "to": {"step": "b"}},
+            {"id": "middle", "take": "walk", "from": {"step": "b"}, "to": {"step": "end"}, "crossfade": 0.5, "captions": [
+              {"text": "This clip", "y": 0.8, "color": "#000000"},
+              {"text": "Runs on", "y": 0.8, "color": "#000000", "to": {"clip": "last"}}
+            ]},
+            {"id": "last", "take": "walk", "from": {"step": "a"}, "to": {"step": "b"}, "crossfade": 0.25},
+            {"take": "walk", "from": {"step": "a"}, "to": {"step": "b"}, "crossfade": 0.25}
+            """#)
+        // The middle clip fades in over 0.5–1 s and plays to 4.5 s; the last fades in from 4.25 s,
+        // plays to 5.25 s, and the one after it fades in from 5 s.
+        #expect(placed.captions.map(\.start) == [1, 1])
+        #expect(placed.captions.map(\.end) == [4.25, 5])
     }
 
     @Test func aTouchIsDrawnWhereItLandedAndASpotlightAroundItsElement() throws {
@@ -61,6 +78,24 @@ struct OverlaysTests {
         #expect(abs(placed.spotlights[0].start - 3.1) < 1e-9 && placed.spotlights[0].end == 6)
         #expect(close(placed.blurs[0].rect, CGRect(x: 0, y: 834 * scale, width: 1200, height: 100 * scale)))
         #expect(placed.blurs[0].start == 1 && placed.blurs[0].end == 2)
+    }
+
+    @Test func aRegionCanBePartOfAnElementOrSharesOfTheScreen() throws {
+        let placed = try overlays(#"""
+            {"take": "walk", "from": {"step": "b"}, "to": {"step": "end"},
+             "spotlight": {"rect": {"x": "10%", "y": "50%", "width": "50%", "height": 100}, "padding": 0},
+             "blurs": [{"element": {"label": "Share"}, "part": {"x": "50%", "width": "50%", "y": 4, "height": 10}, "from": {"step": "b", "offset": 0.1}}]}
+            """#)
+        // A tenth of the 834-point screen across, half its 1194 down; and the right half of the
+        // Share button, 44 points square at (10, 20), from 4 points down its side for 10.
+        #expect(close(placed.spotlights[0].rect, CGRect(x: 83.4 * scale, y: 597 * scale, width: 417 * scale, height: 100 * scale)))
+        #expect(close(placed.blurs[0].rect, CGRect(x: 32 * scale, y: 24 * scale, width: 22 * scale, height: 10 * scale)))
+    }
+
+    @Test func aShareOfTheScreenNeedsATakeThatRecordedItsSize() {
+        #expect(throws: RetakeError.self) {
+            try overlays(#"{"take": "walk", "from": {"step": "b"}, "to": {"step": "end"}, "blurs": [{"rect": {"x": 0, "y": 0, "width": "50%", "height": 10}}]}"#, screen: nil)
+        }
     }
 
     @Test func touchesAreDrawnUnlessAClipTurnsThemOff() throws {
@@ -122,6 +157,41 @@ struct OverlaysTests {
         #expect(abs(background.start + OverlayLayers.stillsBackgroundFade - placed.stills[0].start) < 1e-9 && background.end == 5)
         let layers = OverlayLayers(placed, spec: spec, stills: [Self.pixel, Self.pixel])
         #expect(layers.parent.sublayers?[1].backgroundColor != nil, "over the picture, under the stills")
+    }
+
+    @Test func stillsPopOutOneAfterAnotherInTheOrderTheyPoppedIn() throws {
+        let placed = try overlays(#"""
+            {"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "stillsOut": {"step": "b", "offset": 0.5},
+             "stills": [{"take": "walk", "at": 1}, {"take": "walk", "at": 2}, {"take": "walk", "at": 3}]}
+            """#)
+        // The clip plays 1–6 s of the take as 0–5 s; b ends at 3 s in the take, 2 s in the video.
+        let ends = placed.stills.map { ($0.end * 1000).rounded() / 1000 }
+        #expect(ends == [2.5, 2.72, 2.94] && placed.stills.allSatisfy(\.popsOut))
+        #expect(throws: RetakeError.self, "before they've popped in") {
+            try overlays(#"{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "stillsOut": {"step": "a"}, "stills": [{"take": "walk", "at": 1}]}"#)
+        }
+    }
+
+    @Test func stillsFitTheCanvasWithTheSameSpaceAboveBetweenAndBelow() {
+        let canvas = CGSize(width: 1200, height: 1600)
+        let grid = OverlayLayers.stillsGrid(count: 4, aspect: 4.0 / 3, canvas: canvas)
+        let above = grid[0].minY, between = grid[2].minY - grid[0].maxY, below = canvas.height - grid[2].maxY
+        #expect(abs(above - between) < 1e-9 && abs(between - below) < 1e-9 && above >= OverlayLayers.stillsSpacing)
+        let left = grid[0].minX, across = grid[1].minX - grid[0].maxX, right = canvas.width - grid[1].maxX
+        #expect(abs(left - across) < 1e-9 && abs(across - right) < 1e-9)
+        let short = OverlayLayers.stillsGrid(count: 3, aspect: 4.0 / 3, canvas: canvas)
+        #expect(abs(short[2].midX - canvas.width / 2) < 1e-9, "a short last row is centred")
+        let wide = OverlayLayers.stillsGrid(count: 2, aspect: 2, canvas: CGSize(width: 1600, height: 900))
+        #expect(wide.allSatisfy { $0.minY >= OverlayLayers.stillsSpacing && $0.maxY <= 900 - OverlayLayers.stillsSpacing }, "fits a short canvas by its height")
+    }
+
+    @Test func aCaptionTooWideForTheCanvasIsSetSmallerToFit() {
+        let short = OverlayLayers.caption(.init(text: "Hi", color: .black, y: 0.5, symbol: nil, start: 0, end: 1), canvas: spec.size)
+        let long = OverlayLayers.caption(
+            .init(text: "https://github.com/justinseanmartin/Retake", color: .black, y: 0.5, symbol: Edit.Symbol(name: "link"), start: 0, end: 1), canvas: spec.size,
+        )
+        #expect(long.bounds.width <= spec.size.width - OverlayLayers.captionMargin * 2 + 1 && long.bounds.width > spec.size.width * 0.8)
+        #expect(long.bounds.height < short.bounds.height, "its text smaller")
     }
 
     /// A one-pixel image, standing in for a still's frame.

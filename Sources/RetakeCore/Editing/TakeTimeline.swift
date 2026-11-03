@@ -9,6 +9,15 @@ public struct TakeTimeline: Sendable {
         self.log = log
     }
 
+    /// The screen in points as the device faced `time` seconds into the take: turned from upright
+    /// when the frame was wider than tall. Nil for a take that didn't record its screen's size.
+    public func screen(at time: Double) -> CGSize? {
+        guard let screen = log.screen else { return nil }
+        let shape = log.shapes.last { $0.at <= time + 1e-9 }
+        let landscape = shape.map { $0.width > $0.height } ?? false
+        return landscape == (screen.width > screen.height) ? screen : CGSize(width: screen.height, height: screen.width)
+    }
+
     /// Why an anchor or element didn't resolve, in a sentence to follow where it's named.
     public struct Unresolved: Error, Equatable, Sendable {
         public var message: String

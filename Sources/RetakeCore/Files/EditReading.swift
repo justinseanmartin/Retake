@@ -171,13 +171,17 @@ extension EditFile {
         if stillsBackground != nil, stills.isEmpty {
             reader.problem("the clip has no stills for it to go behind", at: object.path("stillsBackground"))
         }
+        let stillsOut = object.optional("stillsOut") { readAnchor($0, $1, reader) }
+        if stillsOut != nil, stills.isEmpty {
+            reader.problem("the clip has no stills to pop out", at: object.path("stillsOut"))
+        }
         let turns = object.optional("turns") { reader.choice($0, at: $1, as: Edit.Turns.self) }
         let turnBlur = object.optional("turnBlur") { readTurnBlur($0, $1, reader) }
         guard reader.problems.count == problemsBefore, let take, let from, let to else { return nil }
         return Edit.Clip(
             id: id, intent: intent, take: take, from: from, to: to, speed: speed, crossfade: crossfade,
             audioCrossfade: audioCrossfade, touches: touches, touchColor: touchColor, touchColors: touchColors, takeAudio: takeAudio, captions: captions, sounds: sounds,
-            spotlight: spotlight, blurs: blurs, stills: stills, stillsBackground: stillsBackground, turns: turns, turnBlur: turnBlur,
+            spotlight: spotlight, blurs: blurs, stills: stills, stillsBackground: stillsBackground, stillsOut: stillsOut, turns: turns, turnBlur: turnBlur,
         )
     }
 
@@ -283,10 +287,15 @@ extension EditFile {
         return Edit.Still(take: take, at: at)
     }
 
-    /// An `element`, found in the step log, or a `rect` in screen points: one of them.
+    /// An `element`, found in the step log, and perhaps a `part` of it, or a `rect` of the screen:
+    /// one of them.
     static func readRegion(_ object: inout ObjectReader, _ reader: JSONReader) -> Edit.Region? {
         let hasElement = object.has("element")
         let hasRect = object.has("rect")
+        if object.has("part"), !hasElement {
+            reader.problem("is a part of an \"element\", which isn't given", at: object.path("part"))
+            return nil
+        }
         switch (hasElement, hasRect) {
         case (true, true):
             reader.problem("names an \"element\" or a \"rect\", not both", at: object.path)
@@ -295,21 +304,31 @@ extension EditFile {
             reader.problem("needs an \"element\" to find in the step log, or a \"rect\" in screen points", at: object.path)
             return nil
         case (true, false):
-            return object.required("element") { value, path in
+            let element = object.required("element") { value, path in
                 reader.object(value, at: path).flatMap { var element = $0; defer { element.finish() }; return SceneFile.readElement(&element, reader) }
-            }.map(Edit.Region.element)
+            }
+            let part = object.optional("part") { readRect($0, $1, reader, whole: true) }
+            if object.has("part"), part == nil { return nil }
+            return element.map { Edit.Region.element($0, part: part) }
         case (false, true):
-            return object.required("rect") { value, path -> Edit.Rect? in
-                guard var rect = reader.object(value, at: path) else { return nil }
-                defer { rect.finish() }
-                let x = rect.required("x") { reader.number($0, at: $1, .atLeast(0)) }
-                let y = rect.required("y") { reader.number($0, at: $1, .atLeast(0)) }
-                let width = rect.required("width") { reader.number($0, at: $1, .above(0)) }
-                let height = rect.required("height") { reader.number($0, at: $1, .above(0)) }
-                guard let x, let y, let width, let height else { return nil }
-                return Edit.Rect(x: x, y: y, width: width, height: height)
-            }.map(Edit.Region.rect)
+            return object.required("rect") { readRect($0, $1, reader) }.map(Edit.Region.rect)
         }
+    }
+
+    /// A rectangle of points or shares, each of its sides given; or, for a `whole` element's part,
+    /// any of them, the rest the whole's.
+    static func readRect(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader, whole: Bool = false) -> Edit.Rect? {
+        guard var rect = reader.object(value, at: path) else { return nil }
+        defer { rect.finish() }
+        let problems = reader.problems.count
+        func side(_ key: String, aboveZero: Bool, otherwise: Length) -> Length? {
+            whole ? rect.optional(key) { SceneFile.readLength($0, $1, reader, aboveZero: aboveZero) } ?? otherwise
+                : rect.required(key) { SceneFile.readLength($0, $1, reader, aboveZero: aboveZero) }
+        }
+        let x = side("x", aboveZero: false, otherwise: .share(0)), y = side("y", aboveZero: false, otherwise: .share(0))
+        let width = side("width", aboveZero: true, otherwise: .share(1)), height = side("height", aboveZero: true, otherwise: .share(1))
+        guard reader.problems.count == problems, let x, let y, let width, let height else { return nil }
+        return Edit.Rect(x: x, y: y, width: width, height: height)
     }
 
     static func readColor(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> Color? {

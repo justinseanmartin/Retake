@@ -213,6 +213,7 @@ extension EditFile {
         )
         let region: [Schema.Property] = [
             .init("element", .ref("element", "An element, found in the take's step log at the moment.")),
+            .init("part", .ref("part")),
             .init("rect", .ref("rect")),
         ]
         let from = Schema.ref("anchor", "When it starts; the clip's from when not given.")
@@ -243,6 +244,7 @@ extension EditFile {
             .init("spotlight", .ref("spotlight")),
             .init("blurs", .array("Blurs over a stretch of the take, for anything private it shows.", of: .ref("blur"))),
             .init("stills", .array("Frames of other takes, popped in over the clip.", of: .ref("still"))),
+            .init("stillsOut", .ref("anchor", "When the stills pop out, one after another in the order they popped in; they stay to the clip's end when not given.")),
             .init("stillsBackground", .ref("color", "A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture.")),
             .init("turns", turns.described("How this clip shows the device turning; the edit's turns when not given.")),
             .init("turnBlur", .ref("turn-blur")),
@@ -252,8 +254,8 @@ extension EditFile {
             .init("text", .string(nil, nonEmpty: true)),
             .init("y", .number("Its centre, as a share of the video's height: 0 at the top, 1 at the bottom.", atLeast: 0, atMost: 1)),
             .init("color", .ref("color")),
-            .init("from", from),
-            .init("to", .oneOf("When it ends: an anchor in its clip's take, or, naming a later clip, in that clip's take; the clip's to when not given.", [
+            .init("from", .ref("anchor", "When it starts; once its clip has faded in when not given.")),
+            .init("to", .oneOf("When it ends: an anchor in its clip's take, or, naming a later clip, in that clip's take; as the next clip starts to fade in when not given.", [
                 .ref("anchor"), .ref("caption-end"),
             ])),
             .init("symbol", .ref("symbol")),
@@ -267,7 +269,7 @@ extension EditFile {
         ], required: ["step"])
         stepAnchor.not = [{ var both = Schema(); both.required = ["offset", "fraction"]; return both }()]
         var captionEnd = stepAnchor
-        captionEnd.description = "A later clip, by its id, and an anchor in that clip's take; that clip's to when it gives no step."
+        captionEnd.description = "A later clip, by its id, and an anchor in that clip's take; as that clip's next starts to fade in, when it gives no step."
         captionEnd.properties.insert(.init("clip", .string("The later clip's id.", nonEmpty: true)), at: 0)
         captionEnd.required = ["clip"]
 
@@ -304,10 +306,15 @@ extension EditFile {
                 .init("take", .string("The scene whose latest successful take it's from.", nonEmpty: true)),
                 .init("at", .ref("anchor", "The moment in that take.")),
             ], required: ["take", "at"])),
-            .init("rect", .object("A rectangle in screen points.", [
-                .init("x", .number(nil, atLeast: 0)), .init("y", .number(nil, atLeast: 0)),
-                .init("width", .number(nil, above: 0)), .init("height", .number(nil, above: 0)),
+            .init("rect", .object("A rectangle of the screen, each side in screen points or a percentage of the screen as the device faced.", [
+                .init("x", .length(nil)), .init("y", .length(nil)),
+                .init("width", .length(nil, aboveZero: true)), .init("height", .length(nil, aboveZero: true)),
             ], required: ["x", "y", "width", "height"])),
+            .init("part", .object("Part of the element, each side in points from its top-left corner or a percentage of its frame; its whole frame on a side not given, as \"part\": { \"x\": \"62%\", \"width\": \"38%\" } is its right 38%.", [
+                .init("x", .length(nil, of: "the element").defaulting(to: "0%")), .init("y", .length(nil, of: "the element").defaulting(to: "0%")),
+                .init("width", .length(nil, aboveZero: true, of: "the element").defaulting(to: "100%")),
+                .init("height", .length(nil, aboveZero: true, of: "the element").defaulting(to: "100%")),
+            ])),
             .init("music", .object("Plays under the whole video.", [
                 .init("file", file), .init("volume", volume),
                 .init("fadeOut", .number("Seconds it fades out over at the end.", atLeast: 0).defaulting(to: 0)),

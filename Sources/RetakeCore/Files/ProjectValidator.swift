@@ -293,7 +293,7 @@ public struct ProjectValidator {
                 let starts = regionFrom.flatMap { resolve($0, in: timeline, at: regionAt.appending("from")) }
                 within(starts, played, at: regionAt.appending("from"))
                 within(regionTo.flatMap { resolve($0, in: timeline, at: regionAt.appending("to")) }, played, at: regionAt.appending("to"))
-                guard case .element(let element) = region else { continue }
+                guard case .element(let element, _) = region else { continue }
                 do {
                     _ = try timeline.element(element, at: starts ?? from)
                 } catch {
@@ -304,6 +304,9 @@ public struct ProjectValidator {
                 let stillAt = at.appending("stills").appending(index)
                 guard let stillTimeline = latest(still.take, at: stillAt.appending("take")) else { continue }
                 _ = resolve(still.at, in: stillTimeline, at: stillAt.appending("at"))
+            }
+            if let stillsOut = clip.stillsOut {
+                within(resolve(stillsOut, in: timeline, at: at.appending("stillsOut")), played, at: at.appending("stillsOut"))
             }
         }
     }

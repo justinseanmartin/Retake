@@ -158,25 +158,37 @@ public struct OverlayLayers: @unchecked Sendable {
         return layer
     }
 
+    /// The least space around and between stills, in canvas pixels.
+    static let stillsSpacing = 48.0
+
+    /// Where each of `count` stills of `aspect` (height over width) goes on `canvas`: as big as
+    /// they fit with at least `stillsSpacing` around and between them, and what's left over shared
+    /// equally above, between and below them, and likewise across. A short last row is centred.
+    static func stillsGrid(count: Int, aspect: Double, canvas: CGSize) -> [CGRect] {
+        let columns = count > 4 ? 3 : min(count, 2)
+        let rows = (count + columns - 1) / columns
+        let width = min(
+            (canvas.width - stillsSpacing * Double(columns + 1)) / Double(columns),
+            (canvas.height - stillsSpacing * Double(rows + 1)) / Double(rows) / aspect,
+        )
+        let height = width * aspect
+        let across = (canvas.width - width * Double(columns)) / Double(columns + 1)
+        let down = (canvas.height - height * Double(rows)) / Double(rows + 1)
+        return (0 ..< count).map { index in
+            let row = index / columns, column = index % columns
+            let inRow = row == rows - 1 ? count - row * columns : columns
+            let left = (canvas.width - width * Double(inRow) - across * Double(inRow - 1)) / 2
+            return CGRect(x: left + Double(column) * (width + across), y: down + Double(row) * (height + down), width: width, height: height)
+        }
+    }
+
     /// One of a grid of rounded frames, popping in on a spring.
     static func still(_ still: Overlays.Still, image: CGImage, canvas: CGSize) -> CALayer {
-        let columns = still.count > 4 ? 3 : 2
-        let rows = (still.count + columns - 1) / columns
-        let gap = 30.0
-        let width = (canvas.width - 70 * 2 - gap * Double(columns - 1)) / Double(columns)
-        let height = width * Double(image.height) / Double(image.width)
-        let gridHeight = height * Double(rows) + gap * Double(rows - 1)
-        let top = (canvas.height - gridHeight) / 2 + 110
-        let column = still.index % columns
-        let row = still.index / columns
-        // A short last row is centred.
-        let inRow = row == rows - 1 ? still.count - row * columns : columns
-        let rowWidth = width * Double(inRow) + gap * Double(inRow - 1)
-        let left = (canvas.width - rowWidth) / 2
+        let frame = stillsGrid(count: still.count, aspect: Double(image.height) / Double(image.width), canvas: canvas)[still.index]
 
         let screen = CALayer()
-        screen.bounds = CGRect(x: 0, y: 0, width: width, height: height)
-        screen.position = CGPoint(x: left + Double(column) * (width + gap) + width / 2, y: top + Double(row) * (height + gap) + height / 2)
+        screen.bounds = CGRect(origin: .zero, size: frame.size)
+        screen.position = CGPoint(x: frame.midX, y: frame.midY)
         screen.contents = image
         screen.contentsGravity = .resizeAspectFill
         screen.cornerRadius = 30
@@ -205,20 +217,55 @@ public struct OverlayLayers: @unchecked Sendable {
         screen.add(pop, forKey: "pop")
         screen.opacity = 0
         let length = still.end - still.start
-        screen.add(animation("opacity", values: [0, 1, 1, 0], keyTimes: [0, 0.05, max(0.05, length - 0.15), length], at: still.start), forKey: "opacity")
+        guard still.popsOut else {
+            screen.add(animation("opacity", values: [0, 1, 1, 0], keyTimes: [0, 0.05, max(0.05, length - 0.15), length], at: still.start), forKey: "opacity")
+            return holder
+        }
+        // Shrinks away, as it popped in, and stays gone.
+        screen.add(animation("opacity", values: [0, 1, 1, 0], keyTimes: [0, 0.05, length - 0.02, length], at: still.start), forKey: "opacity")
+        let out = CABasicAnimation(keyPath: "transform.scale")
+        out.fromValue = 1
+        out.toValue = 0
+        out.duration = stillPopOut
+        out.beginTime = AVCoreAnimationBeginTimeAtZero + still.end - stillPopOut
+        out.timingFunction = CAMediaTimingFunction(name: .easeIn)
+        out.fillMode = .forwards
+        out.isRemovedOnCompletion = false
+        screen.add(out, forKey: "popOut")
         return holder
     }
 
+    /// Seconds a still takes to pop out.
+    static let stillPopOut = 0.25
+
     // MARK: Captions
+
+    /// The size of a caption's text, unless it's too wide for the canvas.
+    static let captionSize = 54.0
+    /// The least space each side of a caption.
+    static let captionMargin = 48.0
 
     /// The caption's text on a pill of its colour, across the canvas's centre at its `y`, with its
     /// symbol before the text, turning as its animation says.
     static func caption(_ caption: Overlays.Caption, canvas: CGSize) -> CALayer {
-        let font = NSFont.systemFont(ofSize: 54, weight: .heavy).rounded
-        let text = NSAttributedString(string: caption.text, attributes: [.font: font, .foregroundColor: NSColor.white])
-        let textSize = text.size()
+        // A caption too wide for the canvas, with `captionMargin` each side, is set smaller.
         let padding = CGSize(width: 40, height: 22)
-        let symbol = caption.symbol.flatMap { symbolImage($0.name, font: font) }
+        func laidOut(_ size: Double) -> (font: NSFont, text: NSAttributedString, symbol: (image: CGImage, size: CGSize)?, width: Double) {
+            let font = NSFont.systemFont(ofSize: size, weight: .heavy).rounded
+            let text = NSAttributedString(string: caption.text, attributes: [.font: font, .foregroundColor: NSColor.white])
+            let symbol = caption.symbol.flatMap { symbolImage($0.name, font: font) }
+            return (font, text, symbol, (symbol.map { ceil($0.size.width) + 20 } ?? 0) + ceil(text.size().width) + padding.width * 2)
+        }
+        var size = captionSize
+        var layout = laidOut(size)
+        let room = canvas.width - captionMargin * 2
+        // The symbol's gap doesn't shrink with the text, so it takes a step or two to fit.
+        while layout.width > room, size > 8 {
+            size = max(8, (size * (room - padding.width * 2) / (layout.width - padding.width * 2)).rounded(.down) - 0.5)
+            layout = laidOut(size)
+        }
+        let (font, text, symbol) = (layout.font, layout.text, layout.symbol)
+        let textSize = text.size()
         let symbolWidth = symbol.map { ceil($0.size.width) + 20 } ?? 0
 
         let pill = CALayer()

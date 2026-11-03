@@ -120,6 +120,8 @@ public struct Edit: Equatable, Sendable {
         public var stills: [Still]
         /// A colour filling the canvas behind the stills, over the clip's picture; none when nil.
         public var stillsBackground: Color? = nil
+        /// When the stills pop out, one after another; they stay to the clip's end when nil.
+        public var stillsOut: Anchor? = nil
         /// The edit's when nil.
         public var turns: Turns?
         public var turnBlur: TurnBlur?
@@ -174,12 +176,32 @@ public struct Edit: Equatable, Sendable {
 
     /// Something on screen: an element the step log found, or a rectangle in screen points.
     public enum Region: Equatable, Sendable {
-        case element(ElementTarget)
+        /// An element, or the `part` of its frame given, in points from its corner or shares of it.
+        case element(ElementTarget, part: Rect? = nil)
+        /// In screen points, or shares of the screen as the device faced.
         case rect(Rect)
     }
 
     public struct Rect: Equatable, Sendable {
-        public var x, y, width, height: Double
+        public var x, y, width, height: Length
+
+        public init(x: Length, y: Length, width: Length, height: Length) {
+            (self.x, self.y, self.width, self.height) = (x, y, width, height)
+        }
+
+        public init(x: Double, y: Double, width: Double, height: Double) {
+            self.init(x: .points(x), y: .points(y), width: .points(width), height: .points(height))
+        }
+
+        /// In points, within `whole`: its shares of it, its points from its corner.
+        func within(_ whole: CGRect) -> CGRect {
+            CGRect(
+                x: whole.minX + x.points(of: whole.width), y: whole.minY + y.points(of: whole.height),
+                width: width.points(of: whole.width), height: height.points(of: whole.height),
+            )
+        }
+
+        var hasShare: Bool { [x, y, width, height].contains(where: \.isShare) }
     }
 
     public struct Spotlight: Equatable, Sendable {
