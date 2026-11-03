@@ -37,6 +37,10 @@ public struct CutPlan: Equatable, Sendable {
         /// How it shows the device turning, and how long it blurs each turn, if it does.
         public var turns: Edit.Turns = .letterboxed
         public var turnBlur: Double? = nil
+        /// Whether its card covers it from its start, and to its end, so a cross-fade there shows
+        /// only the other clip's picture, the card fading over it.
+        public var coveredFromStart = false
+        public var coveredToEnd = false
 
         public var end: Double { start + duration }
 
@@ -85,6 +89,7 @@ public struct CutPlan: Equatable, Sendable {
             placements.append(Placement(
                 take: clip.take, from: from, to: to, speed: clip.speed, start: start, duration: duration, crossfade: crossfade,
                 turns: clip.turns ?? video.turns, turnBlur: (clip.turnBlur ?? video.turnBlur)?.duration,
+                coveredFromStart: clip.card.map { $0.from == nil } ?? false, coveredToEnd: clip.card.map { $0.to == nil } ?? false,
             ))
         }
         return CutPlan(placements: placements)

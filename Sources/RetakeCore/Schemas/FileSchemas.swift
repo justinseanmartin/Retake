@@ -246,6 +246,8 @@ extension EditFile {
             .init("stills", .array("Frames of other takes, popped in over the clip.", of: .ref("still"))),
             .init("stillsOut", .ref("anchor", "When the stills pop out, one after another in the order they popped in; they stay to the clip's end when not given.")),
             .init("stillsBackground", .ref("color", "A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture.")),
+            .init("card", .ref("card")),
+            .init("devices", .array("The device types whose videos play it; every one of the edit's when not given.", of: .choice(nil, DeviceType.allCases.map(\.rawValue)), minItems: 1, unique: true)),
             .init("turns", turns.described("How this clip shows the device turning; the edit's turns when not given.")),
             .init("turnBlur", .ref("turn-blur")),
         ], required: ["take", "from", "to"])
@@ -287,6 +289,11 @@ extension EditFile {
                 .init("degrees", .number("Clockwise when positive.")),
                 .init("duration", .number("Seconds it takes.", above: 0)),
             ], required: ["degrees", "duration"])),
+            .init("card", .object("A colour covering the clip's picture, and everything drawn over it but its captions, for a card between clips: over the whole clip, fading in and out with the cross-fades either side, or from its from to its to.", [
+                .init("color", .ref("color")),
+                .init("from", .ref("anchor", "When it starts; the clip's from when not given.")),
+                .init("to", .ref("anchor", "When it ends; the clip's to when not given.")),
+            ], required: ["color"])),
             .init("sound", .object("A sound effect.", [
                 .init("file", file),
                 .init("at", .ref("anchor", "When it starts.")),

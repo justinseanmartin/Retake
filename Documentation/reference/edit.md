@@ -54,6 +54,8 @@ A stretch of a take, played in order.
 | `stills` | list of [still](#still) |  | Frames of other takes, popped in over the clip. |
 | `stillsOut` | [anchor](#anchor) |  | When the stills pop out, one after another in the order they popped in; they stay to the clip's end when not given. |
 | `stillsBackground` | [color](#color) |  | A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture. |
+| `card` | [card](#card) |  |  |
+| `devices` | list of `"iphone"` or `"ipad"`, at least 1, each once |  | The device types whose videos play it; every one of the edit's when not given. |
 | `turns` | `"letterboxed"` or `"device"` |  | How this clip shows the device turning; the edit's turns when not given. |
 | `turnBlur` | [turn-blur](#turn-blur) |  |  |
 
@@ -102,6 +104,16 @@ Turns the symbol.
 | --- | --- | --- | --- |
 | `degrees` | number | required | Clockwise when positive. |
 | `duration` | number > 0 | required | Seconds it takes. |
+
+### card
+
+A colour covering the clip's picture, and everything drawn over it but its captions, for a card between clips: over the whole clip, fading in and out with the cross-fades either side, or from its from to its to.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `color` | [color](#color) | required |  |
+| `from` | [anchor](#anchor) |  | When it starts; the clip's from when not given. |
+| `to` | [anchor](#anchor) |  | When it ends; the clip's to when not given. |
 
 ### sound
 

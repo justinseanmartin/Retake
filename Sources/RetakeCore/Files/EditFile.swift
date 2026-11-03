@@ -122,9 +122,21 @@ public struct Edit: Equatable, Sendable {
         public var stillsBackground: Color? = nil
         /// When the stills pop out, one after another; they stay to the clip's end when nil.
         public var stillsOut: Anchor? = nil
+        /// A colour covering the picture, for a card between clips; none when nil.
+        public var card: Card? = nil
         /// The edit's when nil.
         public var turns: Turns?
         public var turnBlur: TurnBlur?
+    }
+
+    /// A colour covering the clip's picture, and what's drawn over it but its captions: a card,
+    /// fading in and out with the cross-fades either side, or over its own stretch.
+    public struct Card: Equatable, Sendable {
+        public var color: Color
+        /// The clip's `from` when nil.
+        public var from: Anchor?
+        /// The clip's `to` when nil.
+        public var to: Anchor?
     }
 
     public struct TouchColor: Equatable, Sendable {

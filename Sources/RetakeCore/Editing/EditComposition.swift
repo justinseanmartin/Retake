@@ -93,7 +93,8 @@ public struct EditComposition: @unchecked Sendable {
     }
 
     /// One instruction for each stretch a clip plays alone, and one for each cross-fade, the clip
-    /// coming in on top and fading in over the one going out.
+    /// coming in on top and fading in over the one going out; or, where a card covers either side,
+    /// only the other side's picture, which the card fades over.
     static func instructions(
         _ plan: CutPlan, tracks: [AVMutableCompositionTrack], framings: [[(at: Double, framing: ClipFraming)]], background: Color,
     ) -> [AVVideoCompositionInstruction] {
@@ -124,8 +125,14 @@ public struct EditComposition: @unchecked Sendable {
             if fadeOut > 0 {
                 let overlap = CMTimeRange(start: alone.end, end: time(placement.end))
                 let incoming = layer(index + 1)
-                incoming.setOpacityRamp(fromStartOpacity: 0, toEndOpacity: 1, timeRange: overlap)
-                instructions.append(instruction(overlap, [incoming, layer(index)]))
+                if next?.coveredFromStart == true {
+                    instructions.append(instruction(overlap, [layer(index)]))
+                } else if placement.coveredToEnd {
+                    instructions.append(instruction(overlap, [incoming]))
+                } else {
+                    incoming.setOpacityRamp(fromStartOpacity: 0, toEndOpacity: 1, timeRange: overlap)
+                    instructions.append(instruction(overlap, [incoming, layer(index)]))
+                }
             }
             cursor = time(placement.end)
         }

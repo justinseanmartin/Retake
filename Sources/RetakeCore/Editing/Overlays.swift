@@ -67,6 +67,18 @@ public struct Overlays: Equatable, Sendable {
         public var end: Double
     }
 
+    /// A clip's card, covering the canvas from `start` to `end`, fading in over `fadeIn` and out over
+    /// `fadeOut`.
+    public var cards: [Card] = []
+
+    public struct Card: Equatable, Sendable {
+        public var color: Color
+        public var start: Double
+        public var end: Double
+        public var fadeIn: Double
+        public var fadeOut: Double
+    }
+
     /// The overlays of `video`, as `plan` places its clips, each framed as `framings` says (from
     /// `EditComposition`), its anchors and elements resolved in its scene's take in `timelines`.
     /// Fails (1), naming where, for an anchor or element that doesn't resolve, a caption that ends
@@ -216,6 +228,19 @@ public struct Overlays: Equatable, Sendable {
                     start: start, end: end, popsOut: stillsOut != nil,
                 ))
             }
+            if let card = clip.card {
+                // Over the whole clip, it fades with the cross-fades either side, so it comes in as
+                // the clip's picture would; over a stretch of its own, it fades quickly.
+                let fadeOut = plan.placements.indices.contains(index + 1) ? plan.placements[index + 1].crossfade : 0
+                let start = try time(card.from, "card.from") ?? placement.start
+                let end = try time(card.to, "card.to") ?? placement.end
+                guard end > start else { throw RetakeError(.failed, "\(name).card ends before it starts.") }
+                overlays.cards.append(Card(
+                    color: card.color, start: start, end: end,
+                    fadeIn: card.from == nil ? placement.crossfade : min(Overlays.cardFade, (end - start) / 2),
+                    fadeOut: card.to == nil ? fadeOut : min(Overlays.cardFade, (end - start) / 2),
+                ))
+            }
             if let color = clip.stillsBackground, !clip.stills.isEmpty {
                 // Faded in by the time the first still pops in.
                 overlays.stillsBackgrounds.append(StillsBackground(color: color, start: placement.start + Overlays.firstStill - OverlayLayers.stillsBackgroundFade, end: placement.end))
@@ -224,6 +249,8 @@ public struct Overlays: Equatable, Sendable {
         return overlays
     }
 
+    /// Seconds a card over a stretch of its own takes to fade in, and out.
+    static let cardFade = 0.25
     /// Seconds into its clip the first still pops in.
     static let firstStill = 0.35
     /// Seconds between one still popping in, or out, and the next.

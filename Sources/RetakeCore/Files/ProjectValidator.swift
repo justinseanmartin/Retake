@@ -188,6 +188,10 @@ public struct ProjectValidator {
                     checkAnchor(blur.from, in: scene, sceneName: clip.take, type, at: at.appending("blurs").appending(blurIndex).appending("from"))
                     checkAnchor(blur.to, in: scene, sceneName: clip.take, type, at: at.appending("blurs").appending(blurIndex).appending("to"))
                 }
+                if let card = clip.card {
+                    checkAnchor(card.from, in: scene, sceneName: clip.take, type, at: at.appending("card").appending("from"))
+                    checkAnchor(card.to, in: scene, sceneName: clip.take, type, at: at.appending("card").appending("to"))
+                }
                 for (stillIndex, still) in clip.stills.enumerated() {
                     let stillAt = at.appending("stills").appending(stillIndex)
                     let stillScene = checkScene(still.take, type, at: stillAt.appending("take"))
@@ -307,6 +311,11 @@ public struct ProjectValidator {
             }
             if let stillsOut = clip.stillsOut {
                 within(resolve(stillsOut, in: timeline, at: at.appending("stillsOut")), played, at: at.appending("stillsOut"))
+            }
+            for (key, anchor) in [("from", clip.card?.from), ("to", clip.card?.to)] {
+                guard let anchor else { continue }
+                let cardAt = at.appending("card").appending(key)
+                within(resolve(anchor, in: timeline, at: cardAt), played, at: cardAt)
             }
         }
     }

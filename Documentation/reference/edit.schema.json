@@ -279,6 +279,19 @@
           "$ref": "#/$defs/color",
           "description": "A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture."
         },
+        "card": {
+          "$ref": "#/$defs/card"
+        },
+        "devices": {
+          "description": "The device types whose videos play it; every one of the edit's when not given.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["iphone", "ipad"]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
         "turns": {
           "description": "How this clip shows the device turning; the edit's turns when not given.",
           "type": "string",
@@ -412,6 +425,33 @@
         }
       },
       "required": ["degrees", "duration"],
+      "additionalProperties": false
+    },
+    "card": {
+      "description": "A colour covering the clip's picture, and everything drawn over it but its captions, for a card between clips: over the whole clip, fading in and out with the cross-fades either side, or from its from to its to.",
+      "type": "object",
+      "properties": {
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "from": {
+          "$ref": "#/$defs/anchor",
+          "description": "When it starts; the clip's from when not given."
+        },
+        "to": {
+          "$ref": "#/$defs/anchor",
+          "description": "When it ends; the clip's to when not given."
+        },
+        "iphone": {
+          "$ref": "#/$defs/card-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/card-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "required": ["color"],
       "additionalProperties": false
     },
     "sound": {
@@ -1150,6 +1190,19 @@
           "$ref": "#/$defs/color-override",
           "description": "A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture."
         },
+        "card": {
+          "$ref": "#/$defs/card-override"
+        },
+        "devices": {
+          "description": "The device types whose videos play it; every one of the edit's when not given.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["iphone", "ipad"]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
         "turns": {
           "description": "How this clip shows the device turning; the edit's turns when not given.",
           "type": "string",
@@ -1236,6 +1289,24 @@
           "description": "Seconds it takes.",
           "type": "number",
           "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "card-override": {
+      "description": "A colour covering the clip's picture, and everything drawn over it but its captions, for a card between clips: over the whole clip, fading in and out with the cross-fades either side, or from its from to its to.",
+      "type": "object",
+      "properties": {
+        "color": {
+          "$ref": "#/$defs/color-override"
+        },
+        "from": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "When it starts; the clip's from when not given."
+        },
+        "to": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "When it ends; the clip's to when not given."
         }
       },
       "additionalProperties": false

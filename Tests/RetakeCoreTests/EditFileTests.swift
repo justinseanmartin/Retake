@@ -178,6 +178,21 @@ struct EditFileTests {
         #expect(Color(hex: "1F6FEB") == nil && Color(hex: "#12345") == nil && Color(hex: "#GGGGGG") == nil)
     }
 
+    @Test func aClipNamingDevicesIsInOnlyTheirVideosAndAProblemAfterItIsNamedWhereItsWritten() throws {
+        let edit = try #require(clips(#"{"take": "a", "from": 0, "to": 1}, {"take": "card", "from": 0, "to": 1, "devices": ["iphone"]}, {"take": "c", "from": 0, "to": 1}"#).edit)
+        #expect(edit.videos[.iphone]?.clips.map(\.take) == ["a", "card", "c"])
+        #expect(edit.videos[.ipad]?.clips.map(\.take) == ["a", "c"])
+        // The iPad's second clip is the file's third, in an override or not.
+        let problems = clips(#"""
+            {"take": "a", "from": 0, "to": 1}, {"take": "b", "from": 0, "to": 1, "devices": ["iphone"]},
+            {"take": "c", "from": 0, "to": 1, "ipad": {"crossfade": -1}}, {"take": "d", "from": 0, "to": 1, "speed": 0}
+            """#).problems
+        #expect(problems.contains { $0.hasPrefix("edits/video1.json: clips[2].ipad.crossfade:") }, "\(problems)")
+        #expect(problems.filter { $0.contains("clips[3].speed") }.count == 1, "once, at the file's place, for both types: \(problems)")
+        let elsewhere = clips(#"{"take": "a", "from": 0, "to": 1, "devices": ["iphone"]}"#, devices: #"["ipad"]"#).problems
+        #expect(elsewhere.contains { $0.contains("clips[0].devices[0]: \"iphone\" isn't one of this edit's devices") }, "\(elsewhere)")
+    }
+
     @Test func aClipThatCantBeReadDoesntShiftTheChecksAcrossClips() {
         let read = clips(#"{"take": "a", "from": 0}, {"id": "b", "take": "a", "from": 0, "to": 1, "crossfade": 0.4}"#, devices: #"["ipad"]"#)
         #expect(read.problems == ["edits/video1.json: clips[0]: is missing \"to\""])

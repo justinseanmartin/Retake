@@ -31,6 +31,7 @@ public struct OverlayLayers: @unchecked Sendable {
         for spotlight in overlays.spotlights {
             for layer in Self.spotlight(spotlight, canvas: canvas) { parent.addSublayer(layer) }
         }
+        for card in overlays.cards { parent.addSublayer(Self.card(card, canvas: canvas)) }
         for caption in overlays.captions { parent.addSublayer(Self.caption(caption, canvas: canvas)) }
     }
 
@@ -155,6 +156,19 @@ public struct OverlayLayers: @unchecked Sendable {
         let length = background.end - background.start
         let fade = min(stillsBackgroundFade, length)
         layer.add(animation("opacity", values: [0, 1, 1], keyTimes: [0, fade, length], at: background.start), forKey: "opacity")
+        return layer
+    }
+
+    // MARK: Cards
+
+    /// The canvas filled with a colour, fading in and out, over everything but the captions.
+    static func card(_ card: Overlays.Card, canvas: CGSize) -> CALayer {
+        let layer = CALayer()
+        layer.frame = CGRect(origin: .zero, size: canvas)
+        layer.backgroundColor = cgColor(card.color, alpha: card.color.alpha)
+        layer.opacity = 0
+        let length = card.end - card.start
+        layer.add(animation("opacity", values: [0, 1, 1, 0], keyTimes: [0, card.fadeIn, length - card.fadeOut, length], at: card.start), forKey: "opacity")
         return layer
     }
 

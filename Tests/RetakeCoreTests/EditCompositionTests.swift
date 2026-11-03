@@ -211,6 +211,22 @@ struct EditCompositionTests {
         #expect(between.0 > green.0 + 40 && between.1 > red.1 + 40, "half way through the cross-fade, some of each")
     }
 
+    @Test func aClipItsCardCoversDoesntShowThroughTheCrossfadesEitherSide() async throws {
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let movies = ["red": try await movie("red", red: 255, green: 0, blue: 0), "green": try await movie("green", red: 0, green: 255, blue: 0)]
+        let plan = CutPlan(placements: [
+            .init(take: "red", from: 0, to: 1, speed: 1, start: 0, duration: 1, crossfade: 0),
+            .init(take: "green", from: 0, to: 1, speed: 1, start: 0.75, duration: 1, crossfade: 0.25, coveredFromStart: true, coveredToEnd: true),
+            .init(take: "red", from: 0, to: 1, speed: 1, start: 1.5, duration: 1, crossfade: 0.25),
+        ])
+        let composition = try await EditComposition.make(plan, movies: movies, spec: PreviewSpec(width: 64, height: 96, framesPerSecond: 30), background: .black)
+        // The card, drawn over the picture, fades in and out over these; under it, only red.
+        for at in [0.875, 1.625] {
+            let under = try await colour(of: composition, at: at)
+            #expect(under.0 > under.1 + 150, "at \(at) s, only the clip the card doesn't cover")
+        }
+    }
+
     @Test func aTurnInAClipChangesItsFramingThereAndIsBlurredAroundIt() async throws {
         defer { try? FileManager.default.removeItem(at: folder) }
         let movies = ["red": try await movie("red", red: 255, green: 0, blue: 0)]

@@ -530,6 +530,9 @@ An override is laid over what it overrides: an object merges key by key, so `"ip
 in a caption changes only its `y`, while a list or a single value replaces what's there, so an
 override of a clip's `captions` gives that type's video its whole list.
 
+A clip that names `devices`, such as `"devices": ["iphone"]`, is in only those types' videos: one
+type can show something the others don't, or show something else in its place.
+
 One device type's takes in an edit must come from devices with the same screen, since positions in
 the step log are the screen's points: `cut` refuses an edit whose iPhone takes, say, mix a 6.1-inch
 and a 6.9-inch iPhone, naming the takes on each.
@@ -544,6 +547,9 @@ and a 6.9-inch iPhone, naming the takes on each.
 - **Carry captions**, any number, each up between two moments; see [captions](#captions).
 - **Spotlight** an element, dimming the rest, with a pulsing ring around it.
 - **Blur** an element over a stretch of the take, for anything private it shows.
+- **Show a card**, a colour covering the picture with its captions on it, for a title between
+  clips (`card`). Over the whole clip, it fades in and out with the cross-fades either side, so
+  what's under it never shows; with a `from` or `to`, over that stretch only.
 - **Pop in stills** from other takes, over the clip or over a colour of their own (`stillsBackground`),
   and pop them out again, in the same order, at `stillsOut`.
 - **Cue sound effects**, which play at normal speed however fast the clip plays, or play the take's

@@ -159,6 +159,21 @@ struct OverlaysTests {
         #expect(layers.parent.sublayers?[1].backgroundColor != nil, "over the picture, under the stills")
     }
 
+    @Test func aCardFadesWithTheCrossFadesEitherSideOrQuicklyOverAStretchOfItsOwn() throws {
+        let placed = try overlays(#"""
+            {"take": "walk", "from": {"step": "a"}, "to": {"step": "b"}},
+            {"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "crossfade": 0.5, "card": {"color": "#FFD43B"},
+             "captions": [{"text": "On the card", "y": 0.5, "color": "#1B2A4E"}]},
+            {"take": "walk", "from": {"step": "b"}, "to": {"step": "end"}, "crossfade": 0.4, "card": {"color": "#000000", "from": {"step": "b", "offset": 1}}}
+            """#)
+        // 1–2 s of the take as 0–1 s; 1–6 s as 0.5–5.5 s; 2–6 s as 5.1–9.1 s, b ending at 3 s.
+        let whole = placed.cards[0], own = placed.cards[1]
+        #expect(whole.start == 0.5 && whole.end == 5.5 && whole.fadeIn == 0.5 && abs(whole.fadeOut - 0.4) < 1e-9)
+        #expect(abs(own.start - 7.1) < 1e-9 && abs(own.end - 9.1) < 1e-9 && own.fadeIn == Overlays.cardFade && own.fadeOut == 0, "to the video's end: \(own)")
+        let layers = OverlayLayers(placed, spec: spec)
+        #expect(layers.parent.sublayers?.last?.cornerRadius ?? 0 > 0, "the caption, a pill, over the cards")
+    }
+
     @Test func stillsPopOutOneAfterAnotherInTheOrderTheyPoppedIn() throws {
         let placed = try overlays(#"""
             {"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "stillsOut": {"step": "b", "offset": 0.5},

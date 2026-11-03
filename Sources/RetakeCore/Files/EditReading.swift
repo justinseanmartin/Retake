@@ -35,6 +35,16 @@ extension EditFile {
                 }
             }
         }
+        // A clip's devices are among the edit's.
+        if let devices, case .array(let clips)? = root.value("clips") {
+            for (index, clip) in clips.enumerated() {
+                guard case .object(let clip) = clip, case .array(let named)? = clip["devices"] else { continue }
+                for (deviceIndex, name) in named.enumerated() {
+                    guard case .string(let name) = name, let type = DeviceType(rawValue: name), !devices.contains(type) else { continue }
+                    reader.problem("\"\(name)\" isn't one of this edit's devices", at: root.path("clips").appending(index).appending("devices").appending(deviceIndex))
+                }
+            }
+        }
         root.finish()
 
         var videos: [DeviceType: Edit] = [:]
@@ -43,7 +53,7 @@ extension EditFile {
         if case .object(let object) = value {
             for type in devices ?? [] {
                 var origins = Origins()
-                let merged = Overrides.merge(object, for: type, at: .root, into: .root, origins: &origins, reader: reader)
+                let merged = Overrides.clips(of: Overrides.merge(object, for: type, at: .root, into: .root, origins: &origins, reader: reader), for: type, origins: &origins)
                 let typeReader = JSONReader(file: reader.file)
                 let edit = readEdit(merged, typeReader)
                 for problem in typeReader.problems {
@@ -177,11 +187,28 @@ extension EditFile {
         }
         let turns = object.optional("turns") { reader.choice($0, at: $1, as: Edit.Turns.self) }
         let turnBlur = object.optional("turnBlur") { readTurnBlur($0, $1, reader) }
+        let card = object.optional("card") { value, path -> Edit.Card? in
+            guard var card = reader.object(value, at: path) else { return nil }
+            defer { card.finish() }
+            let color = card.required("color") { readColor($0, $1, reader) }
+            let from = card.optional("from") { readAnchor($0, $1, reader) }
+            let to = card.optional("to") { readAnchor($0, $1, reader) }
+            return color.map { Edit.Card(color: $0, from: from, to: to) }
+        }
+        // Read for the edit's types already, and only those it names kept; checked here.
+        _ = object.optional("devices") { value, path -> [DeviceType]? in
+            guard let devices = reader.array(value, at: path, element: { reader.choice($0, at: $1, as: DeviceType.self) }) else { return nil }
+            if devices.isEmpty { reader.problem("needs at least one device type: iphone, ipad", at: path) }
+            for (index, device) in devices.enumerated() where devices[..<index].contains(device) {
+                reader.problem("\"\(device.rawValue)\" is given more than once", at: path.appending(index))
+            }
+            return devices
+        }
         guard reader.problems.count == problemsBefore, let take, let from, let to else { return nil }
         return Edit.Clip(
             id: id, intent: intent, take: take, from: from, to: to, speed: speed, crossfade: crossfade,
             audioCrossfade: audioCrossfade, touches: touches, touchColor: touchColor, touchColors: touchColors, takeAudio: takeAudio, captions: captions, sounds: sounds,
-            spotlight: spotlight, blurs: blurs, stills: stills, stillsBackground: stillsBackground, stillsOut: stillsOut, turns: turns, turnBlur: turnBlur,
+            spotlight: spotlight, blurs: blurs, stills: stills, stillsBackground: stillsBackground, stillsOut: stillsOut, card: card, turns: turns, turnBlur: turnBlur,
         )
     }
 
@@ -398,6 +425,16 @@ public struct Origins: Equatable, Sendable {
         entries.append(Entry(merged: merged, source: source))
     }
 
+    /// Moves what's recorded under `old` in the merged object to `new`, an earlier place, as when
+    /// what was before it is dropped, and records that it's written where `old` was.
+    mutating func move(_ old: JSONPath, to new: JSONPath) {
+        let source = source(of: old)
+        for index in entries.indices where entries[index].merged.components.starts(with: old.components) {
+            entries[index].merged = JSONPath(new.components + entries[index].merged.components.dropFirst(old.components.count))
+        }
+        record(new, from: source)
+    }
+
     /// The path a problem at `path` in the merged object is written at: the longest recorded prefix
     /// of it, rewritten to where that part came from.
     public func source(of path: JSONPath) -> JSONPath {
@@ -436,6 +473,21 @@ enum Overrides {
         }
         let overrideSource = source.appending(type.rawValue)
         lay(override, over: &result, for: type, from: overrideSource, at: merged, origins: &origins, reader: reader)
+        return result
+    }
+
+    /// `object`, a device type's merged edit, without the clips whose `devices` leave `type` out.
+    static func clips(of object: JSONObject, for type: DeviceType, origins: inout Origins) -> JSONObject {
+        guard let index = object.entries.firstIndex(where: { $0.key == "clips" }), case .array(let clips) = object.entries[index].value else { return object }
+        var kept: [JSONValue] = []
+        for (old, clip) in clips.enumerated() {
+            if case .object(let clip) = clip, case .array(let devices)? = clip["devices"], !devices.contains(.string(type.rawValue)) { continue }
+            let path = JSONPath.root.appending("clips")
+            if kept.count != old { origins.move(path.appending(old), to: path.appending(kept.count)) }
+            kept.append(clip)
+        }
+        var result = object
+        result.entries[index].value = .array(kept)
         return result
     }
 
