@@ -16,14 +16,26 @@
     },
     {
       "id": "write",
-      "intent": "A new note, titled, then synced.",
+      "intent": "A new note, titled, then synced; its caption hands over halfway from the title typed to Synced showing, however long the app takes to sync.",
       "take": "create-note",
       "from": { "step": "new-note", "offset": -0.5 },
       "to": { "step": "synced", "offset": 0.8 },
       "crossfade": 0.4,
       "touches": true,
       "captions": [
-        { "text": "Jot it down", "y": 0.1, "color": "#1F6FEB", "to": { "clip": "share" } }
+        {
+          "text": "Jot it down",
+          "y": 0.1,
+          "color": "#1F6FEB",
+          "to": { "step": "synced", "fraction": -0.5, "edge": "end" }
+        },
+        {
+          "text": "Synced on its own",
+          "y": 0.1,
+          "color": "#1F6FEB",
+          "from": { "step": "synced", "fraction": -0.5, "edge": "end" },
+          "to": { "clip": "share" }
+        }
       ]
     },
     {
