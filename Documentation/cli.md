@@ -452,6 +452,11 @@ takes the options its step does there; every one but `hold` also takes `--id <na
 | `waitFor` | An element | `--gone`, `--timeout <seconds>` (10) |
 | `hold` | `--seconds <seconds>` | |
 
+A `tap` at a point that lands on an element no other element on screen shares a label with is
+added, and `compose` says so, with the `tap --label` that names it instead: a step that names an
+element finds it wherever the layout puts it, on every device. In `--json`, that step is the
+reply's `suggestion`.
+
 `hold` adds a step that's only a pause, as `{ "hold": 2 }` does in a file. A step's `--hold` is the
 scene's `defaultHold` when it isn't given.
 

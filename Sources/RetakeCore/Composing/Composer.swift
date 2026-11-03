@@ -20,8 +20,9 @@ public enum Composer {
         /// The elements `inspect` was asked for, in the order VoiceOver reads them, so the first is
         /// `--occurrence 1`.
         case matches([ScreenElement])
-        /// A step that ran and was added, its number, and the screen after it.
-        case added(Step, number: Int, [ScreenElement])
+        /// A step that ran and was added, its number, and the screen after it; and, for a tap at a
+        /// point on an element a step could name, that step.
+        case added(Step, number: Int, [ScreenElement], suggestion: Step? = nil)
         /// The last step, changed by `set`.
         case changed(Step, number: Int)
         /// The scene's steps, for `steps`, or replayed after `undo` or `replay`.
@@ -144,6 +145,8 @@ public enum Composer {
                 }
                 let number = state.document.steps.count + 1
                 let played = Player.Played(isSetup: false, number: number, count: number, step: step)
+                let before: [ScreenElement]
+                if case .tapPoint = step.action { before = try await driver.elements() } else { before = [] }
                 do throws(RetakeError) {
                     try await player.play(played, in: name, orientation: &orientation, holding: false, on: driver)
                 } catch {
@@ -153,7 +156,8 @@ public enum Composer {
                 }
                 state.document.steps.append(step)
                 try state.document.write()
-                reply(.added(step, number: number, try await driver.elements()))
+                let suggestion = naming(step, in: before).map { Step(id: step.id, .tapElement($0), hold: step.hold) }
+                reply(.added(step, number: number, try await driver.elements(), suggestion: suggestion))
             case .inspect(let target):
                 let elements = try await driver.elements()
                 reply(target.map { target in .matches(elements.filter(target.matches)) } ?? .screen(elements))
@@ -239,6 +243,21 @@ public enum Composer {
         state.document.steps[state.document.steps.count - 1] = step
         try state.document.write()
         reply(.changed(step, number: state.document.steps.count))
+    }
+
+    /// For a tap at a point in screen points, the element it lands on (the smallest, where several
+    /// overlap), named by its label, when no other element on screen has that label: a step naming
+    /// it follows the element wherever the layout puts it, on every device. Nil for anything else.
+    static func naming(_ step: Step, in elements: [ScreenElement]) -> ElementTarget? {
+        guard case .tapPoint(let position)? = step.action, case .points(let x) = position.x, case .points(let y) = position.y else { return nil }
+        let under = elements.compactMap { element in
+            element.frame.flatMap { frame in
+                (frame.x...frame.x + frame.width).contains(x) && (frame.y...frame.y + frame.height).contains(y) ? (element, frame.width * frame.height) : nil
+            }
+        }
+        guard let element = under.min(by: { $0.1 < $1.1 })?.0, let label = element.label, !label.isEmpty else { return nil }
+        let target = ElementTarget(label: label)
+        return elements.filter(target.matches).count == 1 ? target : nil
     }
 
     /// What's on screen once it has looked the same twice running, a quarter second apart, so an app

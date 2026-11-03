@@ -65,8 +65,12 @@ enum ComposeOutput {
         case .matches(let elements):
             if elements.isEmpty { print("Nothing on screen matches.") }
             for (index, element) in elements.enumerated() { print("  --occurrence \(index + 1)  \(element.line)") }
-        case .added(let step, let number, let elements):
+        case .added(let step, let number, let elements, let suggestion):
             print("✓ step \(number)\(step.id.map { " (\($0))" } ?? ""): \(step.line)")
+            if case .tapElement(let target)? = suggestion?.action, let label = target.label {
+                let quoted = "\"" + label.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
+                print("  That point is on \(quoted), which a step can name and follow wherever the layout puts it: undo, then tap --label \(quoted)")
+            }
             print("On screen, \(elements.count) element\(elements.count == 1 ? "" : "s"):")
             for element in elements { print("  \(element.line)") }
         case .changed(let step, let number):
@@ -95,11 +99,12 @@ enum ComposeOutput {
                 return .object(object)
             }
             fields = [.init(key: "ok", value: .bool(true)), .init(key: "screen", value: .array(numbered))]
-        case .added(let step, let number, let elements):
+        case .added(let step, let number, let elements, let suggestion):
             fields = [
                 .init(key: "ok", value: .bool(true)), .init(key: "number", value: .number(Double(number))),
                 .init(key: "step", value: step.json), .init(key: "screen", value: .array(elements.map(\.json))),
             ]
+            if let suggestion { fields.append(.init(key: "suggestion", value: suggestion.json)) }
         case .changed(let step, let number):
             fields = [.init(key: "ok", value: .bool(true)), .init(key: "number", value: .number(Double(number))), .init(key: "step", value: step.json)]
         case .steps(let steps):

@@ -18,6 +18,18 @@ struct ComposeActionTests {
         #expect(try parse("hold --seconds 2 --id rest") == .step(Step(id: "rest", nil, hold: 2)))
     }
 
+    @Test func aTapAtAPointOnAnElementOnlyItsLabelNamesSuggestsNamingIt() {
+        func tap(_ x: Double, _ y: Double) -> Step { Step(.tapPoint(Position(Point(x: x, y: y)))) }
+        let row = ScreenElement(label: "Groceries", traits: ["button"], frame: .init(x: 0, y: 100, width: 390, height: 44))
+        let badge = ScreenElement(label: "Synced", traits: [], frame: .init(x: 300, y: 110, width: 60, height: 20))
+        let elements = [row, badge, ScreenElement(label: "Library", traits: ["header"], frame: .init(x: 0, y: 40, width: 390, height: 40)),
+                        ScreenElement(label: "Library", traits: ["button"], frame: .init(x: 0, y: 800, width: 100, height: 44))]
+        #expect(Composer.naming(tap(20, 120), in: elements) == ElementTarget(label: "Groceries"))
+        #expect(Composer.naming(tap(320, 120), in: elements) == ElementTarget(label: "Synced"), "the smallest under the point")
+        #expect(Composer.naming(tap(20, 60), in: elements) == nil, "another element has its label")
+        #expect(Composer.naming(tap(20, 500), in: elements) == nil, "nothing there")
+    }
+
     @Test func actionsOnTheSceneAddNoStep() throws {
         #expect(try parse("inspect") == .inspect(nil))
         #expect(try parse(#"inspect --label "Delete""#) == .inspect(ElementTarget(label: "Delete")))
