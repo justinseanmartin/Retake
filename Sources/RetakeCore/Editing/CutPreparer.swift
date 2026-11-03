@@ -34,6 +34,8 @@ public enum CutPreparer {
             TakeStore.takes(of: scene, for: [type], in: project).last(where: \.successful)?.recorded
         }
         var problems: [String] = []
+        // Where each time in seconds was, by its path, for those it turns into a caption's default.
+        var convertedPaths: [String: String] = [:]
         func converted(_ value: JSONValue, at path: String, scene: String?, type: DeviceType?) -> JSONValue {
             switch value {
             case .array(let values):
@@ -57,6 +59,7 @@ public enum CutPreparer {
                     }
                     let anchor = anchor(for: seconds, in: source.0)
                     changes.append("\(at): \(JSONReader.format(seconds)) s into \(scene) take \(source.0.take) (\(source.1.rawValue)) becomes \(JSONWriter.compact(anchor))")
+                    convertedPaths[at] = "\(JSONReader.format(seconds)) s into \(scene) take \(source.0.take)"
                     return .init(key: entry.key, value: anchor)
                 }))
             default:
@@ -95,7 +98,56 @@ public enum CutPreparer {
         guard unresolved.isEmpty else {
             throw RetakeError(.failed, "In the new takes, nothing was written:\n" + unresolved.joined(separator: "\n"))
         }
-        return Result(text: newText, changes: changes)
+
+        let defaults = captionDefaults(prepared, types: types, among: Set(convertedPaths.keys), log: log)
+        guard !defaults.isEmpty else { return Result(text: newText, changes: changes) }
+        changes = changes.filter { line in !defaults.contains { line.hasPrefix("\($0): ") } }
+            + defaults.sorted().map { "\($0): \(convertedPaths[$0]!) is when the caption \($0.hasSuffix(".from") ? "starts" : "ends") anyway; it's dropped" }
+        return Result(text: JSONWriter.fitting(dropping(.object(root), defaults, at: "")), changes: changes)
+    }
+
+    /// The paths, among `paths`, of captions' `from`s and `to`s that are their caption's default on
+    /// every device type: as its clip has faded in, or as the next starts to fade in over it, to a
+    /// sixtieth of a second. Saying nothing says the same, and goes on saying it however the takes'
+    /// timing changes. Nothing, unless every type's video plans.
+    static func captionDefaults(_ edit: EditFile, types: [DeviceType], among paths: Set<String>, log: (String, DeviceType) -> TakeLog?) -> Set<String> {
+        guard !paths.isEmpty else { return [] }
+        var same: [String: Bool] = [:]
+        for type in types {
+            guard let video = edit.videos[type] else { return [] }
+            var timelines: [String: TakeTimeline] = [:]
+            for scene in video.scenes { if let found = log(scene, type) { timelines[scene] = TakeTimeline(found) } }
+            guard let plan = try? CutPlan.make(video, timelines: timelines) else { return [] }
+            for (index, (clip, placement)) in zip(video.clips, plan.placements).enumerated() {
+                guard let timeline = timelines[clip.take] else { return [] }
+                let next = plan.placements.indices.contains(index + 1) ? plan.placements[index + 1].crossfade : 0
+                for (captionIndex, caption) in clip.captions.enumerated() {
+                    let at = JSONPath.root.appending("clips").appending(index).appending("captions").appending(captionIndex)
+                    let ends = [("from", caption.from, placement.start + placement.crossfade), ("to", caption.to?.clip == nil ? caption.to?.anchor : nil, placement.end - next)]
+                    for (key, anchor, moment) in ends {
+                        let source = edit.source(of: at.appending(key), for: type).description
+                        guard let anchor, paths.contains(source), let time = try? timeline.time(of: anchor) else { continue }
+                        same[source] = (same[source] ?? true) && abs(placement.videoTime(time) - moment) < 1.0 / 60
+                    }
+                }
+            }
+        }
+        return Set(same.filter(\.value).keys)
+    }
+
+    /// `value` without the entries at `paths`, written as `converted` names them.
+    static func dropping(_ value: JSONValue, _ paths: Set<String>, at path: String) -> JSONValue {
+        switch value {
+        case .array(let values):
+            return .array(values.enumerated().map { dropping($1, paths, at: "\(path)[\($0)]") })
+        case .object(let object):
+            return .object(JSONObject(object.entries.compactMap { entry in
+                let at = path.isEmpty ? entry.key : "\(path).\(entry.key)"
+                return paths.contains(at) ? nil : .init(key: entry.key, value: dropping(entry.value, paths, at: at))
+            }))
+        default:
+            return value
+        }
     }
 
     /// `seconds` into the take as an anchor: the latest step starting at or before it, and the

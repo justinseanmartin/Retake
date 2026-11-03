@@ -69,6 +69,25 @@ struct CutPreparerTests {
         ], "the failed take 3 isn't the latest successful one")
     }
 
+    @Test func aCaptionsTimeThatsItsDefaultMomentIsDroppedRatherThanAnchored() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try record(1)
+        // The first clip plays 1–3 s; the next fades in over its last 0.5 s, so its caption, unless
+        // told, is up from 1 s, and goes at 2.5 s.
+        try write("edits/video.json", #"""
+            {"devices": ["ipad"], "clips": [
+              {"take": "walk", "from": {"step": "a"}, "to": {"step": "b", "offset": 1, "edge": "start"},
+               "captions": [{"text": "Default", "y": 0.1, "color": "#000000", "from": 1, "to": 2.5}, {"text": "Own", "y": 0.2, "color": "#000000", "to": 2}]},
+              {"take": "walk", "from": {"step": "b"}, "to": {"step": "end"}, "crossfade": 0.5}
+            ]}
+            """#)
+        let result = try CutPreparer.prepare("video", in: project)
+        let edit = try #require(EditFile.read(result.text, with: JSONReader(file: "video.json"))?.videos[.ipad])
+        #expect(edit.clips[0].captions[0].from == nil && edit.clips[0].captions[0].to == nil)
+        #expect(edit.clips[0].captions[1].to?.anchor == .step(.init(step: .id("b"))), "a moment of its own is anchored: b starts at 2 s")
+        #expect(result.changes.contains("clips[0].captions[0].to: 2.5 s into walk take 1 is when the caption ends anyway; it's dropped"), "\(result.changes)")
+    }
+
     @Test func anEditWhoseTimesAreAnchorsHasNoChanges() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try record(1)
