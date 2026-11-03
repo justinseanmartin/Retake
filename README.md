@@ -19,10 +19,16 @@ recorded on an iPhone and an iPad, and cut for each from the one
 [`showcase`](Examples/Notes/Retake/edits/showcase.json) edit, which turns the iPad and puts a card
 in the iPhone's place.
 
-> **Status:** before its first release. Retake is extracted from a pipeline that has made shipping
-> App Store previews for iPhone and iPad, and works as this README describes when
-> [built from source](#building-from-source); the release the [Install](#install) section describes
-> isn't published yet.
+> **Status:** before its first release. Retake is an experiment in making a general tool of
+> something built twice before, for two apps' App Store previews on iPhone and iPad. It works as
+> this README describes when [built from source](#building-from-source); the release the
+> [Install](#install) section describes isn't published yet.
+>
+> **Stability:** until 1.0, nothing is guaranteed to stay the same between versions: not the
+> command line, not the JSON of its files, schemas or output. If you depend on it, pin an exact
+> version, such as `mise use github:justinseanmartin/Retake@0.1.0`. What is promised is that every
+> breaking change is spelled out in the release notes and comes with a new minor version, from 0.1
+> to 0.2. Compatibility guarantees start at 1.0.
 
 ## Contents
 
@@ -69,6 +75,9 @@ Retake is a single command for macOS, released with everything it needs:
 ```sh
 mise use github:justinseanmartin/Retake   # from GitHub Releases
 ```
+
+Add `@<version>` to pin one, since nothing is guaranteed stable before 1.0 (see the status note
+above).
 
 When a command fails and its message doesn't say why, `retake doctor` checks each part of the setup
 in turn, to find which.
@@ -822,6 +831,10 @@ after changing the clone.
 A build from a clone says so. `retake version` names the clone's path and commit, ending in `-dirty`
 when it has uncommitted changes, and so does each take's metadata. Release builds refuse to run with
 the variable set.
+
+SwiftPM drops The Button Heist's pin from `Package.resolved` while building from a clone. Don't
+commit that change: `git checkout Package.resolved` puts the pin back, and
+`Scripts/fetch-insidejob.sh` needs it to download the release.
 
 ## License
 
