@@ -315,8 +315,11 @@ Each step does one thing, led by what it does:
 
 - **`tap`** touches a point, `x` and `y`, or an element, at its activation point. Either is drawn in
   the video.
-- **`drag`** is a straight one-finger drag `from` one point `to` another, over `duration` seconds,
-  0.5 unless given.
+- **`drag`** is a straight one-finger drag `from` one point or element `to` another, over
+  `duration` seconds, 0.5 unless given. An element is touched at its activation point, as the
+  screen has it just before the drag, so dragging a list's row by its handle to another row's handle
+  needs no coordinates: `{ "from": { "label": "Reorder Book club" }, "to": { "label": "Reorder
+  Weekend plans" } }`.
 - **`type`** types `text` key by key on the on-screen keyboard, where `\n` presses return, into the
   element `into` names, or the field already being typed in.
 - **`activate`** is an accessibility activation of an element, with no touch, for getting somewhere
@@ -369,8 +372,10 @@ step and after the last, 1 second each unless given, so the edit has frames to c
 lead-in then starts once the app is up and reachable, so the first step waits for its first screen
 to settle, as it would without the launch.
 
-Points are in the device's screen points, so scenes are written per device type: `scenes/iphone/`
-and `scenes/ipad/`. A scene of the same name on each type, with every step id an edit references, is what lets
+Name elements where you can. Where there's nothing to name, a point's `x` and `y` are screen
+points, or a percentage of the screen's width or height as the device faces, such as `"50%"`, which
+holds better across devices. Points, and layouts, differ between devices, so scenes are written per
+device type: `scenes/iphone/` and `scenes/ipad/`. A scene of the same name on each type, with every step id an edit references, is what lets
 one edit cut both.
 
 ### What a scene can't reach

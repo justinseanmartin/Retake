@@ -64,12 +64,14 @@ public enum Composer {
         }
         let set = try AppSession.set(setFor, in: project, namedBy: scene == nil && setName != nil ? "--set" : project.displayPath(url))
         let state = State(document: SceneDocument(url: url, scene: scene, text: text, newOn: setFor), scene: scene ?? SceneFile(set: setFor, steps: []))
+        var player = Player()
+        player.screen = Devicectl().screenPoints(of: device)
 
         while true {
             var launch = state.scene
             launch.steps = state.document.steps
             try await AppSession.run("compose-\(name)", in: project, set: set, scene: launch, on: device, report: report, cleanUp: false) { driver, _ throws(RetakeError) in
-                state.ending = try await session(name, state: state, on: driver, input: input, reply: reply)
+                state.ending = try await session(name, state: state, on: driver, input: input, player: player, reply: reply)
             }
             if state.ending != .relaunch { break }
         }

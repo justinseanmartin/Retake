@@ -8,8 +8,8 @@ struct ComposeActionTests {
 
     @Test func eachStepActionBecomesTheStepItsOptionsDescribe() throws {
         #expect(try parse(#"tap --label "New Note" --id new-note --hold 0.8"#) == .step(Step(id: "new-note", .tapElement(ElementTarget(label: "New Note")), hold: 0.8)))
-        #expect(try parse("tap --x 195 --y 410.5") == .step(Step(.tapPoint(Point(x: 195, y: 410.5)))))
-        #expect(try parse("drag --from 120,590 --to 260,500") == .step(Step(.drag(from: Point(x: 120, y: 590), to: Point(x: 260, y: 500), duration: 0.5))))
+        #expect(try parse("tap --x 195 --y 410.5") == .step(Step(.tapPoint(Position(Point(x: 195, y: 410.5))))))
+        #expect(try parse("drag --from 120,590 --to 260,500") == .step(Step(.drag(from: .point(x: 120, y: 590), to: .point(x: 260, y: 500), duration: 0.5))))
         #expect(try parse(#"type --text "Groceries\n" --value Title"#) == .step(Step(.type(text: "Groceries\n", into: ElementTarget(value: "Title")))))
         #expect(try parse(#"type --text "a \"b\"""#) == .step(Step(.type(text: #"a "b""#, into: nil))))
         #expect(try parse(#"activate --label Delete --occurrence 2"#) == .step(Step(.activate(ElementTarget(label: "Delete", occurrence: 2)))))

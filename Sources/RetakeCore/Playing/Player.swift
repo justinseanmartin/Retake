@@ -66,6 +66,9 @@ public struct Player: Sendable {
     /// Told which way an `orientation` step is about to turn the device, before it does: for the
     /// recorder, to store frames of the new shape facing the right way.
     public var turning: @Sendable (SceneFile.Orientation) -> Void = { _ in }
+    /// The device's screen in points, held upright: what a step's share of the screen is of, turned
+    /// as the device faces. Nil when it isn't known, and a step that gives a share fails.
+    public var screen: CGSize? = nil
 
     /// How long an `orientation` step waits for the app to turn.
     public static let turnTimeout = 5.0
@@ -113,7 +116,9 @@ public struct Player: Sendable {
         let sentAt = now()
         var evidence = StepEvidence()
         do {
-            switch try StepPlay.make(for: played.step) {
+            let (touch, end) = try await points(for: played.step.action, facing: orientation, on: driver)
+            defer { (evidence.touched, evidence.lifted) = (evidence.touched ?? touch, end) }
+            switch try StepPlay.make(for: played.step, touch: touch, end: end) {
             case .heist(let plan):
                 evidence = try await driver.run(plan)
             case .direct(let command):
@@ -143,6 +148,59 @@ public struct Player: Sendable {
             let remaining = played.step.action?.key == "tap" ? hold - (now() - sentAt) : hold
             if remaining > 0 { await pause(remaining) }
         }
+    }
+
+    /// Where a tap at a point, or a drag, touches and lifts, in points: a share of the screen as the
+    /// device faces, and a drag's end on an element where the screen has it now, read just before
+    /// the drag. A drag that starts on an element is touched where The Button Heist finds it, but its
+    /// start is found here too, for the step log.
+    @ButtonHeistActor
+    func points(for action: Step.Action?, facing orientation: SceneFile.Orientation, on driver: some AppDriver) async throws(RetakeError) -> (touch: Point?, end: Point?) {
+        let facing = screen.map { orientation.isLandscape ? CGSize(width: $0.height, height: $0.width) : $0 }
+        func onScreen(_ position: Position) throws(RetakeError) -> Point {
+            guard let point = position.point(on: facing) else {
+                throw RetakeError(.environment, "\(position) is a share of the screen, and the device's screen size isn't known")
+            }
+            return point
+        }
+        switch action {
+        case .tapPoint(let position)?:
+            return (try onScreen(position), nil)
+        case .drag(let from, let to, _)?:
+            var elements: [ScreenElement]?
+            func find(_ spot: Spot) async throws(RetakeError) -> Point {
+                switch spot {
+                case .position(let position): return try onScreen(position)
+                case .element(let target):
+                    if elements == nil { elements = try await driver.elements() }
+                    return try Self.point(of: target, in: elements!)
+                }
+            }
+            return (try await find(from), try await find(to))
+        default:
+            return (nil, nil)
+        }
+    }
+
+    /// The activation point of the one element on screen `target` names.
+    static func point(of target: ElementTarget, in elements: [ScreenElement]) throws(RetakeError) -> Point {
+        let matches = elements.filter { target.matches($0) && $0.frame != nil }
+        let found: ScreenElement
+        if let occurrence = target.occurrence {
+            guard matches.indices.contains(occurrence - 1) else {
+                throw RetakeError(.failed, "\(matches.count) element\(matches.count == 1 ? "" : "s") on screen \(matches.count == 1 ? "matches" : "match") \(target), so there's no occurrence \(occurrence)")
+            }
+            found = matches[occurrence - 1]
+        } else {
+            guard !matches.isEmpty else { throw RetakeError(.failed, "\(target) isn't on screen") }
+            guard matches.count == 1 else {
+                throw RetakeError(.failed, "\(matches.count) elements on screen match \(target); name it more closely, or give occurrence, from 1 to \(matches.count)")
+            }
+            found = matches[0]
+        }
+        if let point = found.activationPoint { return point }
+        let frame = found.frame!
+        return Point(x: frame.x + frame.width / 2, y: frame.y + frame.height / 2)
     }
 
     /// The Button Heist's failure for an element that matches several, said in a scene's terms, or

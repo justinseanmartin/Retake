@@ -14,6 +14,8 @@ public struct StepEvidence: Equatable, Sendable {
     /// Where a step on an element touched: the activation point of the element The Button Heist
     /// resolved just before acting on it.
     public var touched: Point?
+    /// Where a drag lifted, as the player worked it out.
+    public var lifted: Point?
     /// Seconds the action's touch took, from `began`: a tap's press, or a drag from down to up.
     public var interaction: Double?
 

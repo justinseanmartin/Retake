@@ -15,7 +15,7 @@ extension Step {
 extension Step.Action {
     var json: JSONValue {
         switch self {
-        case .tapPoint(let point): return point.fileJSON
+        case .tapPoint(let position): return position.fileJSON
         case .tapElement(let element): return element.json
         case .drag(let from, let to, let duration):
             var entries: [JSONObject.Entry] = [.init(key: "from", value: from.fileJSON), .init(key: "to", value: to.fileJSON)]
@@ -36,10 +36,28 @@ extension Step.Action {
     }
 }
 
-extension Point {
-    /// As a scene file gives a point: `{ "x": 195, "y": 410 }`.
+extension Position {
+    /// As a scene file gives a point: `{ "x": 195, "y": "50%" }`.
     var fileJSON: JSONValue {
-        .object(JSONObject([.init(key: "x", value: .number(x)), .init(key: "y", value: .number(y))]))
+        .object(JSONObject([.init(key: "x", value: x.fileJSON), .init(key: "y", value: y.fileJSON)]))
+    }
+}
+
+extension Length {
+    var fileJSON: JSONValue {
+        switch self {
+        case .points(let points): .number(points)
+        case .share(let share): .string("\(Point.number(share * 100))%")
+        }
+    }
+}
+
+extension Spot {
+    var fileJSON: JSONValue {
+        switch self {
+        case .position(let position): position.fileJSON
+        case .element(let element): element.json
+        }
     }
 }
 

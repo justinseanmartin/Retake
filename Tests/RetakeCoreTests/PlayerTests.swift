@@ -39,6 +39,15 @@ final class FakeDriver: AppDriver {
     }
 }
 
+/// The points each step's evidence gives, as the player reports them.
+final class Touched: @unchecked Sendable {
+    var points: [[Point?]] = []
+}
+
+extension Step.Action {
+    static func tapPosition(x: Length, y: Length) -> Step.Action { .tapPoint(Position(x: x, y: y)) }
+}
+
 /// A clock that moves only when the player pauses, recording each pause.
 final class FakeTime: @unchecked Sendable {
     var now = 0.0
@@ -86,11 +95,40 @@ struct PlayerTests {
         driver.answering = (time, 0.4)
         let scene = SceneFile(steps: [
             Step(tap.action, hold: 1),
-            Step(.drag(from: Point(x: 1, y: 2), to: Point(x: 3, y: 4), duration: 0.5), hold: 1),
+            Step(.drag(from: .point(x: 1, y: 2), to: .point(x: 3, y: 4), duration: 0.5), hold: 1),
             Step(tap.action, hold: 0.3),
         ])
         try await time.player().play(scene, named: "create-note", on: driver)
         #expect(time.pauses.map { ($0 * 1000).rounded() / 1000 } == [0.6, 1], "the last tap's answer outlasts its hold")
+    }
+
+    @Test func aDragBetweenElementsAndATapAtAShareOfTheScreenAreFoundAsTheyPlay() async throws {
+        let driver = FakeDriver()
+        driver.screens = [[
+            ScreenElement(label: "Reorder Book club", frame: .init(x: 758, y: 812, width: 44, height: 44), activationPoint: Point(x: 780, y: 834)),
+            ScreenElement(label: "Reorder Weekend plans", frame: .init(x: 758, y: 164, width: 44, height: 44)),
+        ]]
+        let touched = Touched()
+        var player = Player(pause: { _ in }, report: { event in
+            if case .finished(_, let timing) = event { touched.points.append([timing.evidence.touched, timing.evidence.lifted]) }
+        })
+        player.screen = CGSize(width: 834, height: 1194)
+        let scene = SceneFile(steps: [
+            Step(.drag(from: .element(ElementTarget(label: "Reorder Book club")), to: .element(ElementTarget(label: "Reorder Weekend plans")), duration: 0.6)),
+        ])
+        try await player.play(scene, named: "reorder", on: driver)
+        #expect(touched.points[0] == [Point(x: 780, y: 834), Point(x: 780, y: 186)], "its activation point, or its frame's middle")
+        #expect(driver.done == ["look", "direct"], "the screen's read once, before the drag")
+
+        let landscape = SceneFile(steps: [Step(.tapPosition(x: .share(0.5), y: .points(100)))], orientation: .landscapeLeft)
+        try await player.play(landscape, named: "turned", on: FakeDriver())
+        #expect(touched.points[1] == [Point(x: 597, y: 100), nil], "half the screen's width as it faces, turned")
+    }
+
+    @Test func aShareOfAScreenWhoseSizeIsntKnownSaysSo() async {
+        await #expect(throws: RetakeError.self) {
+            try await Player(pause: { _ in }).play(SceneFile(steps: [Step(.tapPosition(x: .share(0.5), y: .share(0.5)))]), named: "a", on: FakeDriver())
+        }
     }
 
     @Test func theFirstStepThatDoesntRunStopsThePlayNamingIt() async {

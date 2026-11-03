@@ -39,8 +39,8 @@ struct SceneFileTests {
             steps: [
                 Step(id: "new-note", .tapElement(ElementTarget(label: "New Note")), hold: 1.2),
                 Step(.type(text: "Groceries\n", into: ElementTarget(value: "Title"))),
-                Step(.tapPoint(Point(x: 195, y: 410))),
-                Step(id: "reorder", .drag(from: Point(x: 120, y: 590), to: Point(x: 260, y: 500), duration: 0.8)),
+                Step(.tapPoint(Position(Point(x: 195, y: 410)))),
+                Step(id: "reorder", .drag(from: .point(x: 120, y: 590), to: .point(x: 260, y: 500), duration: 0.8)),
                 Step(id: "synced", .waitFor(ElementTarget(label: "Synced"), gone: false, timeout: Step.defaultWaitTimeout)),
                 Step(nil, hold: 2),
             ],
@@ -61,9 +61,33 @@ struct SceneFileTests {
         #expect(scene?.leadIn == 1 && scene?.tail == 1 && scene?.orientation == .portrait && scene?.recordsLaunch == false)
         #expect(scene?.set == nil)
         #expect(scene?.steps == [
-            Step(.drag(from: Point(x: 1, y: 2), to: Point(x: 3, y: 4), duration: 0.5)),
+            Step(.drag(from: .point(x: 1, y: 2), to: .point(x: 3, y: 4), duration: 0.5)),
             Step(.waitFor(ElementTarget(value: "Title"), gone: true, timeout: 10)),
         ])
+    }
+
+    @Test func aPointCanBeAShareOfTheScreenAndADragsEndsElements() {
+        let scene = steps(#"""
+            {"tap": {"x": "50%", "y": 410}},
+            {"drag": {"from": {"label": "Reorder Book club"}, "to": {"label": "Reorder Weekend plans"}, "duration": 0.6}}
+            """#).scene
+        #expect(scene?.steps.map(\.action) == [
+            .tapPoint(Position(x: .share(0.5), y: .points(410))),
+            .drag(from: .element(ElementTarget(label: "Reorder Book club")), to: .element(ElementTarget(label: "Reorder Weekend plans")), duration: 0.6),
+        ])
+        #expect(scene?.steps.map(\.json) == [
+            .object(JSONObject([.init(key: "tap", value: .object(JSONObject([.init(key: "x", value: .string("50%")), .init(key: "y", value: .number(410))])))])),
+            try! JSONParser.parse(#"{"drag": {"from": {"label": "Reorder Book club"}, "to": {"label": "Reorder Weekend plans"}, "duration": 0.6}}"#),
+        ], "written back as given")
+    }
+
+    @Test(arguments: [
+        (#"{"tap": {"x": "150%", "y": 1}}"#, #"scenes/ipad/create-note.json: steps[0].tap.x: is a number of points, or a percentage of the screen up to 100%, such as "50%""#),
+        (#"{"tap": {"x": "half", "y": 1}}"#, #"scenes/ipad/create-note.json: steps[0].tap.x: is a number of points, or a percentage of the screen up to 100%, such as "50%""#),
+        (#"{"drag": {"from": {"x": 1, "y": 2, "label": "A"}, "to": {"x": 3, "y": 4}}}"#, #"scenes/ipad/create-note.json: steps[0].drag.from: is a point ("x" and "y") or an element, not both"#),
+    ])
+    func aPointThatIsntOneSaysWhy(_ step: String, _ expected: String) {
+        #expect(steps(step).problems == [expected])
     }
 
     @Test func elementsCanBeNamedEveryWayTogether() {

@@ -29,7 +29,7 @@ One thing the scene does, led by what it does, and the pause after it. A step ca
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `tap` | [object](#steptap-with-x), or [element](#element) |  | Touches a point, x and y, or an element. An element is touched at its activation point, which the step log records, so either is drawn in the video. |
-| `drag` | [object](#stepdrag) |  | A straight one-finger drag from one point to another. |
+| `drag` | [object](#stepdrag) |  | A straight one-finger drag from one point or element to another. An element is touched at its activation point, as the screen has it just before the drag. |
 | `type` | [object](#steptype) |  | Types text key by key on the on-screen keyboard. |
 | `activate` | [element](#element) |  | An accessibility activation of an element, with no touch, for getting somewhere off camera. |
 | `orientation` | `"portrait"`, `"portrait-upside-down"`, `"landscape-left"` or `"landscape-right"` |  | Turns the device, with no hand on it; the step ends when the app has turned. |
@@ -43,17 +43,17 @@ Gives exactly one of `tap`, `drag`, `type`, `activate`, `orientation` or `waitFo
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `x` | number ≥ 0 | required | Screen points from the left. |
-| `y` | number ≥ 0 | required | Screen points from the top. |
+| `x` | number ≥ 0, or string matching `^(100(\.0+)?\|[0-9]{1,2}(\.[0-9]+)?)%$` | required | Screen points from the left, or a percentage of the screen's width as the device faces. |
+| `y` | number ≥ 0, or string matching `^(100(\.0+)?\|[0-9]{1,2}(\.[0-9]+)?)%$` | required | Screen points from the top, or a percentage of the screen's height as the device faces. |
 
 #### `step.drag`
 
-A straight one-finger drag from one point to another.
+A straight one-finger drag from one point or element to another. An element is touched at its activation point, as the screen has it just before the drag.
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `from` | [object](#stepdragfrom) | required | Where the finger comes down. |
-| `to` | [object](#stepdragto) | required | Where it lifts. |
+| `from` | [object](#stepdragfrom-with-x), or [element](#element) | required | Where the finger comes down: a point, x and y, or an element. |
+| `to` | [object](#stepdragto-with-x), or [element](#element) | required | Where it lifts: a point, x and y, or an element. |
 | `duration` | number > 0 | `0.5` | Seconds the drag takes. |
 
 #### `step.type`
@@ -82,23 +82,19 @@ Waits until an element is on screen, or with gone until it isn't. The step fails
 
 Gives at least one of `label`, `value`, `identifier`, `hint` and `traits`.
 
-#### `step.drag.from`
-
-Where the finger comes down.
+#### `step.drag.from`, with `x`
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `x` | number ≥ 0 | required | Screen points from the left. |
-| `y` | number ≥ 0 | required | Screen points from the top. |
+| `x` | number ≥ 0, or string matching `^(100(\.0+)?\|[0-9]{1,2}(\.[0-9]+)?)%$` | required | Screen points from the left, or a percentage of the screen's width as the device faces. |
+| `y` | number ≥ 0, or string matching `^(100(\.0+)?\|[0-9]{1,2}(\.[0-9]+)?)%$` | required | Screen points from the top, or a percentage of the screen's height as the device faces. |
 
-#### `step.drag.to`
-
-Where it lifts.
+#### `step.drag.to`, with `x`
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `x` | number ≥ 0 | required | Screen points from the left. |
-| `y` | number ≥ 0 | required | Screen points from the top. |
+| `x` | number ≥ 0, or string matching `^(100(\.0+)?\|[0-9]{1,2}(\.[0-9]+)?)%$` | required | Screen points from the left, or a percentage of the screen's width as the device faces. |
+| `y` | number ≥ 0, or string matching `^(100(\.0+)?\|[0-9]{1,2}(\.[0-9]+)?)%$` | required | Screen points from the top, or a percentage of the screen's height as the device faces. |
 
 ### element
 

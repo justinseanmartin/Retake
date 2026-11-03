@@ -92,6 +92,8 @@ public enum RecordRun {
     ) async -> [Outcome] {
         var outcomes: [Outcome] = []
         var needsCleanUp = false
+        var player = player
+        if player.screen == nil { player.screen = Devicectl().screenPoints(of: device) }
         for name in scenes {
             var outcome = Outcome(scene: name)
             do throws(RetakeError) {

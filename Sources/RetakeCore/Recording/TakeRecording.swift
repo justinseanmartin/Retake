@@ -65,6 +65,7 @@ public enum TakeRecording {
         let header = log
         let collected = Collected()
         var player = player
+        player.screen = screen
         let report = player.report
         player.report = { event in
             if case .finished(let played, let timing) = event, !played.isSetup { collected.add(played, timing) }

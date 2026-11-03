@@ -159,9 +159,9 @@ extension TakeLog {
         let (start, end, byDevice) = clock.place(timing)
         var touch: Point?, touchEnd: Point?
         switch played.step.action {
-        case .tapPoint(let point): touch = point
+        case .tapPoint(let position): touch = timing.evidence.touched ?? position.point(on: nil)
         case .tapElement: touch = timing.evidence.touched
-        case .drag(let from, let to, _): (touch, touchEnd) = (from, to)
+        case .drag(let from, let to, _): (touch, touchEnd) = (timing.evidence.touched ?? from.point, timing.evidence.lifted ?? to.point)
         default: break
         }
         return Entry(

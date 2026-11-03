@@ -14,18 +14,36 @@ public enum StepPlay: Equatable, Sendable {
     /// Nothing but the step's hold.
     case pause
 
-    /// The plan for `step`, or why The Button Heist can't take it, as a failure (1) naming nothing:
-    /// the caller names the step.
-    public static func make(for step: Step) throws(RetakeError) -> StepPlay {
+    /// The plan for `step`, its touch at `touch`, and a drag's end at `end`, as the player works
+    /// them out where the step gives an element or a share of the screen; or why The Button Heist
+    /// can't take it, as a failure (1) naming nothing: the caller names the step. A drag that starts
+    /// on an element starts on it, wherever The Button Heist finds it.
+    public static func make(for step: Step, touch: Point? = nil, end: Point? = nil) throws(RetakeError) -> StepPlay {
         guard let action = step.action else { return .pause }
         do {
             switch action {
-            case .tapPoint(let point):
+            case .tapPoint(let position):
+                guard let point = touch ?? position.point(on: nil) else { throw RetakeError(.failed, "its point is a share of a screen whose size isn't known") }
                 return .heist(try plan(.oneFingerTap(TapTarget(selection: .coordinate(screenPoint(point))))))
             case .tapElement(let element):
                 return .heist(try plan(.oneFingerTap(TapTarget(selection: .element(target(element))))))
-            case .drag(let from, let to, let duration):
-                let start = GesturePointSelection.coordinate(try screenPoint(from))
+            case .drag(let fromSpot, let toSpot, let duration):
+                let start: GesturePointSelection
+                switch fromSpot {
+                case .element(let element): start = .element(target(element))
+                case .position(let position):
+                    guard let point = touch ?? position.point(on: nil) else { throw RetakeError(.failed, "where it starts is a share of a screen whose size isn't known") }
+                    start = .coordinate(try screenPoint(point))
+                }
+                let to: Point
+                switch toSpot {
+                case .element(let element):
+                    guard let end else { throw RetakeError(.failed, "where it ends, \(element), wasn't looked for on the screen") }
+                    to = end
+                case .position(let position):
+                    guard let point = end ?? position.point(on: nil) else { throw RetakeError(.failed, "where it ends is a share of a screen whose size isn't known") }
+                    to = point
+                }
                 guard duration != DragTarget.defaultDuration.seconds else {
                     return .heist(try plan(.drag(DragTarget(start: start, end: try screenPoint(to)))))
                 }
@@ -81,7 +99,7 @@ extension Step {
     public var summary: String {
         guard let action else { return "hold \(Self.seconds(hold ?? 0))" }
         switch action {
-        case .tapPoint(let point): return "tap \(point)"
+        case .tapPoint(let position): return "tap \(position)"
         case .tapElement(let element): return "tap \(element)"
         case .drag(let from, let to, _): return "drag \(from) to \(to)"
         case .type(let text, let into):
@@ -100,6 +118,29 @@ extension Step {
 
     static func seconds(_ value: Double) -> String {
         value == value.rounded() ? "\(Int(value)) s" : "\(value) s"
+    }
+}
+
+extension Position: CustomStringConvertible {
+    /// `(417, 50%)`.
+    public var description: String { "(\(x), \(y))" }
+}
+
+extension Length: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .points(let points): Point.number(points)
+        case .share(let share): "\(Point.number(share * 100))%"
+        }
+    }
+}
+
+extension Spot: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .position(let position): position.description
+        case .element(let element): element.description
+        }
     }
 }
 

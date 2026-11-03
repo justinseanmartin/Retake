@@ -37,14 +37,14 @@ struct TakeLogTests {
         func entry(_ step: Step, touched: Point? = nil) -> TakeLog.Entry {
             TakeLog.entry(Player.Played(isSetup: false, number: 1, count: 1, step: step), timing(sent: 1, received: 2, touched: touched), on: clock)
         }
-        #expect(entry(Step(.tapPoint(Point(x: 195, y: 410)))).touch == Point(x: 195, y: 410))
-        let drag = entry(Step(.drag(from: Point(x: 1, y: 2), to: Point(x: 3, y: 4), duration: 0.5)))
+        #expect(entry(Step(.tapPoint(Position(Point(x: 195, y: 410))))).touch == Point(x: 195, y: 410))
+        let drag = entry(Step(.drag(from: .point(x: 1, y: 2), to: .point(x: 3, y: 4), duration: 0.5)))
         #expect(drag.touch == Point(x: 1, y: 2) && drag.touchEnd == Point(x: 3, y: 4) && drag.action == "drag")
         #expect(entry(Step(.tapElement(ElementTarget(label: "Share"))), touched: Point(x: 30, y: 40)).touch == Point(x: 30, y: 40))
         #expect(entry(Step(.activate(ElementTarget(label: "Share"))), touched: Point(x: 30, y: 40)).touch == nil, "activating touches nothing")
         #expect(entry(Step(nil, hold: 2)).action == "hold")
         let timed = TakeLog.entry(
-            Player.Played(isSetup: false, number: 1, count: 1, step: Step(.drag(from: Point(x: 1, y: 2), to: Point(x: 3, y: 4), duration: 0.5))),
+            Player.Played(isSetup: false, number: 1, count: 1, step: Step(.drag(from: .point(x: 1, y: 2), to: .point(x: 3, y: 4), duration: 0.5))),
             timing(sent: 1, received: 2, interaction: 0.52), on: clock,
         )
         #expect(timed.touchDuration == 0.52)

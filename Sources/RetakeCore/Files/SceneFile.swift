@@ -8,6 +8,8 @@ public struct SceneFile: Equatable, Sendable {
         case portraitUpsideDown = "portrait-upside-down"
         case landscapeLeft = "landscape-left"
         case landscapeRight = "landscape-right"
+
+        public var isLandscape: Bool { self == .landscapeLeft || self == .landscapeRight }
     }
 
     /// The set the scene starts on; the project's `defaultSet` when nil.
@@ -65,9 +67,9 @@ public struct Step: Equatable, Sendable {
     }
 
     public enum Action: Equatable, Sendable {
-        case tapPoint(Point)
+        case tapPoint(Position)
         case tapElement(ElementTarget)
-        case drag(from: Point, to: Point, duration: Double)
+        case drag(from: Spot, to: Spot, duration: Double)
         case type(text: String, into: ElementTarget?)
         case activate(ElementTarget)
         case orientation(SceneFile.Orientation)
@@ -100,6 +102,64 @@ public struct Point: Equatable, Sendable {
     public init(x: Double, y: Double) {
         self.x = x
         self.y = y
+    }
+}
+
+/// A distance on the screen, as a scene or an edit gives it: points, `120`, or a share of the
+/// screen's width or height as the device faces, `"50%"`.
+public enum Length: Equatable, Sendable {
+    case points(Double)
+    /// From 0 to 1.
+    case share(Double)
+
+    /// In points, along a side `whole` points long.
+    public func points(of whole: Double) -> Double {
+        switch self {
+        case .points(let points): points
+        case .share(let share): share * whole
+        }
+    }
+
+    public var isShare: Bool {
+        if case .share = self { true } else { false }
+    }
+}
+
+/// A point on the screen, each coordinate in points or as a share of the screen.
+public struct Position: Equatable, Sendable {
+    public var x: Length
+    public var y: Length
+
+    public init(x: Length, y: Length) {
+        self.x = x
+        self.y = y
+    }
+
+    public init(_ point: Point) {
+        self.init(x: .points(point.x), y: .points(point.y))
+    }
+
+    /// In points, on a screen `screen` points across and down as the device faces it: nil for a
+    /// share of a screen whose size isn't known.
+    public func point(on screen: CGSize?) -> Point? {
+        guard x.isShare || y.isShare else { return Point(x: x.points(of: 0), y: y.points(of: 0)) }
+        guard let screen else { return nil }
+        return Point(x: x.points(of: screen.width), y: y.points(of: screen.height))
+    }
+}
+
+/// Where a finger comes down or lifts: a position on the screen, or an element, at its activation
+/// point as the screen has it then.
+public enum Spot: Equatable, Sendable {
+    case position(Position)
+    case element(ElementTarget)
+
+    /// A point in screen points.
+    public static func point(x: Double, y: Double) -> Spot { .position(Position(Point(x: x, y: y))) }
+
+    /// Where it is without looking at the screen: a position given in points.
+    public var point: Point? {
+        if case .position(let position) = self { position.point(on: nil) } else { nil }
     }
 }
 
@@ -232,13 +292,13 @@ extension SceneFile {
                 reader.problem("taps a point (\"x\" and \"y\") or an element, not both", at: path)
                 return nil
             }
-            if hasPoint { return readPoint(&object, reader).map(Step.Action.tapPoint) }
+            if hasPoint { return readPosition(&object, reader).map(Step.Action.tapPoint) }
             return readElement(&object, reader).map(Step.Action.tapElement)
         case "activate":
             return readElement(&object, reader).map(Step.Action.activate)
         case "drag":
-            let from = object.required("from") { value, path in reader.object(value, at: path).flatMap { var point = $0; defer { point.finish() }; return readPoint(&point, reader) } }
-            let to = object.required("to") { value, path in reader.object(value, at: path).flatMap { var point = $0; defer { point.finish() }; return readPoint(&point, reader) } }
+            let from = object.required("from") { readSpot($0, $1, reader) }
+            let to = object.required("to") { readSpot($0, $1, reader) }
             let duration = object.optional("duration") { reader.number($0, at: $1, .above(0)) } ?? Step.defaultDragDuration
             guard let from, let to else { return nil }
             return .drag(from: from, to: to, duration: duration)
@@ -264,11 +324,41 @@ extension SceneFile {
         }
     }
 
-    static func readPoint(_ object: inout ObjectReader, _ reader: JSONReader) -> Point? {
-        let x = object.required("x") { reader.number($0, at: $1, .atLeast(0)) }
-        let y = object.required("y") { reader.number($0, at: $1, .atLeast(0)) }
+    static func readPosition(_ object: inout ObjectReader, _ reader: JSONReader) -> Position? {
+        let x = object.required("x") { readLength($0, $1, reader) }
+        let y = object.required("y") { readLength($0, $1, reader) }
         guard let x, let y else { return nil }
-        return Point(x: x, y: y)
+        return Position(x: x, y: y)
+    }
+
+    /// Points, at least 0 (or above it), or a percentage of the screen from 0% to 100%, as a string.
+    static func readLength(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader, aboveZero: Bool = false) -> Length? {
+        guard case .string(let text) = value else {
+            return reader.number(value, at: path, aboveZero ? .above(0) : .atLeast(0)).map(Length.points)
+        }
+        guard text.hasSuffix("%"), let percent = Double(text.dropLast()), percent.isFinite, percent >= 0, percent <= 100, !(aboveZero && percent == 0),
+              text.first?.isNumber == true else {
+            reader.problem("is a number of points, or a percentage of the screen\(aboveZero ? " above 0%" : "") up to 100%, such as \"50%\"", at: path)
+            return nil
+        }
+        return .share(percent / 100)
+    }
+
+    /// A drag's end: a point, `x` and `y`, or an element, not both.
+    static func readSpot(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> Spot? {
+        guard var object = reader.object(value, at: path) else { return nil }
+        defer { object.finish() }
+        object.know("x", "y", "occurrence")
+        object.know(ElementTarget.keys[0], ElementTarget.keys[1], ElementTarget.keys[2])
+        object.know(ElementTarget.keys[3], ElementTarget.keys[4])
+        let hasPoint = object.object["x"] != nil || object.object["y"] != nil
+        let hasElement = (ElementTarget.keys + ["occurrence"]).contains { object.object[$0] != nil }
+        if hasPoint, hasElement {
+            reader.problem("is a point (\"x\" and \"y\") or an element, not both", at: path)
+            return nil
+        }
+        if hasPoint { return readPosition(&object, reader).map(Spot.position) }
+        return readElement(&object, reader).map(Spot.element)
     }
 
     /// An element named by any of `label`, `value`, `identifier`, `hint` and `traits`, at least one.

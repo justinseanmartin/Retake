@@ -106,18 +106,28 @@ extension SetFile {
 
 // MARK: - Scenes
 
+extension Schema {
+    /// Points, or a percentage of `whole`, as a string: what `SceneFile.readLength` reads.
+    static func length(_ description: String?, aboveZero: Bool = false, of whole: String = "the screen") -> Schema {
+        .oneOf(description, [
+            aboveZero ? .number(nil, above: 0) : .number(nil, atLeast: 0),
+            .string("A percentage of \(whole), such as 50%.", pattern: #"^(100(\.0+)?|[0-9]{1,2}(\.[0-9]+)?)%$"#),
+        ])
+    }
+}
+
 extension SceneFile {
     public static var schema: FileSchema {
         let orientation = Schema.choice(nil, Orientation.allCases.map(\.rawValue))
         let point = Schema.object(nil, [
-            .init("x", .number("Screen points from the left.", atLeast: 0)),
-            .init("y", .number("Screen points from the top.", atLeast: 0)),
+            .init("x", .length("Screen points from the left, or a percentage of the screen's width as the device faces.")),
+            .init("y", .length("Screen points from the top, or a percentage of the screen's height as the device faces.")),
         ], required: ["x", "y"])
         let actions: [Schema.Property] = [
             .init("tap", .oneOf("Touches a point, x and y, or an element. An element is touched at its activation point, which the step log records, so either is drawn in the video.", [point, .ref("element")])),
-            .init("drag", .object("A straight one-finger drag from one point to another.", [
-                .init("from", point.described("Where the finger comes down.")),
-                .init("to", point.described("Where it lifts.")),
+            .init("drag", .object("A straight one-finger drag from one point or element to another. An element is touched at its activation point, as the screen has it just before the drag.", [
+                .init("from", .oneOf("Where the finger comes down: a point, x and y, or an element.", [point, .ref("element")])),
+                .init("to", .oneOf("Where it lifts: a point, x and y, or an element.", [point, .ref("element")])),
                 .init("duration", .number("Seconds the drag takes.", above: 0).defaulting(to: .number(Step.defaultDragDuration))),
             ], required: ["from", "to"])),
             .init("type", .object("Types text key by key on the on-screen keyboard.", [

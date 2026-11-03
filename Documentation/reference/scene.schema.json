@@ -73,14 +73,32 @@
               "type": "object",
               "properties": {
                 "x": {
-                  "description": "Screen points from the left.",
-                  "type": "number",
-                  "minimum": 0
+                  "description": "Screen points from the left, or a percentage of the screen's width as the device faces.",
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    {
+                      "description": "A percentage of the screen, such as 50%.",
+                      "type": "string",
+                      "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+                    }
+                  ]
                 },
                 "y": {
-                  "description": "Screen points from the top.",
-                  "type": "number",
-                  "minimum": 0
+                  "description": "Screen points from the top, or a percentage of the screen's height as the device faces.",
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    {
+                      "description": "A percentage of the screen, such as 50%.",
+                      "type": "string",
+                      "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+                    }
+                  ]
                 }
               },
               "required": ["x", "y"],
@@ -92,44 +110,94 @@
           ]
         },
         "drag": {
-          "description": "A straight one-finger drag from one point to another.",
+          "description": "A straight one-finger drag from one point or element to another. An element is touched at its activation point, as the screen has it just before the drag.",
           "type": "object",
           "properties": {
             "from": {
-              "description": "Where the finger comes down.",
-              "type": "object",
-              "properties": {
-                "x": {
-                  "description": "Screen points from the left.",
-                  "type": "number",
-                  "minimum": 0
+              "description": "Where the finger comes down: a point, x and y, or an element.",
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "description": "Screen points from the left, or a percentage of the screen's width as the device faces.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "description": "A percentage of the screen, such as 50%.",
+                          "type": "string",
+                          "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+                        }
+                      ]
+                    },
+                    "y": {
+                      "description": "Screen points from the top, or a percentage of the screen's height as the device faces.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "description": "A percentage of the screen, such as 50%.",
+                          "type": "string",
+                          "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+                        }
+                      ]
+                    }
+                  },
+                  "required": ["x", "y"],
+                  "additionalProperties": false
                 },
-                "y": {
-                  "description": "Screen points from the top.",
-                  "type": "number",
-                  "minimum": 0
+                {
+                  "$ref": "#/$defs/element"
                 }
-              },
-              "required": ["x", "y"],
-              "additionalProperties": false
+              ]
             },
             "to": {
-              "description": "Where it lifts.",
-              "type": "object",
-              "properties": {
-                "x": {
-                  "description": "Screen points from the left.",
-                  "type": "number",
-                  "minimum": 0
+              "description": "Where it lifts: a point, x and y, or an element.",
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "description": "Screen points from the left, or a percentage of the screen's width as the device faces.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "description": "A percentage of the screen, such as 50%.",
+                          "type": "string",
+                          "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+                        }
+                      ]
+                    },
+                    "y": {
+                      "description": "Screen points from the top, or a percentage of the screen's height as the device faces.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "description": "A percentage of the screen, such as 50%.",
+                          "type": "string",
+                          "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+                        }
+                      ]
+                    }
+                  },
+                  "required": ["x", "y"],
+                  "additionalProperties": false
                 },
-                "y": {
-                  "description": "Screen points from the top.",
-                  "type": "number",
-                  "minimum": 0
+                {
+                  "$ref": "#/$defs/element"
                 }
-              },
-              "required": ["x", "y"],
-              "additionalProperties": false
+              ]
             },
             "duration": {
               "description": "Seconds the drag takes.",

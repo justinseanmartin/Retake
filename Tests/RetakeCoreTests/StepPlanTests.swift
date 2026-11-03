@@ -20,7 +20,7 @@ struct StepPlanTests {
     }
 
     @Test func aDragAtTheDefaultSpeedIsAPlanAndAnyOtherADirectCommand() throws {
-        let from = Point(x: 120, y: 590), to = Point(x: 260, y: 500)
+        let from = Spot.point(x: 120, y: 590), to = Spot.point(x: 260, y: 500)
         let plain = try action(Step(.drag(from: from, to: to, duration: Step.defaultDragDuration)))
         guard case .drag(let target)? = plain else { Issue.record("not a drag: \(String(describing: plain))"); return }
         #expect(target.duration == nil, "0.7.1 refuses a plan's drag with a duration")
@@ -29,6 +29,17 @@ struct StepPlanTests {
             return
         }
         #expect(timed.duration?.seconds == 0.8 && timed.end == ScreenPoint(x: 260, y: 500))
+    }
+
+    @Test func aDragFromAnElementStartsOnItAndEndsWhereThePlayerFoundItsEnd() throws {
+        let handle = ElementTarget(label: "Reorder Book club")
+        let step = Step(.drag(from: .element(handle), to: .element(ElementTarget(label: "Reorder Weekend plans")), duration: 0.6))
+        guard case .direct(.drag(let target)) = try StepPlay.make(for: step, end: Point(x: 780, y: 186)) else {
+            Issue.record("not a timed drag")
+            return
+        }
+        #expect(target.start == .element(StepPlay.target(handle)) && target.end == ScreenPoint(x: 780, y: 186))
+        #expect(throws: RetakeError.self, "an element end needs the player to have found it") { try StepPlay.make(for: step) }
     }
 
     @Test func aWaitWaitsForTheElementOrItsGoingForItsTimeout() throws {

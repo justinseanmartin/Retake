@@ -265,7 +265,7 @@ extension ComposeActionSpec {
             if given["x"] != nil || given["y"] != nil {
                 guard ElementOptions.names.allSatisfy({ given[$0] == nil }) else { throw .wrong("tap takes an element or --x and --y, not both.") }
                 guard let x = given["x"], let y = given["y"] else { throw .wrong("tap at a point needs both --x and --y.") }
-                return .step(Step(.tapPoint(Point(x: try number(x, "--x", atLeast: 0), y: try number(y, "--y", atLeast: 0)))))
+                return .step(Step(.tapPoint(Position(Point(x: try number(x, "--x", atLeast: 0), y: try number(y, "--y", atLeast: 0))))))
             }
             guard let element = try ElementOptions.target(given) else {
                 throw .missing(action: "tap", [.element])
@@ -282,7 +282,8 @@ extension ComposeActionSpec {
             required: ["from", "to"], isStep: true,
         ) { given throws(ComposeAction.Problem) in
             let duration = try given["duration"].map { text throws(ComposeAction.Problem) in try number(text, "--duration", above: 0) } ?? Step.defaultDragDuration
-            return .step(Step(.drag(from: try point(given["from"]!, "--from"), to: try point(given["to"]!, "--to"), duration: duration)))
+            let from = Spot.position(Position(try point(given["from"]!, "--from"))), to = Spot.position(Position(try point(given["to"]!, "--to")))
+            return .step(Step(.drag(from: from, to: to, duration: duration)))
         },
         ComposeActionSpec(
             name: "type", summary: "Types text on the on-screen keyboard.",
