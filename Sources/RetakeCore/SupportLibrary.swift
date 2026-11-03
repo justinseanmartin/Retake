@@ -27,7 +27,7 @@ public struct SupportLibrary: Equatable, Sendable {
         cache: URL = defaultCache,
     ) throws(RetakeError) -> SupportLibrary {
         guard let file = candidates(executable: executable, cache: cache).first(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
-            throw RetakeError(.environment, "Retake's support library isn't built yet; run Scripts/build-support.sh.")
+            throw RetakeError(.environment, "Retake's support library isn't built yet; \(SourceCheckout.remedy()).")
         }
         return SupportLibrary(file: file)
     }

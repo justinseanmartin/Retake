@@ -61,7 +61,7 @@ struct InsideJobFrameworkTests {
             _ = try locate()
             Issue.record("found a framework where there's none")
         } catch {
-            #expect(error.status == .environment && error.message.contains("Scripts/fetch-insidejob.sh"))
+            #expect(error.status == .environment && error.message.contains("/Scripts/build.sh"), "\(error.message)")
         }
         try make(cache.appending(path: "0.7.1/TheInsideJob.xcframework"), version: "0.7.1", deviceSlice: false)
         #expect(throws: RetakeError.self) { try locate() }

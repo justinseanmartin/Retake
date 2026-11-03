@@ -41,7 +41,7 @@ public struct InsideJobFramework: Equatable, Sendable {
                 throw RetakeError(
                     .environment,
                     "\(bundle.path) is TheInsideJob \(version), but this Retake is built against \(expectedVersion); "
-                        + "run Scripts/fetch-insidejob.sh to replace it.",
+                        + "\(SourceCheckout.remedy()) to replace it.",
                 )
             }
             guard FileManager.default.fileExists(atPath: framework.deviceFramework.path) else {
@@ -52,8 +52,8 @@ public struct InsideJobFramework: Equatable, Sendable {
         throw RetakeError(
             .environment,
             builtFromClone
-                ? "There's no TheInsideJob built from the clone yet; run Scripts/fetch-insidejob.sh with RETAKE_BUTTONHEIST_PATH set."
-                : "TheInsideJob \(expectedVersion) isn't here yet; run Scripts/fetch-insidejob.sh to download it.",
+                ? "There's no TheInsideJob built from the clone yet; \(SourceCheckout.remedy()) with RETAKE_BUTTONHEIST_PATH set."
+                : "TheInsideJob \(expectedVersion) isn't here yet; \(SourceCheckout.remedy()) to download it.",
         )
     }
 
