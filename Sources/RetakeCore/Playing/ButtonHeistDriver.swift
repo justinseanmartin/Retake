@@ -117,9 +117,7 @@ public final class ButtonHeistDriver: AppDriver {
     public func perform(_ command: HeistActionCommand) async throws(RetakeError) -> StepEvidence {
         let response: FenceResponse
         do {
-            let action = try JSONDecoder().decode(HeistValue.self, from: JSONEncoder().encode(command))
-            let input = FenceCommandInput(command: .action, arguments: TheFence.CommandArgumentEnvelope(values: ["action": action]))
-            response = try await heist.execute(heist.admit(input))
+            response = try await heist.execute(heist.admit(Self.directInput(command)))
         } catch {
             let (code, message) = Self.classify(error)
             let lost = code.map { $0.phase == .transport || $0 == .connectionNotConnected } ?? false
@@ -131,6 +129,12 @@ public final class ButtonHeistDriver: AppDriver {
         }
         guard case .action(let result, _) = response else { return StepEvidence() }
         return StepEvidence.from(encoded: result)
+    }
+
+    /// `command` as the tooling SPI's `action` command takes it: the action's own JSON, as a value.
+    nonisolated static func directInput(_ command: HeistActionCommand) throws -> FenceCommandInput {
+        let action = try JSONDecoder().decode(HeistValue.self, from: JSONEncoder().encode(command))
+        return FenceCommandInput(command: .action, arguments: TheFence.CommandArgumentEnvelope(values: ["action": action]))
     }
 
     /// How far the device's clock is ahead of the Mac's, in seconds: from when it stamped a reading
