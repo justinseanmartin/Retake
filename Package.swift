@@ -55,6 +55,7 @@ let package = Package(
                 "RetakeCore",
                 .product(name: "ButtonHeist", package: "TheButtonHeist"),
                 .product(name: "ThePlans", package: "TheButtonHeist"),
+                .product(name: "TheScore", package: "TheButtonHeist"),
             ],
         ),
         // Checks only a device can make, run with RETAKE_TEST_DEVICE naming one, and skipped otherwise.

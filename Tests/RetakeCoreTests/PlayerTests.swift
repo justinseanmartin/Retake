@@ -1,7 +1,8 @@
-import ButtonHeist
+@_spi(ButtonHeistTooling) import ButtonHeist
 import Foundation
 @testable import RetakeCore
 import ThePlans
+import TheScore
 import Testing
 
 /// The app as a list of what it was asked to do, with screens to show after each turn.
@@ -262,5 +263,47 @@ struct ButtonHeistDriverTests {
         let unreachable = ButtonHeistDriver.connectionFailure(code: .connectionEndpointUnreachable, message: "Could not reach")
         #expect(unreachable.error.status == .environment && unreachable.retryable, "a server not yet listening is tried again")
         #expect(!ButtonHeistDriver.connectionFailure(code: .authFailed, message: "bad token").retryable)
+    }
+
+    /// The tooling SPI promises nothing: this catches a change in the action's JSON or in what
+    /// admission takes, which would otherwise show only on a device. Admission needs no connection;
+    /// what it admits can't be looked into, so the duration is checked as it decodes the action, and
+    /// that it goes direct by its refusing an expectation, which only direct dispatch does.
+    @Test @ButtonHeistActor func aTimedDragIsAdmittedAsADirectCommandAndRefusedInAPlan() throws {
+        let from = Spot.point(x: 120, y: 590), to = Spot.point(x: 260, y: 500)
+        guard case .direct(let timed) = try StepPlay.make(for: Step(.drag(from: from, to: to, duration: 0.8))),
+              case .heist(let plan) = try StepPlay.make(for: Step(.drag(from: from, to: to, duration: Step.defaultDragDuration))),
+              case .action(let plain)? = plan.body.first else {
+            Issue.record("a timed drag isn't direct, or a plain one isn't a plan")
+            return
+        }
+        let input = try ButtonHeistDriver.directInput(timed)
+        let action = try #require(input.arguments.value(for: "action"))
+        let decoded = try JSONDecoder().decode(HeistActionCommand.self, from: JSONEncoder().encode(action))
+        guard case .drag(let drag) = decoded else { Issue.record("not a drag: \(decoded)"); return }
+        #expect(decoded == timed && drag.duration?.seconds == 0.8)
+
+        let configuration = try EnvironmentConfig.resolve(deviceFilter: "offline", autoReconnect: false, environment: .empty)
+        let heist = TheFence(configuration: configuration.fenceConfiguration)
+        _ = try heist.admit(input)
+        let expect = try JSONDecoder().decode(HeistValue.self, from: JSONEncoder().encode(
+            AccessibilityPredicate.exists(StepPlay.target(ElementTarget(label: "Done"))),
+        ))
+        func expecting(_ command: HeistActionCommand) throws -> FenceCommandInput {
+            var values = try ButtonHeistDriver.directInput(command).arguments.value(for: "action").map { ["action": $0] } ?? [:]
+            values["expect"] = expect
+            return FenceCommandInput(command: .action, arguments: TheFence.CommandArgumentEnvelope(values: values))
+        }
+        _ = try heist.admit(expecting(plain.command))
+        #expect {
+            _ = try heist.admit(expecting(timed))
+        } throws: { error in
+            guard case .invalidRequest(let message) = error as? FenceError else { return false }
+            return message.contains("direct dispatch")
+        }
+
+        // When this starts passing, The Button Heist takes a drag's duration in a plan, and the
+        // SPI path can go.
+        #expect(throws: (any Error).self, "0.7.1 refuses a plan's drag with a duration") { try StepPlay.plan(timed) }
     }
 }
