@@ -26,7 +26,7 @@ struct EditFileTests {
               "intent": "The empty library, then New Note tapped.",
               "take": "create-note",
               "from": { "step": "start", "offset": 1.2 },
-              "to": { "step": "new-note", "offset": 0.6 },
+              "to": { "step": "new-note", "offset": 0.6, "edge": "end" },
               "speed": 1.5,
               "touches": true,
               "sounds": [{ "file": "audio/pop.m4a", "at": { "step": "new-note" } }],
@@ -44,7 +44,7 @@ struct EditFileTests {
               "id": "sync",
               "intent": "The note syncing, cut just before its badge settles.",
               "take": "create-note",
-              "from": { "step": "reorder", "fraction": 0.5 },
+              "from": { "step": "reorder", "fraction": 0.5, "edge": "end" },
               "to": { "step": "synced", "offset": -0.2 },
               "speed": 1,
               "ipad": { "speed": 1.3 },
@@ -80,13 +80,15 @@ struct EditFileTests {
     @Test func anchorsTakeEveryFormTheREADMEGives() {
         let edit = clips(#"""
             {"take": "a", "from": 1.5, "to": {"step": -1, "fraction": -0.5, "edge": "end"}},
-            {"take": "a", "from": {"step": 2}, "to": {"step": "end"}}
+            {"take": "a", "from": {"step": 2}, "to": {"step": "end"}},
+            {"take": "a", "from": {"step": "x", "edge": "end"}, "to": {"step": "end"}}
             """#, devices: #"["iphone"]"#).edit
         let clips = edit?.videos[.iphone]?.clips
         #expect(clips?[0].from == .seconds(1.5))
         #expect(clips?[0].to == .step(Anchor.StepAnchor(step: .number(-1), fraction: -0.5, edge: .end)))
         #expect(clips?[1].from == .step(Anchor.StepAnchor(step: .number(2))))
         #expect(clips?[1].to == .step(Anchor.StepAnchor(step: .end)))
+        #expect(clips?[2].from == .step(Anchor.StepAnchor(step: .id("x"), edge: .end)), "an edge alone is that edge")
     }
 
     @Test func aListInAnOverrideReplacesTheWholeList() throws {
@@ -119,7 +121,6 @@ struct EditFileTests {
         (#"{"take": "a", "from": 0, "to": 1, "speed": -1}"#, "edits/video1.json: clips[0].speed: -1 must be more than 0"),
         (#"{"take": "a", "from": {"step": "x", "offset": 1, "fraction": 0.5}, "to": 1}"#, #"edits/video1.json: clips[0].from: moves by an "offset" or a "fraction", not both"#),
         (#"{"take": "a", "from": {"step": 0}, "to": 1}"#, "edits/video1.json: clips[0].from.step: steps are numbered from 1, or from the last as -1; there's no step 0"),
-        (#"{"take": "a", "from": {"step": "x", "edge": "end"}, "to": 1}"#, #"edits/video1.json: clips[0].from: "edge" says which edge an offset or a fraction counts from, and there's neither"#),
         (#"{"take": "a", "from": {"step": "x", "fraction": 1.4}, "to": 1}"#, "edits/video1.json: clips[0].from.fraction: 1.4 is outside -1 to 1"),
         (#"{"take": "a", "from": -1, "to": 1}"#, "edits/video1.json: clips[0].from: -1 must be at least 0"),
         (#"{"take": "a", "from": 0, "to": 1, "crossfade": 0.5}"#, "edits/video1.json: clips[0].crossfade: has no clip before it to cross-fade from"),

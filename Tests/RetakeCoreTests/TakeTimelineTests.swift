@@ -23,24 +23,69 @@ struct TakeTimelineTests {
         try Self.timeline().time(of: .step(.init(step: step, offset: offset, fraction: fraction, edge: edge)))
     }
 
-    @Test func offsetsMoveForwardFromAStepsEndAndBackFromItsStart() throws {
-        #expect(try time(.id("a")) == 1, "with neither, the step's start")
-        #expect(try time(.id("a"), offset: 0.2) == 1.7)
-        #expect(try time(.id("a"), offset: -0.2) == 0.8)
-        #expect(try time(.id("a"), offset: 0.2, edge: .start) == 1.2)
-        #expect(try time(.id("a"), offset: -0.2, edge: .end) == 1.3)
-        #expect(try time(.start) == 0 && time(.end) == 6)
-        #expect(try time(.end, offset: -0.5) == 5.5)
+    @Test func anAnchorIsAtItsStepsStartOrWithEdgeEndItsEndAndAnOffsetCountsFromThere() throws {
+        #expect(try time(.id("a")) == 1 && time(.id("a"), offset: 0) == 1 && time(.id("a"), offset: 0, edge: .start) == 1, "0 is the start itself")
+        #expect(try time(.id("a"), offset: 0.2) == 1.2 && time(.id("a"), offset: -0.2) == 0.8)
+        #expect(try time(.id("a"), edge: .end) == 1.5 && time(.id("a"), offset: 0, edge: .end) == 1.5)
+        #expect(try time(.id("a"), offset: 0.2, edge: .end) == 1.7 && time(.id("a"), offset: -0.2, edge: .end) == 1.3)
+        #expect(try time(.start) == 0 && time(.end) == 6 && time(.end, offset: -0.5) == 5.5)
         #expect(try Self.timeline().time(of: .seconds(2.5)) == 2.5)
     }
 
-    @Test func fractionsMoveAShareOfTheGapToTheNeighbouringStep() throws {
-        #expect(try time(.id("b"), fraction: 0.5) == 3.5, "toward step 3's start")
-        #expect(try time(.id("b"), fraction: -0.5) == 1.75, "back toward step 1's end")
-        #expect(try time(.number(-1), fraction: 0.5) == 5.25, "past the last step, toward the take's end")
-        #expect(try time(.number(1), fraction: -1) == 0, "before the first, toward the take's start")
-        #expect(try time(.start, fraction: 0.5) == 0.5, "from the take's start toward the first step")
-        #expect(try time(.id("b"), fraction: 0.5, edge: .start) == 3, "from its start toward the next step's")
+    @Test func aFractionIsAShareOfTheWayFromThereToTheNeighbouringStep() throws {
+        #expect(try time(.id("b"), fraction: 0.5) == 3, "from its start to step 3's start")
+        #expect(try time(.id("b"), fraction: -0.5) == 1.75, "from its start back to step 1's end")
+        #expect(try time(.id("b"), fraction: 0.5, edge: .end) == 3.5, "from its end to step 3's start")
+        #expect(try time(.id("b"), fraction: -0.5, edge: .end) == 2.25, "from its end back to step 1's end")
+        #expect(try time(.id("b"), fraction: 0) == 2 && time(.id("b"), fraction: 0, edge: .end) == 3)
+        #expect(try time(.number(-1), fraction: 0.5, edge: .end) == 5.25, "past the last step, to the take's end")
+        #expect(try time(.number(1), fraction: -1) == 0, "before the first, to the take's start")
+        #expect(try time(.start, fraction: 0.5) == 0.5, "from the take's start to the first step")
+    }
+
+    @Test func secondsTurnedIntoAnAnchorResolveBackToThem() throws {
+        let timeline = Self.timeline()
+        for seconds in [0, 0.4, 1, 1.25, 2.75, 3.5, 5.9] {
+            let value = CutPreparer.anchor(for: seconds, in: timeline.log)
+            #expect(!JSONWriter.compact(value).contains("edge"))
+            let anchor = try #require(EditFile.readAnchor(value, .root, JSONReader(file: "edit.json")))
+            #expect(abs(try timeline.time(of: anchor) - seconds) < 1e-9, "\(JSONWriter.compact(value))")
+        }
+    }
+
+    /// The rule before 2026-11-06: with no edge, a value of 0 or more counted from the step's end.
+    static func timeByTheOldRule(_ anchor: Anchor.StepAnchor, in timeline: TakeTimeline) throws -> Double {
+        let place = try timeline.place(of: anchor.step)
+        func edge(forward: Bool) -> Double { anchor.edge.map { $0 == .start ? place.start : place.end } ?? (forward ? place.end : place.start) }
+        if let offset = anchor.offset { return edge(forward: offset >= 0) + offset }
+        guard let fraction = anchor.fraction else { return place.start }
+        let base = edge(forward: fraction >= 0)
+        let toward = try #require(fraction > 0 ? place.nextStart : fraction < 0 ? place.previousEnd : base)
+        return base + abs(fraction) * (toward - base)
+    }
+
+    @Test func theExamplesAnchorsLandWhereTheyDidBeforeTheRuleChanged() throws {
+        let edits = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/Notes/Retake/edits")
+        var anchors: [Anchor.StepAnchor] = []
+        func collect(_ value: JSONValue) {
+            switch value {
+            case .array(let values): values.forEach(collect)
+            case .object(let object):
+                if object["step"] != nil, case .step(let anchor)? = EditFile.readAnchor(value, .root, JSONReader(file: "edit.json")) { anchors.append(anchor) }
+                object.entries.forEach { collect($0.value) }
+            default: break
+            }
+        }
+        for name in ["tour", "showcase"] {
+            collect(try JSONParser.parse(String(contentsOf: edits.appending(path: "\(name).json"), encoding: .utf8)))
+        }
+        #expect(anchors.count > 30)
+        // Each at step b, which has steps either side and a gap between its end and the next start.
+        let timeline = Self.timeline()
+        for var anchor in anchors {
+            anchor.step = .id("b")
+            #expect(try timeline.time(of: .step(anchor)) == Self.timeByTheOldRule(anchor, in: timeline), "\(anchor)")
+        }
     }
 
     @Test(arguments: [

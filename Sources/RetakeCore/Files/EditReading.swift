@@ -405,10 +405,6 @@ extension EditFile {
             reader.problem("moves by an \"offset\" or a \"fraction\", not both", at: path)
             return nil
         }
-        if edge != nil, offset == nil, fraction == nil {
-            reader.problem("\"edge\" says which edge an offset or a fraction counts from, and there's neither", at: path)
-            return nil
-        }
         guard let step else { return nil }
         return .step(Anchor.StepAnchor(step: step, offset: offset, fraction: fraction, edge: edge))
     }

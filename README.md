@@ -467,7 +467,7 @@ every device type it names, from that type's takes of the same scenes:
       "intent": "The empty library, then New Note tapped.",
       "take": "create-note",
       "from": { "step": "start", "offset": 1.2 },
-      "to": { "step": "new-note", "offset": 0.6 },
+      "to": { "step": "new-note", "offset": 0.6, "edge": "end" },
       "speed": 1.5,
       "touches": true,
       "sounds": [{ "file": "audio/pop.m4a", "at": { "step": "new-note" } }],
@@ -485,7 +485,7 @@ every device type it names, from that type's takes of the same scenes:
       "id": "sync",
       "intent": "The note syncing, cut just before its badge settles.",
       "take": "create-note",
-      "from": { "step": "reorder", "fraction": 0.5 },
+      "from": { "step": "reorder", "fraction": 0.5, "edge": "end" },
       "to": { "step": "synced", "offset": -0.2 },
       "speed": 1,
       "ipad": { "speed": 1.3 },
@@ -514,13 +514,13 @@ moment in the clip's take, given by a step and where to go from it.
 
 An anchor's `step` is a step's `id`, its number counted from 1, or a negative number counting back
 from the last (`-1` is the last step); `start` and `end` are the take's first and last frames,
-lead-in and tail included. From the step, `offset` moves in seconds: forward from the step's end, or
-back from its start. `fraction`, from -1 to 1, moves a share of the gap to the neighbouring step:
-forward from the step's end toward the next step's start, or back from its start toward the previous
-step's end, with the take's `start` and `end` standing in past the first and last steps. `edge`
-counts from the step's other edge instead.
+lead-in and tail included. An anchor is at the step's start, or at its end with `"edge": "end"`, and
+moves from there: `offset` in seconds, forward when positive and back when negative, so an offset of
+0 is that edge itself; `fraction`, from -1 to 1, a share of the way from there to the neighbouring
+step, forward to the next step's start or back to the previous step's end, with the take's `start`
+and `end` standing in past the first and last steps.
 
-An anchor has `offset` or `fraction`, not both; with neither, it's the step's start. A plain number
+An anchor has `offset` or `fraction`, not both; with neither, it's the edge itself. A plain number
 of seconds from the take's start still works, and the first `cut` turns it into an anchor against
 the latest successful take.
 

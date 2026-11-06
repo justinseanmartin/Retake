@@ -64,33 +64,27 @@ public struct TakeTimeline: Sendable {
         )
     }
 
-    /// The moment `anchor` names, in seconds from the take's first frame.
+    /// The moment `anchor` names, in seconds from the take's first frame: from its step's start, or
+    /// its end with `edge` `end`, its offset in seconds, or its fraction of the way to the
+    /// neighbouring step, forward to the next step's start or back to the previous step's end.
     public func time(of anchor: Anchor) throws(Unresolved) -> Double {
         guard case .step(let anchor) = anchor else {
             if case .seconds(let seconds) = anchor { return seconds }
             return 0
         }
         let place = try place(of: anchor.step)
-        func edge(forward: Bool) -> Double {
-            switch anchor.edge {
-            case .start?: place.start
-            case .end?: place.end
-            case nil: forward ? place.end : place.start
-            }
-        }
+        let reference = anchor.edge == .end ? place.end : place.start
         if let offset = anchor.offset {
-            return edge(forward: offset >= 0) + offset
+            return reference + offset
         }
-        if let fraction = anchor.fraction {
-            let forward = fraction >= 0
-            let base = edge(forward: forward)
-            guard fraction != 0 else { return base }
+        if let fraction = anchor.fraction, fraction != 0 {
+            let forward = fraction > 0
             guard let toward = forward ? place.nextStart : place.previousEnd else {
                 throw Unresolved("a fraction \(forward ? "forward from the take's end" : "back from the take's start") has no step to go toward")
             }
-            return base + abs(fraction) * (toward - base)
+            return reference + abs(fraction) * (toward - reference)
         }
-        return place.start
+        return reference
     }
 
     /// The element `target` names, as the screen was read at the latest step to end at or before

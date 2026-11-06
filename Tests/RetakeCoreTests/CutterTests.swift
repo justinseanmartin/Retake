@@ -83,7 +83,7 @@ struct CutterTests {
         try Cutter.prepare("video", for: .ipad, in: project)
 
         #expect(try String(contentsOf: root.appending(path: "edits/video.json"), encoding: .utf8) == prepared)
-        #expect(prepared.contains(#""from": { "step": "a", "offset": 0.25, "edge": "start" }"#), "its time in seconds is an anchor")
+        #expect(prepared.contains(#""from": { "step": "a", "offset": 0.25 }"#), "its time in seconds is an anchor")
     }
 
     @Test func takesFromDifferentScreensArentCutTogether() async throws {

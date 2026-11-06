@@ -161,7 +161,7 @@ public enum CutPreparer {
         let offset = ((seconds - step.start) * 1000).rounded() / 1000
         var entries: [JSONObject.Entry] = [.init(key: "step", value: step.id.map(JSONValue.string) ?? .number(Double(step.number)))]
         if offset != 0 {
-            entries += [.init(key: "offset", value: .number(offset)), .init(key: "edge", value: .string("start"))]
+            entries.append(.init(key: "offset", value: .number(offset)))
         }
         return .object(JSONObject(entries))
     }

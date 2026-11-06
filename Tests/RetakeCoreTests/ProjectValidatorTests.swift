@@ -34,7 +34,7 @@ struct ProjectValidatorTests {
 
     @Test func aSoundProjectHasNoProblems() throws {
         try write("sets/top.json", #"{"extends": "base", "files": {"Documents/notes.json": "data/notes.json"}}"#)
-        try edit(#"{"take": "walk", "from": {"step": "open"}, "to": {"step": 2, "offset": 0.5}, "sounds": [{"file": "audio/pop.m4a", "at": {"step": -1}}]}"#)
+        try edit(#"{"take": "walk", "from": {"step": "open"}, "to": {"step": 2, "offset": 0.5, "edge": "end"}, "sounds": [{"file": "audio/pop.m4a", "at": {"step": -1}}]}"#)
         #expect(try validate() == [])
     }
 
@@ -161,12 +161,12 @@ struct ProjectValidatorTests {
         try recordWalk()
         try write("edits/video.json", #"""
             {"devices": ["ipad"], "clips": [
-              {"take": "walk", "from": {"step": "open"}, "to": {"step": "done", "offset": 9},
+              {"take": "walk", "from": {"step": "open"}, "to": {"step": "done", "offset": 9, "edge": "end"},
                "captions": [{"text": "a", "y": 0.1, "color": "#000000", "from": {"step": "start"}}]},
               {"take": "walk", "from": {"step": "done"}, "to": {"step": "open"}},
               {"take": "walk", "from": {"step": "open"}, "to": {"step": "end"},
-               "spotlight": {"element": {"label": "Share"}, "from": {"step": "done", "offset": 0.1}},
-               "blurs": [{"element": {"label": "Send"}, "from": {"step": "done", "offset": 0.1}}]}
+               "spotlight": {"element": {"label": "Share"}, "from": {"step": "done", "offset": 0.1, "edge": "end"}},
+               "blurs": [{"element": {"label": "Send"}, "from": {"step": "done", "offset": 0.1, "edge": "end"}}]}
             ]}
             """#)
         let (problems, warnings) = try validateWithTakes()
@@ -184,7 +184,7 @@ struct ProjectValidatorTests {
         try recordWalk()
         try write("edits/video.json", #"""
             {"devices": ["ipad"], "clips": [
-              {"take": "walk", "from": {"step": "open"}, "to": {"step": "done"}, "stillsIn": {"step": "done", "offset": 1}, "stills": [{"take": "walk", "at": 1}]},
+              {"take": "walk", "from": {"step": "open"}, "to": {"step": "done"}, "stillsIn": {"step": "done", "offset": 1, "edge": "end"}, "stills": [{"take": "walk", "at": 1}]},
               {"take": "walk", "from": {"step": "open"}, "to": {"step": "end"}, "stillsIn": {"step": "done"}, "stillsOut": {"step": "open"}, "stills": [{"take": "walk", "at": 1}]},
               {"take": "walk", "from": {"step": "open"}, "to": {"step": "end"}, "stillsIn": {"step": "open"}, "stillsOut": {"step": "done"}, "stills": [{"take": "walk", "at": 1}]}
             ]}

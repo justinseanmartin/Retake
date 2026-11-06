@@ -630,7 +630,8 @@ cut, since its master is written twice: once as the edit is composed, and again 
 
 Each video records the takes it was cut from in its [metadata](#a-videos-fields). The edit isn't
 touched, except that a time given in plain seconds becomes an anchor against its scene's latest
-successful take, checked against those takes before the edit is rewritten. A caption's `from` or
+successful take, the latest step to start at or before it and an `offset` from that step's start,
+checked against those takes before the edit is rewritten. A caption's `from` or
 `to` in seconds that is the moment it starts or ends anyway, on every device type, to a sixtieth of
 a second, is dropped instead, so it keeps following its clip; the rewritten edit keeps
 its fields' order, and a `"$schema"` naming one of Retake's schemas is updated to this Retake's. To

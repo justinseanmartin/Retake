@@ -254,9 +254,9 @@ extension EditFile {
 
         var stepAnchor = Schema.object("A step, and where to go from it.", [
             .init("step", stepReference),
-            .init("offset", .number("Seconds to move: forward from the step's end, or back from its start.")),
-            .init("fraction", .number("A share of the gap to the neighbouring step to move: forward from the step's end toward the next step's start, or back from its start toward the previous step's end.", atLeast: -1, atMost: 1)),
-            .init("edge", .choice("Counts the offset or fraction from the step's other edge.", Anchor.Edge.allCases.map(\.rawValue))),
+            .init("offset", .number("Seconds from the step's start, or its end with edge end: forward when positive, back when negative; 0 is that edge itself.")),
+            .init("fraction", .number("A share of the way from the step's start, or its end with edge end, to the neighbouring step: forward when positive, to the next step's start, back when negative, to the previous step's end.", atLeast: -1, atMost: 1)),
+            .init("edge", .choice("Which of the step's edges the anchor is at, and counts its offset or fraction from: start, the default, or end.", Anchor.Edge.allCases.map(\.rawValue))),
         ], required: ["step"])
         stepAnchor.not = [{ var both = Schema(); both.required = ["offset", "fraction"]; return both }()]
         var captionEnd = stepAnchor

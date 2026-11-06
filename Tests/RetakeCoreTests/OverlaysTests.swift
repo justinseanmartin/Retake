@@ -37,7 +37,7 @@ struct OverlaysTests {
         let placed = try overlays(#"""
             {"take": "walk", "from": {"step": "a"}, "to": {"step": "b"}, "captions": [
               {"text": "Whole clip", "y": 0.1, "color": "#000000"},
-              {"text": "Runs on", "y": 0.9, "color": "#1F6FEB", "from": {"step": "a", "offset": 0.25}, "to": {"clip": "later", "step": "end", "offset": -1}}
+              {"text": "Runs on", "y": 0.9, "color": "#1F6FEB", "from": {"step": "a", "offset": 0.25, "edge": "end"}, "to": {"clip": "later", "step": "end", "offset": -1}}
             ]},
             {"id": "later", "take": "walk", "from": {"step": "b"}, "to": {"step": "end"}, "crossfade": 0.5}
             """#)
@@ -67,7 +67,7 @@ struct OverlaysTests {
     @Test func aTouchIsDrawnWhereItLandedAndASpotlightAroundItsElement() throws {
         let placed = try overlays(#"""
             {"take": "walk", "from": {"step": "start"}, "to": {"step": "end"}, "touches": true,
-             "spotlight": {"element": {"label": "Share"}, "from": {"step": "b", "offset": 0.1}},
+             "spotlight": {"element": {"label": "Share"}, "from": {"step": "b", "offset": 0.1, "edge": "end"}},
              "blurs": [{"rect": {"x": 0, "y": 834, "width": 834, "height": 100}, "from": {"step": "a"}, "to": {"step": "b"}}]}
             """#)
         #expect(placed.touches.count == 1)
@@ -84,7 +84,7 @@ struct OverlaysTests {
         let placed = try overlays(#"""
             {"take": "walk", "from": {"step": "b"}, "to": {"step": "end"},
              "spotlight": {"rect": {"x": "10%", "y": "50%", "width": "50%", "height": 100}, "padding": 0},
-             "blurs": [{"element": {"label": "Share"}, "part": {"x": "50%", "width": "50%", "y": 4, "height": 10}, "from": {"step": "b", "offset": 0.1}}]}
+             "blurs": [{"element": {"label": "Share"}, "part": {"x": "50%", "width": "50%", "y": 4, "height": 10}, "from": {"step": "b", "offset": 0.1, "edge": "end"}}]}
             """#)
         // A tenth of the 834-point screen across, half its 1194 down; and the right half of the
         // Share button, 44 points square at (10, 20), from 4 points down its side for 10.
@@ -139,7 +139,7 @@ struct OverlaysTests {
 
     @Test func aSpotlightOnAnElementNotOnScreenSaysWhy() throws {
         do {
-            _ = try overlays(#"{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "spotlight": {"element": {"label": "Send"}, "from": {"step": "b", "offset": 0.1}}}"#)
+            _ = try overlays(#"{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "spotlight": {"element": {"label": "Send"}, "from": {"step": "b", "offset": 0.1, "edge": "end"}}}"#)
             Issue.record("placed it")
         } catch {
             #expect((error as? RetakeError)?.message == #"clips[0].spotlight.element: "Send" isn't on screen after step 2, at 3 s."#)
@@ -164,7 +164,7 @@ struct OverlaysTests {
             {"take": "walk", "from": {"step": "a"}, "to": {"step": "b"}},
             {"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "crossfade": 0.5, "card": {"color": "#FFD43B"},
              "captions": [{"text": "On the card", "y": 0.5, "color": "#1B2A4E"}]},
-            {"take": "walk", "from": {"step": "b"}, "to": {"step": "end"}, "crossfade": 0.4, "card": {"color": "#000000", "from": {"step": "b", "offset": 1}}}
+            {"take": "walk", "from": {"step": "b"}, "to": {"step": "end"}, "crossfade": 0.4, "card": {"color": "#000000", "from": {"step": "b", "offset": 1, "edge": "end"}}}
             """#)
         // 1–2 s of the take as 0–1 s; 1–6 s as 0.5–5.5 s; 2–6 s as 5.1–9.1 s, b ending at 3 s.
         let whole = placed.cards[0], own = placed.cards[1]
@@ -176,7 +176,7 @@ struct OverlaysTests {
 
     @Test func stillsPopOutOneAfterAnotherInTheOrderTheyPoppedIn() throws {
         let placed = try overlays(#"""
-            {"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "stillsOut": {"step": "b", "offset": 0.5},
+            {"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "stillsOut": {"step": "b", "offset": 0.5, "edge": "end"},
              "stills": [{"take": "walk", "at": 1}, {"take": "walk", "at": 2}, {"take": "walk", "at": 3}]}
             """#)
         // The clip plays 1–6 s of the take as 0–5 s; b ends at 3 s in the take, 2 s in the video.
@@ -212,7 +212,7 @@ struct OverlaysTests {
 
     @Test func stillsInMovesWhenTheStillsPopInAndTheirBackgroundWithThem() throws {
         let placed = try overlays(#"""
-            {"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "stillsIn": {"step": "b", "offset": 0.5},
+            {"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "stillsIn": {"step": "b", "offset": 0.5, "edge": "end"},
              "stillsBackground": "#F4F1EA", "stills": [{"take": "walk", "at": 1}, {"take": "walk", "at": 2}, {"take": "walk", "at": 3}]}
             """#)
         // The clip plays 1–6 s of the take as 0–5 s; 0.5 s after b ends is 3.5 s in the take.

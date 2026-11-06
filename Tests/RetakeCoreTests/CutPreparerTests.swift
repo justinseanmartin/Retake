@@ -54,18 +54,14 @@ struct CutPreparerTests {
             {
               "devices": ["ipad"],
               "clips": [
-                {
-                  "take": "walk",
-                  "from": { "step": "b", "offset": 0.25, "edge": "start" },
-                  "to": { "step": "b", "offset": 1, "edge": "start" }
-                }
+                { "take": "walk", "from": { "step": "b", "offset": 0.25 }, "to": { "step": "b", "offset": 1 } }
               ]
             }
 
             """)
         #expect(result.changes == [
-            #"clips[0].from: 2.25 s into walk take 2 (ipad) becomes { "step": "b", "offset": 0.25, "edge": "start" }"#,
-            #"clips[0].to: 3 s into walk take 2 (ipad) becomes { "step": "b", "offset": 1, "edge": "start" }"#,
+            #"clips[0].from: 2.25 s into walk take 2 (ipad) becomes { "step": "b", "offset": 0.25 }"#,
+            #"clips[0].to: 3 s into walk take 2 (ipad) becomes { "step": "b", "offset": 1 }"#,
         ], "the failed take 3 isn't the latest successful one")
     }
 
@@ -74,8 +70,8 @@ struct CutPreparerTests {
         try record(1)
         try write("edits/video.json", #"{"devices": ["ipad"], "clips": [{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "stillsIn": 2.25, "stillsOut": 4, "stills": [{"take": "walk", "at": 1}]}]}"#)
         let edit = try #require(EditFile.read(try CutPreparer.prepare("video", in: project).text, with: JSONReader(file: "video.json"))?.videos[.ipad])
-        #expect(edit.clips[0].stillsIn == .step(.init(step: .id("b"), offset: 0.25, edge: .start)))
-        #expect(edit.clips[0].stillsOut == .step(.init(step: .id("b"), offset: 2, edge: .start)))
+        #expect(edit.clips[0].stillsIn == .step(.init(step: .id("b"), offset: 0.25)))
+        #expect(edit.clips[0].stillsOut == .step(.init(step: .id("b"), offset: 2)))
     }
 
     @Test func aCaptionsTimeThatsItsDefaultMomentIsDroppedRatherThanAnchored() throws {
@@ -85,7 +81,7 @@ struct CutPreparerTests {
         // told, is up from 1 s, and goes at 2.5 s.
         try write("edits/video.json", #"""
             {"devices": ["ipad"], "clips": [
-              {"take": "walk", "from": {"step": "a"}, "to": {"step": "b", "offset": 1, "edge": "start"},
+              {"take": "walk", "from": {"step": "a"}, "to": {"step": "b", "offset": 1},
                "captions": [{"text": "Default", "y": 0.1, "color": "#000000", "from": 1, "to": 2.5}, {"text": "Own", "y": 0.2, "color": "#000000", "to": 2}]},
               {"take": "walk", "from": {"step": "b"}, "to": {"step": "end"}, "crossfade": 0.5}
             ]}
@@ -118,7 +114,7 @@ struct CutPreparerTests {
 
     @Test func nothingIsRewrittenWithoutATakeOrWithAnAnchorTheNewTakeCantHold() throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        try write("edits/video.json", #"{"devices": ["ipad"], "clips": [{"take": "walk", "from": 1, "to": {"step": "b", "offset": 2.5}}]}"#)
+        try write("edits/video.json", #"{"devices": ["ipad"], "clips": [{"take": "walk", "from": 1, "to": {"step": "b", "offset": 2.5, "edge": "end"}}]}"#)
         #expect(throws: RetakeError.self) { try CutPreparer.prepare("video", in: project) }
         try record(1, duration: 4)
         do {

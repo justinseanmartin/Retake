@@ -8,7 +8,7 @@
       "intent": "The welcome screen arriving, Get Started tapped, and the library it opens on.",
       "take": "first-launch",
       "from": { "step": "welcome", "offset": -1.5 },
-      "to": { "step": "library", "offset": 0.8 },
+      "to": { "step": "library", "offset": 0.8, "edge": "end" },
       "touches": true,
       "captions": [
         { "text": "Start writing in seconds", "y": 0.1, "color": "#1F6FEB", "ipad": { "y": 0.08 } }
@@ -19,7 +19,7 @@
       "intent": "A new note, titled, then synced; its caption hands over halfway from the title typed to Synced showing, however long the app takes to sync.",
       "take": "create-note",
       "from": { "step": "new-note", "offset": -0.5 },
-      "to": { "step": "synced", "offset": 0.8 },
+      "to": { "step": "synced", "offset": 0.8, "edge": "end" },
       "crossfade": 0.4,
       "touches": true,
       "captions": [
@@ -43,7 +43,7 @@
       "intent": "The note shared, until it's sent.",
       "take": "create-note",
       "from": { "step": "share" },
-      "to": { "step": "sent", "offset": 0.8 },
+      "to": { "step": "sent", "offset": 0.8, "edge": "end" },
       "crossfade": 0.3,
       "touches": true
     },
@@ -51,7 +51,7 @@
       "id": "filed",
       "intent": "The sheet closed, and back to the library with the new note in it.",
       "take": "create-note",
-      "from": { "step": "sent", "offset": 0.8 },
+      "from": { "step": "sent", "offset": 0.8, "edge": "end" },
       "to": { "step": "end" },
       "speed": 1.2,
       "crossfade": 0.3,

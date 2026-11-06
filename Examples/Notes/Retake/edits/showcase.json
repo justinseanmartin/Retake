@@ -12,7 +12,7 @@
       "intent": "The app launching on the device, and its welcome screen's button tapped, drawn as a touch.",
       "take": "first-launch",
       "from": { "step": "welcome", "offset": -0.4 },
-      "to": { "step": "library", "offset": 1.2 },
+      "to": { "step": "library", "offset": 1.2, "edge": "end" },
       "captions": [
         { "text": "Scenes play on a real device", "y": 0.8, "color": "#1F6FEB", "symbol": { "name": "ipad" } }
       ]
@@ -22,7 +22,7 @@
       "intent": "A new note and its title typed; cut before the wait for it to sync.",
       "take": "create-note",
       "from": { "step": "new-note", "offset": -0.4 },
-      "to": { "step": "type-title", "offset": 0.5 },
+      "to": { "step": "type-title", "offset": 0.5, "edge": "end" },
       "crossfade": 0.4,
       "captions": [
         { "text": "Cut the waiting out", "y": 0.8, "color": "#1F6FEB", "symbol": { "name": "scissors" } }
@@ -33,9 +33,9 @@
       "intent": "Straight to the moment it syncs, its cloud and Synced spotlit rather than their whole row, with a chime.",
       "take": "create-note",
       "from": { "step": "synced", "offset": -0.3, "edge": "end" },
-      "to": { "step": "synced", "offset": 1.6 },
-      "spotlight": { "element": { "label": "Synced" }, "part": { "x": 19, "y": 17, "width": 97, "height": 18 }, "padding": 10, "color": "#1F6FEB", "from": { "step": "synced", "offset": 0.01 }, "iphone": { "part": { "width": 107 } } },
-      "sounds": [{ "file": "audio/chime.m4a", "at": { "step": "synced", "offset": 0.01 }, "volume": 0.8 }],
+      "to": { "step": "synced", "offset": 1.6, "edge": "end" },
+      "spotlight": { "element": { "label": "Synced" }, "part": { "x": 19, "y": 17, "width": 97, "height": 18 }, "padding": 10, "color": "#1F6FEB", "from": { "step": "synced", "offset": 0.01, "edge": "end" }, "iphone": { "part": { "width": 107 } } },
+      "sounds": [{ "file": "audio/chime.m4a", "at": { "step": "synced", "offset": 0.01, "edge": "end" }, "volume": 0.8 }],
       "captions": [
         { "text": "Spotlight what matters", "y": 0.8, "color": "#1F6FEB", "symbol": { "name": "scope" } }
       ]
@@ -44,13 +44,13 @@
       "id": "share",
       "intent": "The note shared, from once its sheet has settled, so the name of who it goes to, in Send to Alex, is blurred from the first frame, and a whoosh as it's sent.",
       "take": "create-note",
-      "from": { "step": "share", "offset": 0.35 },
-      "to": { "step": "sent", "offset": 1.5 },
+      "from": { "step": "share", "offset": 0.35, "edge": "end" },
+      "to": { "step": "sent", "offset": 1.5, "edge": "end" },
       "crossfade": 0.3,
-      "blurs": [{ "element": { "hint": "Sends the note to Alex" }, "part": { "x": "62%", "width": "31%" }, "to": { "step": "send", "offset": 0.15 }, "radius": 4.2 }],
+      "blurs": [{ "element": { "hint": "Sends the note to Alex" }, "part": { "x": "62%", "width": "31%" }, "to": { "step": "send", "offset": 0.15, "edge": "end" }, "radius": 4.2 }],
       "iphone": {
         "intent": "On the iPhone, the step log reads the button while its sheet is still rising, 17 points above where it settles.",
-        "blurs": [{ "element": { "hint": "Sends the note to Alex" }, "part": { "x": "58%", "y": 17, "width": "35%" }, "to": { "step": "send", "offset": 0.15 }, "radius": 2.6 }]
+        "blurs": [{ "element": { "hint": "Sends the note to Alex" }, "part": { "x": "58%", "y": 17, "width": "35%" }, "to": { "step": "send", "offset": 0.15, "edge": "end" }, "radius": 2.6 }]
       },
       "sounds": [{ "file": "audio/whoosh.m4a", "at": { "step": "send" }, "volume": 0.6 }],
       "captions": [
@@ -101,7 +101,7 @@
       "intent": "The tap back to the library, its touch and caption in a color of their own, held for a moment to read.",
       "take": "create-note",
       "from": { "step": "library", "offset": -0.5 },
-      "to": { "step": "library", "offset": 1.5 },
+      "to": { "step": "library", "offset": 1.5, "edge": "end" },
       "crossfade": 0.4,
       "touchColor": "#F76707",
       "captions": [
@@ -112,22 +112,22 @@
       "id": "montage",
       "intent": "Frames of the other takes popped in on a plain background, after the library is back; then popped out again, in the same order, for the credit to end on.",
       "take": "create-note",
-      "from": { "step": "library", "offset": 1.1 },
+      "from": { "step": "library", "offset": 1.1, "edge": "end" },
       "to": { "step": "end" },
       "crossfade": 0.4,
       "touches": false,
       "stillsBackground": "#1B2A4E",
-      "stillsOut": { "step": "library", "offset": 4.6 },
+      "stillsOut": { "step": "library", "offset": 4.6, "edge": "end" },
       "stills": [
-        { "take": "first-launch", "at": { "step": "welcome", "offset": 0.5 } },
-        { "take": "create-note", "at": { "step": "synced", "offset": 0.3 } },
-        { "take": "create-note", "at": { "step": "sent", "offset": 0.3 } },
-        { "take": "reorder", "at": { "step": "reorder", "offset": 0.5 } }
+        { "take": "first-launch", "at": { "step": "welcome", "offset": 0.5, "edge": "end" } },
+        { "take": "create-note", "at": { "step": "synced", "offset": 0.3, "edge": "end" } },
+        { "take": "create-note", "at": { "step": "sent", "offset": 0.3, "edge": "end" } },
+        { "take": "reorder", "at": { "step": "reorder", "offset": 0.5, "edge": "end" } }
       ],
       "captions": [
-        { "text": "A montage of moments from other takes", "y": 0.95, "color": "#1F6FEB", "to": { "step": "library", "offset": 4.5 }, "symbol": { "name": "square.grid.2x2" } },
-        { "text": "Generated by Retake", "y": 0.46, "color": "#1F6FEB", "from": { "step": "library", "offset": 5.6 }, "symbol": { "name": "film" } },
-        { "text": "github.com/justinseanmartin/Retake", "y": 0.54, "color": "#F76707", "from": { "step": "library", "offset": 6 }, "symbol": { "name": "link" } }
+        { "text": "A montage of moments from other takes", "y": 0.95, "color": "#1F6FEB", "to": { "step": "library", "offset": 4.5, "edge": "end" }, "symbol": { "name": "square.grid.2x2" } },
+        { "text": "Generated by Retake", "y": 0.46, "color": "#1F6FEB", "from": { "step": "library", "offset": 5.6, "edge": "end" }, "symbol": { "name": "film" } },
+        { "text": "github.com/justinseanmartin/Retake", "y": 0.54, "color": "#F76707", "from": { "step": "library", "offset": 6, "edge": "end" }, "symbol": { "name": "link" } }
       ]
     }
   ]

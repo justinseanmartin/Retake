@@ -287,8 +287,8 @@ public enum Anchor: Equatable, Sendable {
         public var step: StepReference
         public var offset: Double?
         public var fraction: Double?
-        /// The edge the offset or fraction counts from; forward counts from the step's end and back
-        /// from its start when nil.
+        /// The step's edge the anchor is at, and its offset or fraction counts from: its start when
+        /// nil.
         public var edge: Edge?
 
         public init(step: StepReference, offset: Double? = nil, fraction: Double? = nil, edge: Edge? = nil) {

@@ -229,9 +229,9 @@ A step, and where to go from it.
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `step` | string, not empty, or integer, not 0 | required | A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene. |
-| `offset` | number |  | Seconds to move: forward from the step's end, or back from its start. |
-| `fraction` | number from -1 to 1 |  | A share of the gap to the neighbouring step to move: forward from the step's end toward the next step's start, or back from its start toward the previous step's end. |
-| `edge` | `"start"` or `"end"` |  | Counts the offset or fraction from the step's other edge. |
+| `offset` | number |  | Seconds from the step's start, or its end with edge end: forward when positive, back when negative; 0 is that edge itself. |
+| `fraction` | number from -1 to 1 |  | A share of the way from the step's start, or its end with edge end, to the neighbouring step: forward when positive, to the next step's start, back when negative, to the previous step's end. |
+| `edge` | `"start"` or `"end"` |  | Which of the step's edges the anchor is at, and counts its offset or fraction from: start, the default, or end. |
 
 ### caption-end
 
@@ -241,9 +241,9 @@ A later clip, by its id, and an anchor in that clip's take; as that clip's next 
 | --- | --- | --- | --- |
 | `clip` | string, not empty | required | The later clip's id. |
 | `step` | string, not empty, or integer, not 0 |  | A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene. |
-| `offset` | number |  | Seconds to move: forward from the step's end, or back from its start. |
-| `fraction` | number from -1 to 1 |  | A share of the gap to the neighbouring step to move: forward from the step's end toward the next step's start, or back from its start toward the previous step's end. |
-| `edge` | `"start"` or `"end"` |  | Counts the offset or fraction from the step's other edge. |
+| `offset` | number |  | Seconds from the step's start, or its end with edge end: forward when positive, back when negative; 0 is that edge itself. |
+| `fraction` | number from -1 to 1 |  | A share of the way from the step's start, or its end with edge end, to the neighbouring step: forward when positive, to the next step's start, back when negative, to the previous step's end. |
+| `edge` | `"start"` or `"end"` |  | Which of the step's edges the anchor is at, and counts its offset or fraction from: start, the default, or end. |
 
 ### element
 

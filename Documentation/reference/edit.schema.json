@@ -871,17 +871,17 @@
           ]
         },
         "offset": {
-          "description": "Seconds to move: forward from the step's end, or back from its start.",
+          "description": "Seconds from the step's start, or its end with edge end: forward when positive, back when negative; 0 is that edge itself.",
           "type": "number"
         },
         "fraction": {
-          "description": "A share of the gap to the neighbouring step to move: forward from the step's end toward the next step's start, or back from its start toward the previous step's end.",
+          "description": "A share of the way from the step's start, or its end with edge end, to the neighbouring step: forward when positive, to the next step's start, back when negative, to the previous step's end.",
           "type": "number",
           "minimum": -1,
           "maximum": 1
         },
         "edge": {
-          "description": "Counts the offset or fraction from the step's other edge.",
+          "description": "Which of the step's edges the anchor is at, and counts its offset or fraction from: start, the default, or end.",
           "type": "string",
           "enum": ["start", "end"]
         },
@@ -925,17 +925,17 @@
           ]
         },
         "offset": {
-          "description": "Seconds to move: forward from the step's end, or back from its start.",
+          "description": "Seconds from the step's start, or its end with edge end: forward when positive, back when negative; 0 is that edge itself.",
           "type": "number"
         },
         "fraction": {
-          "description": "A share of the gap to the neighbouring step to move: forward from the step's end toward the next step's start, or back from its start toward the previous step's end.",
+          "description": "A share of the way from the step's start, or its end with edge end, to the neighbouring step: forward when positive, to the next step's start, back when negative, to the previous step's end.",
           "type": "number",
           "minimum": -1,
           "maximum": 1
         },
         "edge": {
-          "description": "Counts the offset or fraction from the step's other edge.",
+          "description": "Which of the step's edges the anchor is at, and counts its offset or fraction from: start, the default, or end.",
           "type": "string",
           "enum": ["start", "end"]
         },
@@ -1627,17 +1627,17 @@
           ]
         },
         "offset": {
-          "description": "Seconds to move: forward from the step's end, or back from its start.",
+          "description": "Seconds from the step's start, or its end with edge end: forward when positive, back when negative; 0 is that edge itself.",
           "type": "number"
         },
         "fraction": {
-          "description": "A share of the gap to the neighbouring step to move: forward from the step's end toward the next step's start, or back from its start toward the previous step's end.",
+          "description": "A share of the way from the step's start, or its end with edge end, to the neighbouring step: forward when positive, to the next step's start, back when negative, to the previous step's end.",
           "type": "number",
           "minimum": -1,
           "maximum": 1
         },
         "edge": {
-          "description": "Counts the offset or fraction from the step's other edge.",
+          "description": "Which of the step's edges the anchor is at, and counts its offset or fraction from: start, the default, or end.",
           "type": "string",
           "enum": ["start", "end"]
         }
@@ -1672,17 +1672,17 @@
           ]
         },
         "offset": {
-          "description": "Seconds to move: forward from the step's end, or back from its start.",
+          "description": "Seconds from the step's start, or its end with edge end: forward when positive, back when negative; 0 is that edge itself.",
           "type": "number"
         },
         "fraction": {
-          "description": "A share of the gap to the neighbouring step to move: forward from the step's end toward the next step's start, or back from its start toward the previous step's end.",
+          "description": "A share of the way from the step's start, or its end with edge end, to the neighbouring step: forward when positive, to the next step's start, back when negative, to the previous step's end.",
           "type": "number",
           "minimum": -1,
           "maximum": 1
         },
         "edge": {
-          "description": "Counts the offset or fraction from the step's other edge.",
+          "description": "Which of the step's edges the anchor is at, and counts its offset or fraction from: start, the default, or end.",
           "type": "string",
           "enum": ["start", "end"]
         }
