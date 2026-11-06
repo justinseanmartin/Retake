@@ -201,6 +201,12 @@ CommandArgumentEnvelope(values: ["action": …]))))`, judging the `FenceResponse
 (`ButtonHeistDriver.perform`). Checked on an iPad: a 0.8 s drag reordered the example's rows in 1.25
 s of wall time. Dropping the SPI for this needs either change above.
 
+**Offered.** [#1492](https://github.com/TheButtonHeist/TheButtonHeist/pull/1492) (2026-11-06) takes
+the first: a drag's and a swipe's `duration` is admitted in a plan, as a long press's is since
+#1053, with `duration:` overloads of the `swipe` and `drag` builders and the canonical source
+writing it out. Once released, a drag of any duration goes in a plan, and `ButtonHeistDriver.perform`
+and its SPI import go.
+
 ## 9. A public failure code for a thrown error
 
 **Ask.** A public way to get The Button Heist's `KnownFailureCode` and message for any error its
