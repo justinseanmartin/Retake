@@ -52,6 +52,7 @@ A stretch of a take, played in order.
 | `spotlight` | [spotlight](#spotlight) |  |  |
 | `blurs` | list of [blur](#blur) |  | Blurs over a stretch of the take, for anything private it shows. |
 | `stills` | list of [still](#still) |  | Frames of other takes, popped in over the clip. |
+| `stillsIn` | [anchor](#anchor) |  | When the first still pops in, the rest following one after another, 0.22 s apart; 0.35 s into the clip when not given. |
 | `stillsOut` | [anchor](#anchor) |  | When the stills pop out, one after another in the order they popped in; they stay to the clip's end when not given. |
 | `stillsBackground` | [color](#color) |  | A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture. |
 | `card` | [card](#card) |  |  |

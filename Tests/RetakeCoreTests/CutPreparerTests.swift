@@ -69,6 +69,15 @@ struct CutPreparerTests {
         ], "the failed take 3 isn't the latest successful one")
     }
 
+    @Test func theStillsTimesInSecondsBecomeAnchorsToo() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try record(1)
+        try write("edits/video.json", #"{"devices": ["ipad"], "clips": [{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "stillsIn": 2.25, "stillsOut": 4, "stills": [{"take": "walk", "at": 1}]}]}"#)
+        let edit = try #require(EditFile.read(try CutPreparer.prepare("video", in: project).text, with: JSONReader(file: "video.json"))?.videos[.ipad])
+        #expect(edit.clips[0].stillsIn == .step(.init(step: .id("b"), offset: 0.25, edge: .start)))
+        #expect(edit.clips[0].stillsOut == .step(.init(step: .id("b"), offset: 2, edge: .start)))
+    }
+
     @Test func aCaptionsTimeThatsItsDefaultMomentIsDroppedRatherThanAnchored() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try record(1)

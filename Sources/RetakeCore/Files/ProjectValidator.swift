@@ -309,8 +309,12 @@ public struct ProjectValidator {
                 guard let stillTimeline = latest(still.take, at: stillAt.appending("take")) else { continue }
                 _ = resolve(still.at, in: stillTimeline, at: stillAt.appending("at"))
             }
-            if let stillsOut = clip.stillsOut {
-                within(resolve(stillsOut, in: timeline, at: at.appending("stillsOut")), played, at: at.appending("stillsOut"))
+            let stillsIn = clip.stillsIn.flatMap { resolve($0, in: timeline, at: at.appending("stillsIn")) }
+            within(stillsIn, played, at: at.appending("stillsIn"))
+            let stillsOut = clip.stillsOut.flatMap { resolve($0, in: timeline, at: at.appending("stillsOut")) }
+            within(stillsOut, played, at: at.appending("stillsOut"))
+            if let stillsIn, let stillsOut, stillsIn >= stillsOut {
+                problem(at.appending("stillsIn"), "is \(TakeTimeline.seconds(stillsIn)) into the take, not before stillsOut, at \(TakeTimeline.seconds(stillsOut)); the stills pop in before they pop out")
             }
             for (key, anchor) in [("from", clip.card?.from), ("to", clip.card?.to)] {
                 guard let anchor else { continue }

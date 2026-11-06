@@ -179,6 +179,22 @@ struct ProjectValidatorTests {
         #expect(try validate().isEmpty, "--offline checks none of it")
     }
 
+    @Test func stillsInIsWithinItsClipAndBeforeStillsOut() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try recordWalk()
+        try write("edits/video.json", #"""
+            {"devices": ["ipad"], "clips": [
+              {"take": "walk", "from": {"step": "open"}, "to": {"step": "done"}, "stillsIn": {"step": "done", "offset": 1}, "stills": [{"take": "walk", "at": 1}]},
+              {"take": "walk", "from": {"step": "open"}, "to": {"step": "end"}, "stillsIn": {"step": "done"}, "stillsOut": {"step": "open"}, "stills": [{"take": "walk", "at": 1}]},
+              {"take": "walk", "from": {"step": "open"}, "to": {"step": "end"}, "stillsIn": {"step": "open"}, "stillsOut": {"step": "done"}, "stills": [{"take": "walk", "at": 1}]}
+            ]}
+            """#)
+        #expect(try validateWithTakes().problems == [
+            "edits/video.json: clips[0].stillsIn: is 4 s into the take, outside the stretch its clip plays, 1 s to 2 s",
+            "edits/video.json: clips[1].stillsIn: is 2 s into the take, not before stillsOut, at 1 s; the stills pop in before they pop out",
+        ])
+    }
+
     @Test func noSuccessfulTakeOnlyWarns() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try edit(#"{"take": "walk", "from": {"step": "open"}, "to": {"step": "done"}}"#, devices: #"["ipad"]"#)

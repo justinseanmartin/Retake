@@ -48,7 +48,7 @@ public enum CutPreparer {
                         guard types.contains(override) else { return entry }
                         return .init(key: entry.key, value: converted(entry.value, at: at, scene: scene, type: override))
                     }
-                    guard ["from", "to", "at"].contains(entry.key), case .number(let seconds) = entry.value, let scene else {
+                    guard ["from", "to", "at", "stillsIn", "stillsOut"].contains(entry.key), case .number(let seconds) = entry.value, let scene else {
                         return .init(key: entry.key, value: converted(entry.value, at: at, scene: scene, type: type))
                     }
                     // A time in an override is its type's; one shared by every type, the first's with a take.

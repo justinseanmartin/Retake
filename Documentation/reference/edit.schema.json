@@ -271,6 +271,10 @@
             "$ref": "#/$defs/still"
           }
         },
+        "stillsIn": {
+          "$ref": "#/$defs/anchor",
+          "description": "When the first still pops in, the rest following one after another, 0.22 s apart; 0.35 s into the clip when not given."
+        },
         "stillsOut": {
           "$ref": "#/$defs/anchor",
           "description": "When the stills pop out, one after another in the order they popped in; they stay to the clip's end when not given."
@@ -1181,6 +1185,10 @@
           "items": {
             "$ref": "#/$defs/still"
           }
+        },
+        "stillsIn": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "When the first still pops in, the rest following one after another, 0.22 s apart; 0.35 s into the clip when not given."
         },
         "stillsOut": {
           "$ref": "#/$defs/anchor-override",

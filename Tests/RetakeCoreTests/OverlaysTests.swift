@@ -187,6 +187,17 @@ struct OverlaysTests {
         }
     }
 
+    @Test func stillsInMovesWhenTheStillsPopInAndTheirBackgroundWithThem() throws {
+        let placed = try overlays(#"""
+            {"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "stillsIn": {"step": "b", "offset": 0.5},
+             "stillsBackground": "#F4F1EA", "stills": [{"take": "walk", "at": 1}, {"take": "walk", "at": 2}, {"take": "walk", "at": 3}]}
+            """#)
+        // The clip plays 1–6 s of the take as 0–5 s; 0.5 s after b ends is 3.5 s in the take.
+        let starts = placed.stills.map { ($0.start * 1000).rounded() / 1000 }
+        #expect(starts == [2.5, 2.72, 2.94] && placed.stills.allSatisfy { $0.end == 5 })
+        #expect(abs(placed.stillsBackgrounds[0].start - (2.5 - OverlayLayers.stillsBackgroundFade)) < 1e-9)
+    }
+
     @Test func stillsFitTheCanvasWithTheSameSpaceAboveBetweenAndBelow() {
         let canvas = CGSize(width: 1200, height: 1600)
         let grid = OverlayLayers.stillsGrid(count: 4, aspect: 4.0 / 3, canvas: canvas)

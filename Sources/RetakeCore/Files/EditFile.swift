@@ -121,6 +121,8 @@ public struct Edit: Equatable, Sendable {
         public var stills: [Still]
         /// A colour filling the canvas behind the stills, over the clip's picture; none when nil.
         public var stillsBackground: Color? = nil
+        /// When the first still pops in, the rest one after another; a moment into the clip when nil.
+        public var stillsIn: Anchor? = nil
         /// When the stills pop out, one after another; they stay to the clip's end when nil.
         public var stillsOut: Anchor? = nil
         /// A colour covering the picture, for a card between clips; none when nil.

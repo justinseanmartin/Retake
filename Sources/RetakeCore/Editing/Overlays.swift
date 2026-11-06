@@ -205,6 +205,7 @@ public struct Overlays: Equatable, Sendable {
                 overlays.blurs.append(Blur(rect: rect, radius: blur.radius, start: start, end: end))
             }
 
+            let stillsIn = try time(clip.stillsIn, "stillsIn") ?? placement.start + Overlays.firstStill
             let stillsOut = try time(clip.stillsOut, "stillsOut")
             for (stillIndex, still) in clip.stills.enumerated() {
                 guard let stillTimeline = timelines[still.take] else {
@@ -216,9 +217,9 @@ public struct Overlays: Equatable, Sendable {
                 } catch {
                     throw RetakeError(.failed, "\(name).stills[\(stillIndex)].at: \(error.message).")
                 }
-                // They pop in one after another, as the clip starts, and stay to its end, or pop out
-                // one after another in the same order.
-                let start = placement.start + Overlays.firstStill + Double(stillIndex) * Overlays.stillsApart
+                // They pop in one after another, from stillsIn or as the clip starts, and stay to its
+                // end, or pop out one after another in the same order.
+                let start = stillsIn + Double(stillIndex) * Overlays.stillsApart
                 let end = stillsOut.map { min($0 + Double(stillIndex) * Overlays.stillsApart, placement.end) } ?? placement.end
                 guard end > start + OverlayLayers.stillPopOut else {
                     throw RetakeError(.failed, "\(name).stillsOut: stills[\(stillIndex)] would pop out before it has popped in, at \(TakeTimeline.seconds(start)) into the video.")
@@ -243,7 +244,7 @@ public struct Overlays: Equatable, Sendable {
             }
             if let color = clip.stillsBackground, !clip.stills.isEmpty {
                 // Faded in by the time the first still pops in.
-                overlays.stillsBackgrounds.append(StillsBackground(color: color, start: placement.start + Overlays.firstStill - OverlayLayers.stillsBackgroundFade, end: placement.end))
+                overlays.stillsBackgrounds.append(StillsBackground(color: color, start: max(stillsIn - OverlayLayers.stillsBackgroundFade, placement.start), end: placement.end))
             }
         }
         return overlays

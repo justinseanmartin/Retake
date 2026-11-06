@@ -509,8 +509,8 @@ older or failed takes, along with scene definitions and takes no edit uses.
 ### Anchors: times that follow the app
 
 Every time in an edit — a clip's `from` and `to`, a caption's, spotlight's, blur's or card's
-`from` and `to`, a sound's `at`, a still's `at` and `stillsOut` — is an anchor: a moment in the
-clip's take, given by a step and where to go from it.
+`from` and `to`, a sound's `at`, a still's `at`, and `stillsIn` and `stillsOut` — is an anchor: a
+moment in the clip's take, given by a step and where to go from it.
 
 An anchor's `step` is a step's `id`, its number counted from 1, or a negative number counting back
 from the last (`-1` is the last step); `start` and `end` are the take's first and last frames,
@@ -573,7 +573,8 @@ and a 6.9-inch iPhone, naming the takes on each.
   clips (`card`). Over the whole clip, it fades in and out with the cross-fades either side, so
   what's under it never shows; with a `from` or `to`, over that stretch only.
 - **Pop in stills** from other takes, over the clip or over a colour of their own (`stillsBackground`),
-  and pop them out again, in the same order, at `stillsOut`.
+  one after another from `stillsIn`, or just after the clip starts, and pop them out again, in the
+  same order, at `stillsOut`.
 - **Cue sound effects**, which play at normal speed however fast the clip plays, or play the take's
   own sound; see [sound](#sound).
 - **Show the device turning**, when a scene turns it; see [turns](#turns).

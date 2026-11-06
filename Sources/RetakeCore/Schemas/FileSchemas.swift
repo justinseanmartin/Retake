@@ -232,6 +232,7 @@ extension EditFile {
             .init("spotlight", .ref("spotlight")),
             .init("blurs", .array("Blurs over a stretch of the take, for anything private it shows.", of: .ref("blur"))),
             .init("stills", .array("Frames of other takes, popped in over the clip.", of: .ref("still"))),
+            .init("stillsIn", .ref("anchor", "When the first still pops in, the rest following one after another, 0.22 s apart; 0.35 s into the clip when not given.")),
             .init("stillsOut", .ref("anchor", "When the stills pop out, one after another in the order they popped in; they stay to the clip's end when not given.")),
             .init("stillsBackground", .ref("color", "A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture.")),
             .init("card", .ref("card")),

@@ -181,6 +181,10 @@ extension EditFile {
         if stillsBackground != nil, stills.isEmpty {
             reader.problem("the clip has no stills for it to go behind", at: object.path("stillsBackground"))
         }
+        let stillsIn = object.optional("stillsIn") { readAnchor($0, $1, reader) }
+        if stillsIn != nil, stills.isEmpty {
+            reader.problem("the clip has no stills to pop in", at: object.path("stillsIn"))
+        }
         let stillsOut = object.optional("stillsOut") { readAnchor($0, $1, reader) }
         if stillsOut != nil, stills.isEmpty {
             reader.problem("the clip has no stills to pop out", at: object.path("stillsOut"))
@@ -208,7 +212,7 @@ extension EditFile {
         return Edit.Clip(
             id: id, intent: intent, take: take, from: from, to: to, speed: speed, crossfade: crossfade,
             audioCrossfade: audioCrossfade, touches: touches, touchColor: touchColor, touchColors: touchColors, takeAudio: takeAudio, captions: captions, sounds: sounds,
-            spotlight: spotlight, blurs: blurs, stills: stills, stillsBackground: stillsBackground, stillsOut: stillsOut, card: card, turns: turns, turnBlur: turnBlur,
+            spotlight: spotlight, blurs: blurs, stills: stills, stillsBackground: stillsBackground, stillsIn: stillsIn, stillsOut: stillsOut, card: card, turns: turns, turnBlur: turnBlur,
         )
     }
 
