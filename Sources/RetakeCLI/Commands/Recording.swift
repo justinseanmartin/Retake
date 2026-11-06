@@ -347,7 +347,7 @@ enum TakesOutput {
             let app = [log.app.version, log.app.build.map { "(\($0))" }].compactMap(\.self).joined(separator: " ")
             var parts = [
                 recorded, app.isEmpty ? nil : app, "\(log.device.marketingName ?? log.device.model), iOS \(log.device.os)",
-                String(format: "%.1f s", log.duration), log.dropped.map { "\($0) dropped" },
+                String(format: "%.1f s", log.duration), "\(log.dropped) dropped",
             ].compactMap(\.self)
             if let failure = log.failure { parts.append("failed: \(failure)") }
             if let problem = take.problem { parts.append(problem) }
@@ -371,8 +371,10 @@ enum TakesOutput {
                 ])),
                 .init(key: "duration", value: .number(log.duration)),
             ]
-            if let frames = log.frames { fields.append(.init(key: "frames", value: .number(Double(frames)))) }
-            if let dropped = log.dropped { fields.append(.init(key: "dropped", value: .number(Double(dropped)))) }
+            fields += [
+                .init(key: "frames", value: .number(Double(log.frames))),
+                .init(key: "dropped", value: .number(Double(log.dropped))),
+            ]
         }
         fields.append(.init(key: "failed", value: .bool(take.failed)))
         if let failure = take.recorded?.failure { fields.append(.init(key: "failure", value: .string(failure))) }

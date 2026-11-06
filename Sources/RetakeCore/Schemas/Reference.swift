@@ -108,7 +108,7 @@ public enum Reference {
             return branches.joined(separator: ", or ")
         }
         switch schema.type.first {
-        case "string" where !schema.choices.isEmpty:
+        case "string" where !schema.choices.isEmpty, "integer" where !schema.choices.isEmpty:
             let names = schema.choices.map { "`\(JSONWriter.compact($0))`" }
             return names.count == 1 ? names[0] : names.dropLast().joined(separator: ", ") + " or " + names.last!
         case "string":
@@ -129,7 +129,11 @@ public enum Reference {
             return "boolean"
         case "array":
             var text = "list of " + (schema.items.first.map { typeText($0, path: path, queue: &queue) } ?? "anything")
-            if let minimum = schema.minItems { text += ", at least \(minimum)" }
+            if let minimum = schema.minItems, schema.maxItems == minimum {
+                text += ", exactly \(minimum)"
+            } else if let minimum = schema.minItems {
+                text += ", at least \(minimum)"
+            }
             if schema.uniqueItems { text += ", each once" }
             return text
         case "object" where !schema.values.isEmpty:

@@ -565,7 +565,10 @@ retake takes [<scene>] [--device <device> | --type <type>] [--json]
 ```
 
 Lists takes, of one scene or all: number, when it was recorded, the app's version and build, the
-device and its model, duration, frames dropped, whether it failed, and the edits cut from it.
+device and its model, duration, frames dropped, whether it failed, and the edits cut from it. A
+take whose [step log](reference/take.md) can't be read is listed as failed, saying why: one recorded
+by an earlier Retake that didn't log its screen, frames and dropped frames is to be recorded again,
+and one recorded by a newer Retake, in a later step log `format`, needs Retake updated.
 
 Without `--device` or `--type`, lists takes of both device types.
 
@@ -644,6 +647,9 @@ Store Connect's limits is warned about rather than failed. `--open` opens the re
 Warns, and carries on, when the edit's takes were recorded on more than one build of the app, device
 or iOS version, or Button Heist, naming the takes on each; the video's [metadata](#a-videos-fields) lists all of them.
 
+Warns, and carries on, when a scene's latest take can't be read, cutting the latest that can; when
+none can, fails saying why.
+
 Fails (1) if a scene has no successful take, an anchor doesn't resolve, an element a spotlight
 or blur names isn't in the take's step log at that moment, one device type's takes come from devices
 with different screens (naming the takes on each), or the result is outside App Store Connect's
@@ -714,14 +720,14 @@ there's any. Made for CI and pre-commit hooks, and for an agent checking an edit
 ### `retake schema`
 
 ```
-retake schema (retake | set | scene | edit)
+retake schema (retake | set | scene | edit | take)
 retake schema --output <dir>
 ```
 
 Prints the schema for one kind of file, or with `--output` writes all of them there, one or the
 other, as
 `<kind>.schema.json`. They are the same schemas the files' `"$schema"` URLs name, for this version
-of Retake.
+of Retake. `take` is a take's step log, which Retake writes and names no schema in.
 
 ### `retake version`
 
@@ -736,7 +742,8 @@ and commit, which ends in `-dirty` when the clone had uncommitted changes.
 ## Schemas
 
 Each kind of file Retake reads has a [JSON Schema](https://json-schema.org) (draft 2020-12): `retake.json`, sets, scenes and
-edits. They're published with each release, at a URL that names the version,
+edits, and the step logs Retake writes beside its takes (`take`), which a project doesn't edit.
+They're published with each release, at a URL that names the version,
 `https://justinseanmartin.github.io/Retake/schemas/<version>/<kind>.schema.json`, and `retake
 schema` prints them.
 
@@ -749,7 +756,9 @@ schema` prints them.
   reading, so an editor marks a misspelled key rather than leaving it to be ignored.
 - **They change with Retake.** A release that changes what a file may say changes the schema version
   in its URL. Retake reads only its own version's shape: a file written for an older one that no
-  longer fits fails with the field to change.
+  longer fits fails with the field to change. A step log is read by its own `format` instead, which
+  Retake doesn't write until a change needs one: a log without it is format 1, and one of a later
+  format is refused as recorded by a newer Retake.
 
 ## Files Retake writes
 
@@ -772,7 +781,7 @@ What's worth keeping, and nothing that's rewritten wholesale:
 | Path | What |
 | --- | --- |
 | `takes/<type>/<scene>/<n>.mov` | A take's footage. |
-| `takes/<type>/<scene>/<n>.json` | A take's step log, and what it was recorded with: device, app version and build, set and state, Retake and Button Heist versions. |
+| `takes/<type>/<scene>/<n>.json` | A take's [step log](reference/take.md), and what it was recorded with: device, app version and build, set and state, Retake and Button Heist versions. |
 | `cuts/<type>/<edit>/` | Rendered videos, from `cut`. |
 | `installed.json` | The bundle ID of the app `install` last embedded, for [finding the app](#finding-the-app). |
 

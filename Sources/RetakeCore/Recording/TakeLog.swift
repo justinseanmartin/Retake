@@ -2,7 +2,11 @@ import Foundation
 
 /// A take's step log, written beside its movie as `<n>.json`: what was recorded, with what, and
 /// when each step happened on the movie's own clock, where it touched, and what was on screen after
-/// it. Edits cut on it, draw touches from it and find elements in it. See README.md, "Takes".
+/// it. Edits cut on it, draw touches from it and find elements in it. See README.md, "Takes", and
+/// Documentation/reference/take.md, generated from `TakeLog.schema`.
+///
+/// Retake writes no `format`: a log without one is format 1. The reader refuses a later format,
+/// saying the take was recorded by a newer Retake, so a breaking change can add one cleanly.
 public struct TakeLog: Equatable, Sendable {
     public var scene: String
     public var take: Int
@@ -22,16 +26,16 @@ public struct TakeLog: Equatable, Sendable {
     public var duration: Double
     public var width: Int
     public var height: Int
-    /// Frames written, and frames the encoder wasn't ready for, which a hitch in the take shows;
-    /// nil in a log written before they were recorded.
-    public var frames: Int? = nil
-    public var dropped: Int? = nil
+    /// Frames written, and frames the encoder wasn't ready for, which a hitch in the take shows.
+    public var frames: Int
+    public var dropped: Int
     /// The shape the set's `previewAspect` gave the app's window, portrait and landscape, at the top (or in
     /// landscape, the left) of the screen; nil when the window filled it. The editor crops to it.
-    public var aspect: SetFile.AspectChoice? = nil
+    /// Logs recorded before it was renamed call it `aspect`, which still reads.
+    public var previewAspect: SetFile.AspectChoice? = nil
     /// The device's screen in points, portrait, which the log's touches and frames are in, for the
-    /// editor to find them in the frames; nil in a log written before it was recorded.
-    public var screen: CGSize? = nil
+    /// editor to find them in the frames.
+    public var screen: CGSize
     /// For a take recorded from before the app launched: when it was launched, when Retake's
     /// support library reported in, and when The Button Heist connected, for an edit to cut in on.
     public var launch: Launch?
@@ -196,14 +200,17 @@ extension TakeLog {
             .init(key: "duration", value: Self.number(duration)),
             .init(key: "size", value: .array([.number(Double(width)), .number(Double(height))])),
         ]
-        if let aspect {
-            object.append(.init(key: "aspect", value: Self.object([
-                ("portrait", aspect.portrait.map { .string($0.description) }), ("landscape", aspect.landscape.map { .string($0.description) }),
+        if let previewAspect {
+            object.append(.init(key: "previewAspect", value: Self.object([
+                ("portrait", previewAspect.portrait.map { .string($0.description) }),
+                ("landscape", previewAspect.landscape.map { .string($0.description) }),
             ])))
         }
-        if let screen { object.append(.init(key: "screen", value: .array([Self.number(screen.width, places: 100), Self.number(screen.height, places: 100)]))) }
-        if let frames { object.append(.init(key: "frames", value: .number(Double(frames)))) }
-        if let dropped { object.append(.init(key: "dropped", value: .number(Double(dropped)))) }
+        object += [
+            .init(key: "screen", value: .array([Self.number(screen.width, places: 100), Self.number(screen.height, places: 100)])),
+            .init(key: "frames", value: .number(Double(frames))),
+            .init(key: "dropped", value: .number(Double(dropped))),
+        ]
         if let launch {
             object.append(.init(key: "launch", value: Self.object([
                 ("launched", Self.number(launch.launched)), ("reported", Self.number(launch.reported)), ("connected", Self.number(launch.connected)),
@@ -271,10 +278,23 @@ extension ScreenElement {
 }
 
 extension TakeLog {
+    /// The step log's format this Retake reads, and the only one it has written: a log without
+    /// `format` is this one.
+    public static let format = 1
+
     /// A step log as Retake wrote it, read strictly, as every file Retake reads is; nil, with the
-    /// reader's problems saying why, when it isn't one.
+    /// reader's problems saying why, when it isn't one. One of a later `format` is refused with
+    /// only that said, since the rest of it is a newer Retake's to read.
     public static func read(_ text: String, with reader: JSONReader) -> TakeLog? {
         guard let value = reader.parse(text), var root = reader.object(value, at: .root) else { return nil }
+        if case .number(let number)? = root.object["format"], number.rounded() == number, number > Double(format) {
+            reader.problem(
+                "was recorded by a newer Retake, in step log format \(JSONReader.format(number)), which this Retake (\(RetakeVersion.current.version)) can't read; update Retake to use this take",
+                at: .root,
+            )
+            return nil
+        }
+        _ = root.optional("format") { reader.integer($0, at: $1, atLeast: 1) }
         defer { root.finish() }
         func object<Value>(_ key: String, _ read: (inout ObjectReader) -> Value?) -> Value? {
             root.required(key) { value, path in
@@ -332,10 +352,25 @@ extension TakeLog {
         let failure = root.optional("failure", reader.string)
         let duration = root.required("duration") { reader.number($0, at: $1, .atLeast(0)) }
         let dimensions = root.required("size", size)
-        let frames = root.optional("frames") { reader.integer($0, at: $1, atLeast: 0) }
-        let dropped = root.optional("dropped") { reader.integer($0, at: $1, atLeast: 0) }
-        let aspect = root.optional("aspect") { SetFile.readAspectChoice($0, $1, reader) }
-        let screen = root.optional("screen") { value, path -> CGSize? in
+        // A take recorded before Retake logged its screen and frames can't be cut, which is said once.
+        let unlogged = ["screen", "frames", "dropped"].filter { !root.has($0) }
+        if !unlogged.isEmpty {
+            let names = unlogged.map { "\"\($0)\"" }
+            let list = names.count == 1 ? names[0] : names.dropLast().joined(separator: ", ") + " and " + names.last!
+            reader.problem("is missing \(list): the take was recorded by an earlier Retake, which didn't log \(names.count == 1 ? "it" : "them"); record the take again", at: .root)
+        }
+        func recorded<Value>(_ key: String, _ read: (JSONValue, JSONPath) -> Value?) -> Value? {
+            unlogged.contains(key) ? nil : root.required(key, read)
+        }
+        let frames = recorded("frames") { reader.integer($0, at: $1, atLeast: 0) }
+        let dropped = recorded("dropped") { reader.integer($0, at: $1, atLeast: 0) }
+        // `aspect` is what logs recorded before it was renamed call it, which still read.
+        let aspectKey = root.has("aspect") ? "aspect" : "previewAspect"
+        if aspectKey == "aspect", root.has("previewAspect") {
+            reader.problem("gives both \"previewAspect\" and \"aspect\", its old name; give only \"previewAspect\"", at: .root)
+        }
+        let previewAspect = root.optional(aspectKey) { SetFile.readAspectChoice($0, $1, reader) }
+        let screen = recorded("screen") { value, path -> CGSize? in
             guard let numbers = reader.array(value, at: path, element: { reader.number($0, at: $1, .above(0)) }), numbers.count == 2 else {
                 reader.problem("expected [width, height]", at: path)
                 return nil
@@ -401,12 +436,13 @@ extension TakeLog {
             }
         }
         guard reader.problems.isEmpty, let scene, let take, let set, let state, let deviceType, let device, let app, let retake,
-              let buttonHeist, let recordedAt, let duration, let dimensions, let clock, let steps, let shapes
+              let buttonHeist, let recordedAt, let duration, let dimensions, let frames, let dropped, let screen, let clock, let steps,
+              let shapes
         else { return nil }
         return TakeLog(
             scene: scene, take: take, set: set, state: state, deviceType: deviceType, device: device, app: app, retake: retake,
             buttonHeist: buttonHeist, recordedAt: recordedAt, failure: failure, duration: duration, width: dimensions.0,
-            height: dimensions.1, frames: frames, dropped: dropped, aspect: aspect, screen: screen, launch: launch, clock: clock, steps: steps, shapes: shapes,
+            height: dimensions.1, frames: frames, dropped: dropped, previewAspect: previewAspect, screen: screen, launch: launch, clock: clock, steps: steps, shapes: shapes,
             hitches: hitches,
         )
     }

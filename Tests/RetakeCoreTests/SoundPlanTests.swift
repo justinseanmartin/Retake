@@ -87,7 +87,7 @@ struct SoundPlanTests {
         try tone("pop", seconds: 0.5)
         let red = try await EditCompositionTests().movie("red", red: 255, green: 0, blue: 0)
         let plan = CutPlan(placements: [.init(take: "red", from: 0, to: 2, speed: 1, start: 0, duration: 2, crossfade: 0)])
-        let composition = try await EditComposition.make(plan, movies: ["red": red], spec: PreviewSpec(width: 64, height: 96, framesPerSecond: 30), background: .black)
+        let composition = try await EditComposition.make(plan, movies: ["red": red], logs: EditCompositionTests().logs("red"), spec: PreviewSpec(width: 64, height: 96, framesPerSecond: 30), background: .black)
         var sound = SoundPlan()
         sound.music = .init(file: root.appending(path: "audio/theme.caf"), volume: 0.6, fadeOut: 0.5)
         let pop = root.appending(path: "audio/pop.caf")

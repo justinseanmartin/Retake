@@ -59,6 +59,14 @@ struct CutterTests {
         #expect(await failure() == "There's no successful ipad take of walk for video to be cut from; record it.")
     }
 
+    @Test func aTakeANewerRetakeRecordedIsntCutAndSaysSo() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try edit()
+        try write("output/takes/ipad/walk/1.json", TakeLogReadingTests.text { $0.insert(.init(key: "format", value: 2), at: 0) })
+        try write("output/takes/ipad/walk/1.mov", "")
+        #expect(await failure() == "There's no successful ipad take of walk for video to be cut from: output/takes/ipad/walk/1.json: was recorded by a newer Retake, in step log format 2, which this Retake (\(RetakeVersion.current.version)) can't read; update Retake to use this take.")
+    }
+
     @Test func cuttingLeavesAnEditWhoseTimesAreAnchorsAsItIs() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try record("walk", 1)

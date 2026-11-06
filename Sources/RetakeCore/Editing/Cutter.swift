@@ -57,17 +57,24 @@ public enum Cutter {
         // The latest successful take of every scene the video plays or takes a still from.
         let scenes = video.scenes
         var logs: [String: TakeLog] = [:], movies: [String: URL] = [:]
+        // A later take whose log can't be read, such as one a newer Retake recorded, is passed over,
+        // saying why.
+        var unreadable: [String] = []
         for scene in scenes {
-            guard let take = TakeStore.takes(of: scene, for: [type], in: project).last(where: \.successful), let log = take.recorded else {
-                throw RetakeError(.failed, "There's no successful \(type.rawValue) take of \(scene) for \(name) to be cut from; record it.")
+            let takes = TakeStore.takes(of: scene, for: [type], in: project)
+            let later = takes.reversed().prefix { !$0.successful }.filter { $0.recorded == nil }.compactMap(\.problem)
+            guard let take = takes.last(where: \.successful), let log = take.recorded else {
+                let why = later.first.map { ": \($0)." } ?? "; record it."
+                throw RetakeError(.failed, "There's no successful \(type.rawValue) take of \(scene) for \(name) to be cut from\(why)")
             }
+            unreadable += later.reversed().map { "\($0); cutting \(take.name) instead." }
             logs[scene] = log
             movies[scene] = take.movie
         }
 
         // Points are the screen's, so every take of a type must come from the same screen.
         let screens = Dictionary(grouping: scenes) { scene in
-            logs[scene].map { log in log.screen.map { "\(Int($0.width))×\(Int($0.height)) points" } ?? "\(log.width)×\(log.height) pixels" } ?? ""
+            logs[scene].map { "\(Int($0.screen.width))×\(Int($0.screen.height)) points" } ?? ""
         }
         if screens.count > 1 {
             let list = screens.sorted { $0.key < $1.key }.map { screen, names in
@@ -80,7 +87,7 @@ public enum Cutter {
         let plan = try CutPlan.make(video, timelines: timelines)
         let spec = PreviewSpec.of(type)
         let record = MovieMetadata.Video(edit: name, type: type, bundleID: logs[scenes[0]]?.app.bundleID ?? "", takes: scenes.compactMap { logs[$0] })
-        var warnings: [String] = []
+        var warnings = unreadable
         if !record.mixed.isEmpty {
             let takes = scenes.compactMap { scene in logs[scene].map { "\(scene) take \($0.take) (\($0.app.version ?? "?") (\($0.app.build ?? "?")), \($0.device.marketingName ?? $0.device.model), iOS \($0.device.os))" } }
             warnings.append("\(name)'s \(type.rawValue) takes span more than one of: \(record.mixed.joined(separator: ", ")): \(takes.joined(separator: "; ")).")

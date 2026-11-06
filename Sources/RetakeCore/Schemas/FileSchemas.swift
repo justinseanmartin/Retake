@@ -363,3 +363,116 @@ extension EditFile {
         )
     }
 }
+
+// MARK: - Step logs
+
+extension TakeLog {
+    public static var schema: FileSchema {
+        let seconds = "seconds into the movie, to the millisecond"
+        var format = Schema.integer(
+            "The step log's format. Retake doesn't write it: a log without it is format 1, the only one so far. A log of a later format was recorded by a newer Retake, and this one refuses it, saying to update Retake.",
+        )
+        format.choices = [.number(Double(Self.format))]
+        let size = Schema.tuple("[width, height], in capture pixels.", of: .integer(nil, atLeast: 0), count: 2)
+        let aspect = Schema.oneOf(nil, [.ref("shape"), .ref("preview-aspect")])
+        let root = Schema.object(
+            "A take's step log, `<n>.json` beside its movie `<n>.mov` in the output directory's `takes/<type>/<scene>/`: what was recorded, with what, and when each step happened on the movie's own clock, where it touched, and what was on screen after it. Retake writes it when it records the take, and reads it to list, clean and cut takes; a project doesn't write or edit it. Times are \(seconds); positions and sizes on the screen are its points, portrait, to the hundredth.",
+            [
+                .init("format", format),
+                .init("scene", .string("The scene recorded, as its file in `scenes/<type>/` is named, without `.json`.", nonEmpty: true)),
+                .init("take", .integer("The take's number among the scene's, from 1, which its movie and log are named by.", atLeast: 1)),
+                .init("set", .string("The set the scene started on.", nonEmpty: true)),
+                .init("state", .choice("The set's state, which the take's data started from.", SetFile.State.allCases.map(\.rawValue))),
+                .init("deviceType", .choice("The type of device recorded.", DeviceType.allCases.map(\.rawValue))),
+                .init("device", .object("The device recorded. Nothing personal: not its name, nor its UDID.", [
+                    .init("model", .string("Its hardware identifier, such as iPad13,4.")),
+                    .init("marketingName", .string("Its marketing name, such as iPad Pro (11-inch) (3rd generation), when devicectl gives one.")),
+                    .init("os", .string("Its iOS version and build, such as 26.6.2 (23G90).")),
+                ], required: ["model", "os"])),
+                .init("app", .object("The app recorded.", [
+                    .init("bundleID", .string("Its bundle ID.", nonEmpty: true)),
+                    .init("version", .string("Its CFBundleShortVersionString, as installed on the device.")),
+                    .init("build", .string("Its CFBundleVersion.")),
+                ], required: ["bundleID"])),
+                .init("retake", .string("The version of Retake that recorded it.", nonEmpty: true)),
+                .init("buttonHeist", .object("The Button Heist that drove the app: the one embedded in it.", [
+                    .init("version", .string("Its version.", nonEmpty: true)),
+                    .init("commit", .string("The commit of the local clone it was built from, for one that was.")),
+                ], required: ["version"])),
+                .init("recordedAt", .string(
+                    "When the take was recorded, in ISO 8601 to the second, such as 2026-11-06T09:30:00Z.",
+                    pattern: #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z|[+-][0-9]{2}:?[0-9]{2})$"#,
+                )),
+                .init("failure", .string("Why the take failed, for one whose step didn't run; absent for a take that played every step. No edit is cut from a failed take.")),
+                .init("duration", .number("The movie's length, in seconds, to the millisecond.", atLeast: 0)),
+                .init("size", size.described("The movie's size, [width, height], in capture pixels: its first frame's, which every frame is stored in.")),
+                .init("previewAspect", aspect.described("The shape the set's previewAspect gave the app's window: at the top of the screen in portrait, and at its left in landscape; a shape alone is portrait's. Absent when the app filled the screen. The edit crops each frame to it.")),
+                .init("aspect", aspect.deprecated("Deprecated: previewAspect's old name, which takes recorded before it was renamed give. Still read, but never with previewAspect.")),
+                .init("screen", .tuple(
+                    "The device's screen, [width, height], in points, portrait: what the log's touches and frames are in, for the edit to find them in the movie's frames.",
+                    of: .number(nil, above: 0), count: 2,
+                )),
+                .init("frames", .integer("Frames written to the movie.", atLeast: 0)),
+                .init("dropped", .integer("Frames the encoder wasn't ready for, which a hitch in the take shows.", atLeast: 0)),
+                .init("launch", .object("For a take recorded from before the app launched, as its scene's recordsLaunch asks: when it launched, for an edit to cut in on, each in \(seconds).", [
+                    .init("launched", .number("When Retake launched the app.")),
+                    .init("reported", .number("When Retake's support library, in the app, reported in.")),
+                    .init("connected", .number("When The Button Heist connected to the app.")),
+                ], required: ["launched", "reported", "connected"])),
+                .init("clock", .object("How the steps were placed on the movie's clock.", [
+                    .init("deviceAhead", .number("Seconds the device's clock was ahead of the Mac's, measured once at the start of the take, through which the device's own times for each step are placed. Absent when it couldn't be measured, and every step is timed by the Mac.")),
+                ])),
+                .init("steps", .array("The steps played while recording, in order. Setup steps, played before recording starts, aren't logged.", of: .ref("step"))),
+                .init("shapes", .array("The movie's first shape, and each change after it, as the device turned.", of: .object(nil, [
+                    .init("at", .number("When the frames took this shape, in \(seconds).", atLeast: 0)),
+                    .init("size", size.described("The frames' size as the device sent them, [width, height], in capture pixels.")),
+                    .init("turn", .integer("Degrees clockwise the frames are turned to fit the movie's size: 0, 90, or -90 for a quarter anticlockwise.")),
+                ], required: ["at", "size", "turn"]))),
+                .init("hitches", .array("Each time the app's main thread missed a frame while it was recorded. Absent when Retake's support library didn't watch.", of: .object(nil, [
+                    .init("at", .number("When the app last drew, in \(seconds).")),
+                    .init("duration", .number("Seconds until it drew again.", atLeast: 0)),
+                ], required: ["at", "duration"]))),
+            ],
+            required: [
+                "scene", "take", "set", "state", "deviceType", "device", "app", "retake", "buttonHeist", "recordedAt", "duration", "size",
+                "screen", "frames", "dropped", "clock", "steps", "shapes",
+            ],
+        )
+        var log = root
+        log.not = [{ var both = Schema(); both.required = ["previewAspect", "aspect"]; return both }()]
+
+        let point = Schema.tuple("[x, y], in screen points from the top left.", of: .number(), count: 2)
+        let step = Schema.object("One step as it was recorded.", [
+            .init("number", .integer("Its number among the scene's steps, from 1.", atLeast: 1)),
+            .init("id", .string("Its id in the scene, for one that has one.", nonEmpty: true)),
+            .init("action", .string("The kind of step: tap, drag, type, activate, orientation or waitFor, or hold for one that's only a pause.", nonEmpty: true)),
+            .init("start", .number("When it began, in \(seconds), as the device saw it where it could.")),
+            .init("end", .number("When it ended, in \(seconds); for a waitFor, when its element came or went.")),
+            .init("timedBy", .choice(
+                "Whose times start and end are. device: the device's own, placed through clock.deviceAhead. mac: when the Mac sent the step and heard back, which a round trip either side widens.",
+                ["device", "mac"],
+            )),
+            .init("touch", .ref("point", "Where it touched the screen: a tap's point, by point or on an element, and where a drag came down.")),
+            .init("touchEnd", .ref("point", "Where a drag lifted.")),
+            .init("touchDuration", .number("Seconds the finger was on the screen, from start, as The Button Heist timed it.", atLeast: 0)),
+            .init("elements", .array("What was on screen when it ended, in the order VoiceOver reads it.", of: .ref("screen-element"))),
+        ], required: ["number", "action", "start", "end", "timedBy"])
+        let element = Schema.object("An element on screen, as VoiceOver knows it, which an edit's spotlights and blurs find.", [
+            .init("label", .string("Its accessibility label.")),
+            .init("value", .string("Its value.")),
+            .init("identifier", .string("The accessibilityIdentifier the app gives it.")),
+            .init("hint", .string("Its accessibility hint.")),
+            .init("traits", .array("Its traits, by The Button Heist's names.", of: .string())),
+            .init("frame", .tuple("Where it is, [x, y, width, height], in screen points.", of: .number(), count: 4)),
+            .init("activationPoint", .ref("point", "Where a tap on it touches.")),
+        ])
+        let shape = Schema.string("A width and a height, such as 3:4.", pattern: #"^[0-9]+(\.[0-9]+)?:[0-9]+(\.[0-9]+)?$"#)
+        let shapes = Schema.object("The app window's shape in portrait, and in landscape.", [
+            .init("portrait", .ref("shape", "Its shape in portrait, at the top of the screen.")),
+            .init("landscape", .ref("shape", "Its shape in landscape, at the left of the screen.")),
+        ]).atLeastOne(of: ["portrait", "landscape"])
+        return FileSchema(kind: "take", title: "A step log", root: log, definitions: [
+            .init("step", step), .init("screen-element", element), .init("point", point), .init("preview-aspect", shapes), .init("shape", shape),
+        ])
+    }
+}

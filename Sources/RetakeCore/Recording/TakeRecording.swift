@@ -46,7 +46,9 @@ public enum TakeRecording {
         let bundleID = try Installer.bundleID(for: project)
         let installed = Launcher.installedVersion(bundleID: bundleID, on: device)
         // Asked before recording starts, as devicectl talking to the device mid-take can upset it.
-        let screen = Devicectl().screenPoints(of: device)
+        guard let screen = Devicectl().screenPoints(of: device) else {
+            throw RetakeError(.environment, "Couldn't read \(device.name)'s screen size from devicectl, which the step log needs for its touches and frames.")
+        }
         var log = TakeLog(
             scene: target.scene, take: target.take, set: set.name, state: set.state, deviceType: type,
             device: TakeLog.DeviceInfo(
@@ -55,7 +57,7 @@ public enum TakeRecording {
             ),
             app: TakeLog.AppInfo(bundleID: bundleID, version: installed?.version, build: installed?.build),
             retake: RetakeVersion.current.version, buttonHeist: RetakeVersion.current.buttonHeist,
-            recordedAt: Date(), failure: nil, duration: 0, width: 0, height: 0, launch: nil,
+            recordedAt: Date(), failure: nil, duration: 0, width: 0, height: 0, frames: 0, dropped: 0, screen: screen, launch: nil,
             clock: TakeLog.Clock(deviceAhead: nil), steps: [], shapes: [],
         )
         do {
@@ -133,8 +135,7 @@ public enum TakeRecording {
             log.frames = summary.frames
             log.dropped = summary.dropped
             log.shapes = summary.shapes
-            log.screen = screen
-            log.aspect = set.aspect(for: type)
+            log.previewAspect = set.aspect(for: type)
         }
         log.failure = failure?.message
         log.launch = collected.launch

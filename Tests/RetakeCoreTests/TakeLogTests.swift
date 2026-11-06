@@ -58,7 +58,8 @@ struct TakeLogTests {
             device: .init(model: "iPad13,4", marketingName: nil, os: "26.6.2 (23G90)"),
             app: .init(bundleID: "com.example.notes", version: "1.0", build: nil),
             retake: "0.0.1", buttonHeist: .init(version: "0.7.1"), recordedAt: start, failure: nil,
-            duration: 12.3456789, width: 1200, height: 1718, launch: nil, clock: .init(deviceAhead: 0.0391),
+            duration: 12.3456789, width: 1200, height: 1718, frames: 740, dropped: 0, screen: CGSize(width: 834.123, height: 1194),
+            launch: nil, clock: .init(deviceAhead: 0.0391),
             steps: [TakeLog.Entry(
                 number: 1, id: nil, action: "tap", start: 1.0181234, end: 1.34, timedByDevice: true, touch: Point(x: 195.123, y: 410),
                 touchEnd: nil, elements: [ScreenElement(label: "New Note", traits: ["button"], frame: .init(x: 780, y: 32, width: 44, height: 44.333))],
@@ -100,7 +101,7 @@ struct TakeLogReadingTests {
             app: .init(bundleID: "com.example.notes", version: "1.0", build: "7"),
             retake: "0.0.1", buttonHeist: .init(version: "0.7.1"), recordedAt: Date(timeIntervalSince1970: 1_800_000_000),
             failure: failure, duration: 12.346, width: 1200, height: 1718, frames: 700, dropped: 2,
-            aspect: .init(portrait: .init(width: 3, height: 4), landscape: .init(width: 4, height: 3)), screen: CGSize(width: 834, height: 1194),
+            previewAspect: .init(portrait: .init(width: 3, height: 4), landscape: .init(width: 4, height: 3)), screen: CGSize(width: 834, height: 1194),
             launch: .init(launched: 0.58, reported: 2.02, connected: 2.11), clock: .init(deviceAhead: 0.039),
             steps: [TakeLog.Entry(
                 number: 1, id: "new-note", action: "drag", start: 1.018, end: 1.34, timedByDevice: true, touch: Point(x: 195.12, y: 410),
@@ -137,11 +138,74 @@ struct TakeLogReadingTests {
         let reader = JSONReader(file: "3.json")
         var text = JSONWriter.write(Self.log().json)
         text = text.replacingOccurrences(of: #""timedBy": "device""#, with: #""timedBy": "phone""#)
-        text = text.replacingOccurrences(of: #""dropped": 2"#, with: #""droped": 2"#)
+        text = text.replacingOccurrences(of: #""launch": {"#, with: #""lanch": {"#)
         #expect(TakeLog.read(text, with: reader) == nil)
         #expect(reader.problems.map(\.description).sorted() == [
             #"3.json: steps[0].timedBy: "phone" isn't one of "device" or "mac""#,
-            #"3.json: unknown key "droped"; did you mean "dropped"?"#,
+            #"3.json: unknown key "lanch"; did you mean "launch"?"#,
+        ])
+    }
+
+    /// The fixture's log as written, with its top-level keys changed by `change`.
+    static func text(_ log: TakeLog = log(), _ change: (inout [JSONObject.Entry]) -> Void) -> String {
+        guard case .object(let object) = log.json else { return "" }
+        var entries = object.entries
+        change(&entries)
+        return JSONWriter.write(.object(JSONObject(entries)))
+    }
+
+    /// What the reader says of `text`, and what it read.
+    static func read(_ text: String) -> (log: TakeLog?, problems: [String]) {
+        let reader = JSONReader(file: "3.json")
+        let log = TakeLog.read(text, with: reader)
+        return (log, reader.problems.map(\.description))
+    }
+
+    @Test func aLaterFormatIsRefusedAsANewerRetakesAndFormatOneOrNoneReads() {
+        let newer = Self.read(Self.text {
+            $0.insert(.init(key: "format", value: 2), at: 0)
+            $0.append(.init(key: "somethingNew", value: true))
+            $0.removeAll { $0.key == "screen" }
+        })
+        #expect(newer.log == nil)
+        #expect(newer.problems == [
+            "3.json: was recorded by a newer Retake, in step log format 2, which this Retake (\(RetakeVersion.current.version)) can't read; update Retake to use this take",
+        ], "only that, not what a newer Retake added or left out")
+
+        #expect(Self.read(Self.text { _ in }).log == Self.log(), "no format is format 1")
+        #expect(Self.read(Self.text { $0.insert(.init(key: "format", value: 1), at: 0) }).log == Self.log())
+
+        for (format, problem) in [(JSONValue.number(0), "0 must be at least 1"), (-1, "-1 must be at least 1"), (1.5, "1.5 isn't a whole number"), ("2", "expected a whole number, found a string")] {
+            let read = Self.read(Self.text { $0.insert(.init(key: "format", value: format), at: 0) })
+            #expect(read.log == nil && read.problems == ["3.json: format: \(problem)"])
+        }
+    }
+
+    @Test func anOldAspectReadsAsPreviewAspectButNotBesideIt() throws {
+        let old = Self.read(Self.text { entries in
+            let index = entries.firstIndex { $0.key == "previewAspect" }!
+            entries[index].key = "aspect"
+        })
+        #expect(old.problems.isEmpty)
+        #expect(try #require(old.log).previewAspect == Self.log().previewAspect)
+        #expect(!JSONWriter.write(try #require(old.log).json).contains(#""aspect""#), "written back under its new name")
+
+        let both = Self.read(Self.text { entries in
+            entries.append(.init(key: "aspect", value: entries.first { $0.key == "previewAspect" }!.value))
+        })
+        #expect(both.log == nil)
+        #expect(both.problems == [#"3.json: gives both "previewAspect" and "aspect", its old name; give only "previewAspect""#])
+    }
+
+    @Test func aLogWithoutItsScreenOrFramesMustBeRecordedAgain() {
+        let old = Self.read(Self.text { $0.removeAll { ["screen", "frames"].contains($0.key) } })
+        #expect(old.log == nil)
+        #expect(old.problems == [
+            #"3.json: is missing "screen" and "frames": the take was recorded by an earlier Retake, which didn't log them; record the take again"#,
+        ])
+        let older = Self.read(Self.text { $0.removeAll { ["screen", "frames", "dropped"].contains($0.key) } })
+        #expect(older.problems == [
+            #"3.json: is missing "screen", "frames" and "dropped": the take was recorded by an earlier Retake, which didn't log them; record the take again"#,
         ])
     }
 }

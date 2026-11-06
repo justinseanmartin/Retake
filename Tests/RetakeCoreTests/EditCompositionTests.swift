@@ -64,6 +64,7 @@ struct TurnFramingTests {
     let canvas = PreviewSpec.of(.ipad).size
     let stored = CGSize(width: 1200, height: 1718)
     let aspect = SetFile.AspectChoice(portrait: .init(width: 3, height: 4), landscape: .init(width: 4, height: 3))
+    let screen = CGSize(width: 834, height: 1194)
 
     func lands(_ framing: ClipFraming, _ point: CGPoint) -> CGPoint {
         let placed = point.applying(framing.transform)
@@ -73,28 +74,27 @@ struct TurnFramingTests {
     @Test func aTurnedFrameIsTurnedBackUprightAndLetterboxed() {
         // Turned a quarter clockwise to fit: the upright frame's top left is the stored top right.
         // Upright, the 4:3 window at the left, 1600×1200, fits the canvas as 1200×900, centred.
-        let clockwise = ClipFraming.framing(canvas, stored: stored, turned: 90, aspect: aspect, turns: .letterboxed)
+        let clockwise = ClipFraming.framing(canvas, stored: stored, turned: 90, aspect: aspect, turns: .letterboxed, screen: screen)
         #expect(clockwise.cropRect == CGRect(x: 0, y: 0, width: 1200, height: 1600))
         #expect(lands(clockwise, CGPoint(x: 1200, y: 0)) == CGPoint(x: 0, y: 350), "the window's top left")
         #expect(lands(clockwise, CGPoint(x: 0, y: 1600)) == CGPoint(x: 1200, y: 1250), "its bottom right")
 
         // Turned anticlockwise: the upright top left is the stored bottom left.
-        let anticlockwise = ClipFraming.framing(canvas, stored: stored, turned: -90, aspect: aspect, turns: .letterboxed)
+        let anticlockwise = ClipFraming.framing(canvas, stored: stored, turned: -90, aspect: aspect, turns: .letterboxed, screen: screen)
         #expect(anticlockwise.cropRect == CGRect(x: 0, y: 118, width: 1200, height: 1600))
         #expect(lands(anticlockwise, CGPoint(x: 0, y: 1718)) == CGPoint(x: 0, y: 350))
         #expect(lands(anticlockwise, CGPoint(x: 1200, y: 118)) == CGPoint(x: 1200, y: 1250))
     }
 
     @Test func asTheDeviceHeldItTheWindowIsCroppedWhereItLiesAndFillsTheCanvas() {
-        let held = ClipFraming.framing(canvas, stored: stored, turned: 90, aspect: aspect, turns: .device)
+        let held = ClipFraming.framing(canvas, stored: stored, turned: 90, aspect: aspect, turns: .device, screen: screen)
         #expect(held.cropRect == CGRect(x: 0, y: 0, width: 1200, height: 1600))
         #expect(lands(held, .zero) == .zero && lands(held, CGPoint(x: 1200, y: 1600)) == CGPoint(x: 1200, y: 1600), "not turned")
     }
 
     @Test func screenPointsLandOnTheCanvasThroughTheFrameAndAnyTurn() throws {
-        let screen = CGSize(width: 834, height: 1194)
         func lands(_ framing: ClipFraming, _ x: Double, _ y: Double) throws -> CGPoint {
-            let placed = CGPoint(x: x, y: y).applying(try #require(framing.pointsToCanvas))
+            let placed = CGPoint(x: x, y: y).applying(framing.pointsToCanvas)
             return CGPoint(x: placed.x.rounded(), y: placed.y.rounded())
         }
         // Upright, the capture is 1200 pixels across 834 points, and the 3:4 window fills the canvas.
@@ -106,12 +106,12 @@ struct TurnFramingTests {
         let turned = ClipFraming.framing(canvas, stored: stored, turned: 90, aspect: aspect, turns: .letterboxed, screen: screen)
         #expect(try lands(turned, 0, 0) == CGPoint(x: 0, y: 350))
         #expect(try lands(turned, 1112, 834) == CGPoint(x: 1200, y: 1250))
-        #expect(ClipFraming.framing(canvas, stored: stored, turned: 0, aspect: aspect, turns: .letterboxed).pointsToCanvas == nil, "no screen recorded")
     }
 
     @Test func anUprightFrameIsFramedAsBefore() {
-        let upright = ClipFraming.framing(canvas, stored: stored, turned: 0, aspect: aspect, turns: .letterboxed)
-        #expect(upright == .filling(canvas, capture: stored, aspect: aspect.portrait))
+        let upright = ClipFraming.framing(canvas, stored: stored, turned: 0, aspect: aspect, turns: .letterboxed, screen: screen)
+        let filling = ClipFraming.filling(canvas, capture: stored, aspect: aspect.portrait)
+        #expect(upright.cropRect == filling.cropRect && upright.transform == filling.transform)
     }
 
     @Test func aClipPlaysEachShapeInForceFromItsFromToItsTo() {
@@ -134,6 +134,17 @@ struct TurnFramingTests {
 /// clip shows is a matter of colour.
 struct EditCompositionTests {
     let folder = FileManager.default.temporaryDirectory.appending(path: "retake-composition-\(UUID().uuidString)", directoryHint: .isDirectory)
+
+    /// Step logs for `movie`'s takes: one shape, 64×96, on a screen of as many points.
+    func logs(_ names: String...) -> [String: TakeLog] {
+        var log = TakeLogReadingTests.log()
+        log.width = 64
+        log.height = 96
+        log.previewAspect = nil
+        log.screen = CGSize(width: 64, height: 96)
+        log.shapes = [.init(at: 0, width: 64, height: 96, turn: 0)]
+        return Dictionary(uniqueKeysWithValues: names.map { ($0, log) })
+    }
 
     /// A one-colour movie, 2 s at 30 frames a second, 64×96, a size every encoder takes.
     func movie(_ name: String, red: UInt8, green: UInt8, blue: UInt8) async throws -> URL {
@@ -196,7 +207,7 @@ struct EditCompositionTests {
             .init(take: "red", from: 0, to: 1, speed: 1, start: 0, duration: 1, crossfade: 0),
             .init(take: "green", from: 0.5, to: 1.5, speed: 2, start: 0.75, duration: 0.5, crossfade: 0.25),
         ])
-        let composition = try await EditComposition.make(plan, movies: movies, spec: PreviewSpec(width: 64, height: 96, framesPerSecond: 30), background: .black)
+        let composition = try await EditComposition.make(plan, movies: movies, logs: logs("red", "green"), spec: PreviewSpec(width: 64, height: 96, framesPerSecond: 30), background: .black)
         #expect(abs(composition.composition.duration.seconds - 1.25) < 0.01)
         let ranges = composition.videoComposition.instructions.map { ($0.timeRange.start.seconds, $0.timeRange.end.seconds) }
         #expect(ranges.map(\.0) == [0, 0.75, 1] && ranges.map(\.1) == [0.75, 1, 1.25])
@@ -219,7 +230,7 @@ struct EditCompositionTests {
             .init(take: "green", from: 0, to: 1, speed: 1, start: 0.75, duration: 1, crossfade: 0.25, coveredFromStart: true, coveredToEnd: true),
             .init(take: "red", from: 0, to: 1, speed: 1, start: 1.5, duration: 1, crossfade: 0.25),
         ])
-        let composition = try await EditComposition.make(plan, movies: movies, spec: PreviewSpec(width: 64, height: 96, framesPerSecond: 30), background: .black)
+        let composition = try await EditComposition.make(plan, movies: movies, logs: logs("red", "green"), spec: PreviewSpec(width: 64, height: 96, framesPerSecond: 30), background: .black)
         // The card, drawn over the picture, fades in and out over these; under it, only red.
         for at in [0.875, 1.625] {
             let under = try await colour(of: composition, at: at)

@@ -175,7 +175,7 @@ extension SetFile {
         }?.map { Named($0.key, $0.value) }
     }
 
-    /// A step log's `aspect`: `"3:4"` for portrait, or `{ "portrait": …, "landscape": … }`.
+    /// A step log's `previewAspect`: `"3:4"` for portrait, or `{ "portrait": …, "landscape": … }`.
     static func readAspectChoice(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> AspectChoice? {
         if case .string = value {
             return readAspect(value, path, reader).map { AspectChoice(portrait: $0) }

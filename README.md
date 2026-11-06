@@ -427,7 +427,8 @@ the Mac while it's recorded, rather than the device's speaker.
 Each take is a movie and a step log: when each step started and ended on the movie's own clock,
 where each touch landed, and the elements on screen after each step, with their labels and frames.
 The log is what lets an edit draw touches where they happened, find elements to spotlight or blur,
-and cut on steps rather than seconds, on any take of the same scene.
+and cut on steps rather than seconds, on any take of the same scene. Retake writes it, and a project
+never edits it; every field is in the [step log reference](Documentation/reference/take.md).
 
 Recording a scene again adds a take; it never replaces one. Takes are numbered per scene, and each
 records the app's version and build, the device, and when it was made, which `retake takes` lists.
@@ -769,9 +770,10 @@ repository's `mise.toml` can set for everyone; see [finding the project](Documen
 ### Schemas
 
 Every file Retake reads has a [JSON Schema](https://json-schema.org), released with Retake and versioned with it:
-`retake.json`, sets, scenes and edits. Retake reads every file against its own schema, so a file
-needn't name one. For an editor, a file can name its schema in a `"$schema"` key: the URL its schema
-is published at, which names Retake's version, such as
+`retake.json`, sets, scenes and edits, and the step logs Retake writes beside its takes. Retake
+reads every file against its own schema, so a file needn't name one. For an editor, a file can name
+its schema in a `"$schema"` key: the URL its schema is published at, which names Retake's version,
+such as
 `https://justinseanmartin.github.io/Retake/schemas/0.0.1/edit.schema.json`. Editors that read JSON
 Schema, VS Code among them, fetch it from there, and complete fields as you type, describe them on
 hover, and mark mistakes; nothing is copied into the project. Retake never adds the key, and `retake

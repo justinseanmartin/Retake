@@ -14,6 +14,7 @@ struct SchemaTests {
         case "retake": ProjectSettings.read(text, with: reader) != nil
         case "set": SetFile.read(text, with: reader) != nil
         case "scene": SceneFile.read(text, with: reader) != nil
+        case "take": TakeLog.read(text, with: reader) != nil
         default: EditFile.read(text, with: reader) != nil
         }
         return read && reader.problems.isEmpty
@@ -48,8 +49,84 @@ struct SchemaTests {
         }
     }
 
+    /// The newest take of each of the example project's scenes, where it has been recorded, and the
+    /// tests' own step logs: each fits the schema and reads.
+    @Test func theNewestTakesAndTheFixturesStepLogsFitTheSchemaAndRead() throws {
+        var logs: [(String, String)] = [
+            ("the fixture", JSONWriter.write(TakeLogReadingTests.log(failure: "step 2 didn't run").json)),
+            ("the timeline's", JSONWriter.write(TakeTimelineTests.timeline().log.json)),
+        ]
+        let takes = Self.repository.appending(path: "Examples/Notes/Retake/output/takes")
+        let files = FileManager.default
+        for type in DeviceType.allCases {
+            let folder = takes.appending(path: type.rawValue)
+            for scene in ((try? files.contentsOfDirectory(atPath: folder.path)) ?? []).sorted() {
+                let names = (try? files.contentsOfDirectory(atPath: folder.appending(path: scene).path)) ?? []
+                let numbers = names.filter { $0.hasSuffix(".mov") }.compactMap { Int($0.dropLast(4)) }
+                guard let newest = numbers.max(), names.contains("\(newest).json") else { continue }
+                let url = folder.appending(path: "\(scene)/\(newest).json")
+                logs.append(("\(type.rawValue)/\(scene)/\(newest).json", try String(contentsOf: url, encoding: .utf8)))
+            }
+        }
+        for (name, text) in logs {
+            #expect(try Self.schemaProblem(text, as: "take") == nil, "\(name)")
+            #expect(Self.reads(text, as: "take"), "\(name)")
+        }
+    }
+
+    /// A step log, the fixture's, with its top-level keys changed.
+    static func take(_ change: (inout [JSONObject.Entry]) -> Void) -> String {
+        TakeLogReadingTests.text(TakeLogReadingTests.log(failure: "step 2 didn't run")) { entries in
+            entries.append(.init(key: "hitches", value: json(#"[{"at": 1.2, "duration": 0.53}]"#)))
+            change(&entries)
+        }
+    }
+
+    static func json(_ text: String) -> JSONValue { try! JSONParser.parse(text) }
+
+    static func set(_ key: String, _ text: String) -> (inout [JSONObject.Entry]) -> Void { set(key, json(text)) }
+
+    static func set(_ key: String, _ value: JSONValue) -> (inout [JSONObject.Entry]) -> Void {
+        { entries in
+            if let index = entries.firstIndex(where: { $0.key == key }) { entries[index].value = value } else { entries.append(.init(key: key, value: value)) }
+        }
+    }
+
+    static func remove(_ keys: String...) -> (inout [JSONObject.Entry]) -> Void {
+        { entries in entries.removeAll { keys.contains($0.key) } }
+    }
+
+    static let takeCorpus: [(kind: String, text: String, right: Bool)] = [
+        ("take", take { _ in }, true),
+        ("take", take(set("format", "1")), true),
+        ("take", take { entries in entries[entries.firstIndex { $0.key == "previewAspect" }!].key = "aspect" }, true),
+        ("take", take(set("previewAspect", #""3:4""#)), true),
+        ("take", take(set("previewAspect", #"{"landscape": "4:3"}"#)), true),
+        ("take", take { remove("previewAspect", "launch", "hitches", "failure")(&$0); set("clock", .object(JSONObject()))(&$0) }, true),
+        ("take", take(set("format", "2")), false),
+        ("take", take(set("format", "0")), false),
+        ("take", take(set("format", "1.5")), false),
+        ("take", take(set("format", #""1""#)), false),
+        ("take", take { set("aspect", #"{"portrait": "3:4"}"#)(&$0) }, false),
+        ("take", take(remove("screen")), false),
+        ("take", take(remove("frames")), false),
+        ("take", take(remove("dropped")), false),
+        ("take", take(set("screen", "[834]")), false),
+        ("take", take(set("screen", "[834, 0]")), false),
+        ("take", take(set("size", "[1200, 1718, 1]")), false),
+        ("take", take(set("previewAspect", .object(JSONObject()))), false),
+        ("take", take(set("previewAspect", #"{"portrait": "tall"}"#)), false),
+        ("take", take(set("recordedAt", #""yesterday""#)), false),
+        ("take", take(set("state", #""fresh""#)), false),
+        ("take", take(set("steps", #"[{"number": 1, "action": "tap", "start": 1, "end": 2, "timedBy": "phone"}]"#)), false),
+        ("take", take(set("steps", #"[{"number": 1, "action": "tap", "start": 1, "end": 2, "timedBy": "mac", "touch": [1, 2, 3]}]"#)), false),
+        ("take", take(set("shapes", #"[{"at": 0, "size": [1200, 1718]}]"#)), false),
+        ("take", take(set("hitches", #"[{"at": 1, "duration": -1}]"#)), false),
+        ("take", take(set("pins", "true")), false),
+    ]
+
     /// Files a reader takes, then ones it refuses, each of which the schema should judge the same.
-    static let corpus: [(kind: String, text: String, right: Bool)] = [
+    static let corpus: [(kind: String, text: String, right: Bool)] = takeCorpus + [
         ("retake", ##"{"$schema": "x", "bundleID": "com.example.notes", "build": {"scheme": "Notes", "workspace": "N.xcworkspace", "configuration": "Debug", "allowProvisioningUpdates": true, "optimize": false}, "device": "ipad", "defaultSet": "base", "output": "out"}"##, true),
         ("retake", ##"{"build": {"command": "make", "app": "build/N.app"}}"##, true),
         ("retake", ##"{"build": {"scheme": "N", "command": "make"}}"##, false),

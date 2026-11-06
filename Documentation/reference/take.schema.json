@@ -1,0 +1,419 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.1/take.schema.json",
+  "title": "A step log",
+  "description": "A take's step log, `<n>.json` beside its movie `<n>.mov` in the output directory's `takes/<type>/<scene>/`: what was recorded, with what, and when each step happened on the movie's own clock, where it touched, and what was on screen after it. Retake writes it when it records the take, and reads it to list, clean and cut takes; a project doesn't write or edit it. Times are seconds into the movie, to the millisecond; positions and sizes on the screen are its points, portrait, to the hundredth.",
+  "type": "object",
+  "properties": {
+    "format": {
+      "description": "The step log's format. Retake doesn't write it: a log without it is format 1, the only one so far. A log of a later format was recorded by a newer Retake, and this one refuses it, saying to update Retake.",
+      "type": "integer",
+      "enum": [1]
+    },
+    "scene": {
+      "description": "The scene recorded, as its file in `scenes/<type>/` is named, without `.json`.",
+      "type": "string",
+      "minLength": 1
+    },
+    "take": {
+      "description": "The take's number among the scene's, from 1, which its movie and log are named by.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "set": {
+      "description": "The set the scene started on.",
+      "type": "string",
+      "minLength": 1
+    },
+    "state": {
+      "description": "The set's state, which the take's data started from.",
+      "type": "string",
+      "enum": ["clean", "cloned", "live"]
+    },
+    "deviceType": {
+      "description": "The type of device recorded.",
+      "type": "string",
+      "enum": ["iphone", "ipad"]
+    },
+    "device": {
+      "description": "The device recorded. Nothing personal: not its name, nor its UDID.",
+      "type": "object",
+      "properties": {
+        "model": {
+          "description": "Its hardware identifier, such as iPad13,4.",
+          "type": "string"
+        },
+        "marketingName": {
+          "description": "Its marketing name, such as iPad Pro (11-inch) (3rd generation), when devicectl gives one.",
+          "type": "string"
+        },
+        "os": {
+          "description": "Its iOS version and build, such as 26.6.2 (23G90).",
+          "type": "string"
+        }
+      },
+      "required": ["model", "os"],
+      "additionalProperties": false
+    },
+    "app": {
+      "description": "The app recorded.",
+      "type": "object",
+      "properties": {
+        "bundleID": {
+          "description": "Its bundle ID.",
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "description": "Its CFBundleShortVersionString, as installed on the device.",
+          "type": "string"
+        },
+        "build": {
+          "description": "Its CFBundleVersion.",
+          "type": "string"
+        }
+      },
+      "required": ["bundleID"],
+      "additionalProperties": false
+    },
+    "retake": {
+      "description": "The version of Retake that recorded it.",
+      "type": "string",
+      "minLength": 1
+    },
+    "buttonHeist": {
+      "description": "The Button Heist that drove the app: the one embedded in it.",
+      "type": "object",
+      "properties": {
+        "version": {
+          "description": "Its version.",
+          "type": "string",
+          "minLength": 1
+        },
+        "commit": {
+          "description": "The commit of the local clone it was built from, for one that was.",
+          "type": "string"
+        }
+      },
+      "required": ["version"],
+      "additionalProperties": false
+    },
+    "recordedAt": {
+      "description": "When the take was recorded, in ISO 8601 to the second, such as 2026-11-06T09:30:00Z.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z|[+-][0-9]{2}:?[0-9]{2})$"
+    },
+    "failure": {
+      "description": "Why the take failed, for one whose step didn't run; absent for a take that played every step. No edit is cut from a failed take.",
+      "type": "string"
+    },
+    "duration": {
+      "description": "The movie's length, in seconds, to the millisecond.",
+      "type": "number",
+      "minimum": 0
+    },
+    "size": {
+      "description": "The movie's size, [width, height], in capture pixels: its first frame's, which every frame is stored in.",
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "previewAspect": {
+      "description": "The shape the set's previewAspect gave the app's window: at the top of the screen in portrait, and at its left in landscape; a shape alone is portrait's. Absent when the app filled the screen. The edit crops each frame to it.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/shape"
+        },
+        {
+          "$ref": "#/$defs/preview-aspect"
+        }
+      ]
+    },
+    "aspect": {
+      "description": "Deprecated: previewAspect's old name, which takes recorded before it was renamed give. Still read, but never with previewAspect.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/shape"
+        },
+        {
+          "$ref": "#/$defs/preview-aspect"
+        }
+      ],
+      "deprecated": true
+    },
+    "screen": {
+      "description": "The device's screen, [width, height], in points, portrait: what the log's touches and frames are in, for the edit to find them in the movie's frames.",
+      "type": "array",
+      "items": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "frames": {
+      "description": "Frames written to the movie.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "dropped": {
+      "description": "Frames the encoder wasn't ready for, which a hitch in the take shows.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "launch": {
+      "description": "For a take recorded from before the app launched, as its scene's recordsLaunch asks: when it launched, for an edit to cut in on, each in seconds into the movie, to the millisecond.",
+      "type": "object",
+      "properties": {
+        "launched": {
+          "description": "When Retake launched the app.",
+          "type": "number"
+        },
+        "reported": {
+          "description": "When Retake's support library, in the app, reported in.",
+          "type": "number"
+        },
+        "connected": {
+          "description": "When The Button Heist connected to the app.",
+          "type": "number"
+        }
+      },
+      "required": ["launched", "reported", "connected"],
+      "additionalProperties": false
+    },
+    "clock": {
+      "description": "How the steps were placed on the movie's clock.",
+      "type": "object",
+      "properties": {
+        "deviceAhead": {
+          "description": "Seconds the device's clock was ahead of the Mac's, measured once at the start of the take, through which the device's own times for each step are placed. Absent when it couldn't be measured, and every step is timed by the Mac.",
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "steps": {
+      "description": "The steps played while recording, in order. Setup steps, played before recording starts, aren't logged.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/step"
+      }
+    },
+    "shapes": {
+      "description": "The movie's first shape, and each change after it, as the device turned.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "at": {
+            "description": "When the frames took this shape, in seconds into the movie, to the millisecond.",
+            "type": "number",
+            "minimum": 0
+          },
+          "size": {
+            "description": "The frames' size as the device sent them, [width, height], in capture pixels.",
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "turn": {
+            "description": "Degrees clockwise the frames are turned to fit the movie's size: 0, 90, or -90 for a quarter anticlockwise.",
+            "type": "integer"
+          }
+        },
+        "required": ["at", "size", "turn"],
+        "additionalProperties": false
+      }
+    },
+    "hitches": {
+      "description": "Each time the app's main thread missed a frame while it was recorded. Absent when Retake's support library didn't watch.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "at": {
+            "description": "When the app last drew, in seconds into the movie, to the millisecond.",
+            "type": "number"
+          },
+          "duration": {
+            "description": "Seconds until it drew again.",
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": ["at", "duration"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "scene",
+    "take",
+    "set",
+    "state",
+    "deviceType",
+    "device",
+    "app",
+    "retake",
+    "buttonHeist",
+    "recordedAt",
+    "duration",
+    "size",
+    "screen",
+    "frames",
+    "dropped",
+    "clock",
+    "steps",
+    "shapes"
+  ],
+  "additionalProperties": false,
+  "not": {
+    "required": ["previewAspect", "aspect"]
+  },
+  "$defs": {
+    "step": {
+      "description": "One step as it was recorded.",
+      "type": "object",
+      "properties": {
+        "number": {
+          "description": "Its number among the scene's steps, from 1.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "id": {
+          "description": "Its id in the scene, for one that has one.",
+          "type": "string",
+          "minLength": 1
+        },
+        "action": {
+          "description": "The kind of step: tap, drag, type, activate, orientation or waitFor, or hold for one that's only a pause.",
+          "type": "string",
+          "minLength": 1
+        },
+        "start": {
+          "description": "When it began, in seconds into the movie, to the millisecond, as the device saw it where it could.",
+          "type": "number"
+        },
+        "end": {
+          "description": "When it ended, in seconds into the movie, to the millisecond; for a waitFor, when its element came or went.",
+          "type": "number"
+        },
+        "timedBy": {
+          "description": "Whose times start and end are. device: the device's own, placed through clock.deviceAhead. mac: when the Mac sent the step and heard back, which a round trip either side widens.",
+          "type": "string",
+          "enum": ["device", "mac"]
+        },
+        "touch": {
+          "$ref": "#/$defs/point",
+          "description": "Where it touched the screen: a tap's point, by point or on an element, and where a drag came down."
+        },
+        "touchEnd": {
+          "$ref": "#/$defs/point",
+          "description": "Where a drag lifted."
+        },
+        "touchDuration": {
+          "description": "Seconds the finger was on the screen, from start, as The Button Heist timed it.",
+          "type": "number",
+          "minimum": 0
+        },
+        "elements": {
+          "description": "What was on screen when it ended, in the order VoiceOver reads it.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/screen-element"
+          }
+        }
+      },
+      "required": ["number", "action", "start", "end", "timedBy"],
+      "additionalProperties": false
+    },
+    "screen-element": {
+      "description": "An element on screen, as VoiceOver knows it, which an edit's spotlights and blurs find.",
+      "type": "object",
+      "properties": {
+        "label": {
+          "description": "Its accessibility label.",
+          "type": "string"
+        },
+        "value": {
+          "description": "Its value.",
+          "type": "string"
+        },
+        "identifier": {
+          "description": "The accessibilityIdentifier the app gives it.",
+          "type": "string"
+        },
+        "hint": {
+          "description": "Its accessibility hint.",
+          "type": "string"
+        },
+        "traits": {
+          "description": "Its traits, by The Button Heist's names.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "frame": {
+          "description": "Where it is, [x, y, width, height], in screen points.",
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "activationPoint": {
+          "$ref": "#/$defs/point",
+          "description": "Where a tap on it touches."
+        }
+      },
+      "additionalProperties": false
+    },
+    "point": {
+      "description": "[x, y], in screen points from the top left.",
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "preview-aspect": {
+      "description": "The app window's shape in portrait, and in landscape.",
+      "type": "object",
+      "properties": {
+        "portrait": {
+          "$ref": "#/$defs/shape",
+          "description": "Its shape in portrait, at the top of the screen."
+        },
+        "landscape": {
+          "$ref": "#/$defs/shape",
+          "description": "Its shape in landscape, at the left of the screen."
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": ["portrait"]
+        },
+        {
+          "required": ["landscape"]
+        }
+      ]
+    },
+    "shape": {
+      "description": "A width and a height, such as 3:4.",
+      "type": "string",
+      "pattern": "^[0-9]+(\\.[0-9]+)?:[0-9]+(\\.[0-9]+)?$"
+    }
+  }
+}

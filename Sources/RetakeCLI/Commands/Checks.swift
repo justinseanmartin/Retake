@@ -100,7 +100,7 @@ struct Schema: AsyncParsableCommand {
     )
 
     enum Kind: String, CaseIterable, ExpressibleByArgument {
-        case retake, set, scene, edit
+        case retake, set, scene, edit, take
     }
 
     @Argument(help: ArgumentHelp("The kind of file.", valueName: "kind"))
@@ -114,7 +114,7 @@ struct Schema: AsyncParsableCommand {
             throw ValidationError("Name a kind to print, or give --output to write them all, not both.")
         }
         if kind == nil, output == nil {
-            throw ValidationError("Name a kind to print (retake, set, scene or edit), or give --output.")
+            throw ValidationError("Name a kind to print (retake, set, scene, edit or take), or give --output.")
         }
     }
 

@@ -51,6 +51,17 @@ struct TakeStoreTests {
         #expect(names(TakeStore.takes(of: "a", for: [.ipad], in: project)) == ["ipad a@1", "ipad a@2"])
     }
 
+    @Test func aTakeANewerRetakeRecordedIsListedAsThatAndFailed() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let text = TakeLogReadingTests.text { $0.insert(.init(key: "format", value: 2), at: 0) }
+        try write("output/takes/ipad/a/3.json", text)
+        try write("output/takes/ipad/a/3.mov", "")
+        let takes = TakeStore.takes(of: "a", for: [.ipad], in: project)
+        #expect(takes.map(\.number) == [1, 2, 3])
+        #expect(takes[2].failed && takes[2].problem == "output/takes/ipad/a/3.json: was recorded by a newer Retake, in step log format 2, which this Retake (\(RetakeVersion.current.version)) can't read; update Retake to use this take")
+        #expect(takes[1].usedBy == ["video1"], "the latest take this Retake can read is still the one cut")
+    }
+
     @Test func cleaningChoosesEverythingOrWhatsNamed() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let everything = try TakeStore.cleaning(takes: nil, cuts: nil, for: DeviceType.allCases, in: project)

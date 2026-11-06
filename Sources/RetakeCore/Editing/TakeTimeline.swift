@@ -10,9 +10,9 @@ public struct TakeTimeline: Sendable {
     }
 
     /// The screen in points as the device faced `time` seconds into the take: turned from upright
-    /// when the frame was wider than tall. Nil for a take that didn't record its screen's size.
-    public func screen(at time: Double) -> CGSize? {
-        guard let screen = log.screen else { return nil }
+    /// when the frame was wider than tall.
+    public func screen(at time: Double) -> CGSize {
+        let screen = log.screen
         let shape = log.shapes.last { $0.at <= time + 1e-9 }
         let landscape = shape.map { $0.width > $0.height } ?? false
         return landscape == (screen.width > screen.height) ? screen : CGSize(width: screen.height, height: screen.width)

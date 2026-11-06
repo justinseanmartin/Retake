@@ -13,6 +13,7 @@ public struct Schema: Sendable {
     var keys: [Schema] = []
     var items: [Schema] = []
     var minItems: Int?
+    var maxItems: Int?
     var uniqueItems = false
     var choices: [JSONValue] = []
     var pattern: String?
@@ -27,6 +28,8 @@ public struct Schema: Sendable {
     var ref: String?
     var defaultValue: JSONValue?
     var examples: [JSONValue] = []
+    /// Still read, under a name that's been replaced.
+    var deprecated = false
 
     public struct Property: Sendable {
         public var name: String
@@ -69,6 +72,13 @@ extension Schema {
         schema.items = [items]
         schema.minItems = minItems
         schema.uniqueItems = unique
+        return schema
+    }
+
+    /// A list of exactly `count` values, such as `[width, height]`.
+    static func tuple(_ description: String? = nil, of items: Schema, count: Int) -> Schema {
+        var schema = array(description, of: items, minItems: count)
+        schema.maxItems = count
         return schema
     }
 
@@ -159,6 +169,12 @@ extension Schema {
         schema.description = description
         return schema
     }
+
+    func deprecated(_ description: String) -> Schema {
+        var schema = described(description)
+        schema.deprecated = true
+        return schema
+    }
 }
 
 // MARK: - Per-device overrides
@@ -223,11 +239,13 @@ extension Schema {
         }
         add("items", items.first?.json)
         add("minItems", minItems.map { .number(Double($0)) })
+        add("maxItems", maxItems.map { .number(Double($0)) })
         if uniqueItems { add("uniqueItems", .bool(true)) }
         if !not.isEmpty { add("not", not[0].json) }
         if !oneOf.isEmpty { add("oneOf", .array(oneOf.map(\.json))) }
         if !anyOf.isEmpty { add("anyOf", .array(anyOf.map(\.json))) }
         add("default", defaultValue)
+        if deprecated { add("deprecated", .bool(true)) }
         if !examples.isEmpty { add("examples", .array(examples)) }
         return .object(JSONObject(entries))
     }
@@ -241,7 +259,7 @@ public struct FileSchema: Sendable {
     public var definitions: [Schema.Property]
 
     /// The kinds of file, in the order `retake schema` lists them.
-    public static let kinds = ["retake", "set", "scene", "edit"]
+    public static let kinds = ["retake", "set", "scene", "edit", "take"]
 
     public static func named(_ kind: String) -> FileSchema? {
         switch kind {
@@ -249,6 +267,7 @@ public struct FileSchema: Sendable {
         case "set": SetFile.schema
         case "scene": SceneFile.schema
         case "edit": EditFile.schema
+        case "take": TakeLog.schema
         default: nil
         }
     }

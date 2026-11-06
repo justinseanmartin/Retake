@@ -36,7 +36,7 @@ struct PreviewExportTests {
         let red = try await tests.movie("red", red: 255, green: 0, blue: 0)
         let spec = PreviewSpec(width: 64, height: 96, framesPerSecond: 30)
         let plan = CutPlan(placements: [.init(take: "red", from: 0, to: 1, speed: 1, start: 0, duration: 1, crossfade: 0)])
-        let composition = try await EditComposition.make(plan, movies: ["red": red], spec: spec, background: .black)
+        let composition = try await EditComposition.make(plan, movies: ["red": red], logs: tests.logs("red"), spec: spec, background: .black)
         var overlays = Overlays()
         overlays.captions = [.init(text: "Hi", color: .black, y: 0.5, symbol: nil, start: 0, end: 1)]
         let record = MovieMetadata.Video(edit: "video1", type: .ipad, bundleID: "com.example.notes", takes: [TakeLogReadingTests.log()])
@@ -83,7 +83,7 @@ struct PreviewExportTests {
         let red = try await tests.movie("red", red: 255, green: 0, blue: 0)
         let spec = PreviewSpec(width: 64, height: 96, framesPerSecond: 30)
         let plan = CutPlan(placements: [.init(take: "red", from: 0, to: 1, speed: 1, start: 0, duration: 1, crossfade: 0)])
-        let composition = try await EditComposition.make(plan, movies: ["red": red], spec: spec, background: .black)
+        let composition = try await EditComposition.make(plan, movies: ["red": red], logs: tests.logs("red"), spec: spec, background: .black)
         var overlays = Overlays()
         overlays.captions = [.init(text: "Hi", color: .black, y: 0.5, symbol: nil, start: 0, end: 1)]
         let blurs = [PreviewExport.BlurRegion(start: 0, end: 0.5, rect: CGRect(x: 0, y: 0, width: 64, height: 96), sigma: 12)]

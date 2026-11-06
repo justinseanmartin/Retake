@@ -11,7 +11,7 @@ struct OverlaysTests {
     let scale = 1200.0 / 834
 
     /// The `TakeTimelineTests` take, its screen recorded, step `a` a tap at (100, 200).
-    func timeline(screen: CGSize? = CGSize(width: 834, height: 1194)) -> TakeTimeline {
+    func timeline(screen: CGSize = CGSize(width: 834, height: 1194)) -> TakeTimeline {
         var log = TakeTimelineTests.timeline().log
         log.screen = screen
         log.steps[0].touch = Point(x: 100, y: 200)
@@ -20,7 +20,7 @@ struct OverlaysTests {
         return TakeTimeline(log)
     }
 
-    func overlays(_ clips: String, edit: String = "", screen: CGSize? = CGSize(width: 834, height: 1194)) throws -> Overlays {
+    func overlays(_ clips: String, edit: String = "", screen: CGSize = CGSize(width: 834, height: 1194)) throws -> Overlays {
         let reader = JSONReader(file: "edits/video.json")
         let video = try #require(EditFile.read(#"{"devices": ["ipad"], \#(edit)"clips": [\#(clips)]}"#, with: reader)?.videos[.ipad], "\(reader.problems)")
         let timelines = ["walk": timeline(screen: screen)]
@@ -92,12 +92,6 @@ struct OverlaysTests {
         #expect(close(placed.blurs[0].rect, CGRect(x: 32 * scale, y: 24 * scale, width: 22 * scale, height: 10 * scale)))
     }
 
-    @Test func aShareOfTheScreenNeedsATakeThatRecordedItsSize() {
-        #expect(throws: RetakeError.self) {
-            try overlays(#"{"take": "walk", "from": {"step": "b"}, "to": {"step": "end"}, "blurs": [{"rect": {"x": 0, "y": 0, "width": "50%", "height": 10}}]}"#, screen: nil)
-        }
-    }
-
     @Test func touchesAreDrawnUnlessAClipTurnsThemOff() throws {
         let drawn = try overlays(#"{"take": "walk", "from": {"step": "start"}, "to": {"step": "end"}}"#)
         let hidden = try overlays(#"{"take": "walk", "from": {"step": "start"}, "to": {"step": "end"}, "touches": false}"#)
@@ -121,20 +115,6 @@ struct OverlaysTests {
             try overlays(##"{"take": "walk", "from": {"step": "start"}, "to": {"step": "end"}, "touchColors": [{"step": "b", "color": "#000000"}]}"##)
         }
         #expect(error?.message == "clips[0].touchColors[0].step: it doesn't touch the screen within the clip.")
-    }
-
-    @Test(arguments: [
-        (#"{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "touches": true}"#, "clips[0]: the take of walk doesn't record its screen's size, so its touches can't be drawn; record it again."),
-        (#"{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "touches": false, "spotlight": {"rect": {"x": 0, "y": 0, "width": 1, "height": 1}}}"#, "clips[0].spotlight: the take of walk doesn't record its screen's size; record it again."),
-    ])
-    func whatCantBePlacedWithoutTheScreensSizeSaysSo(_ clip: String, _ message: String) throws {
-        do {
-            _ = try overlays(clip, screen: nil)
-            Issue.record("placed it")
-        } catch {
-            let error = error as? RetakeError
-            #expect(error?.status == .failed && error?.message == message)
-        }
     }
 
     @Test func aSpotlightOnAnElementNotOnScreenSaysWhy() throws {

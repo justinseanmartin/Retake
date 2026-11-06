@@ -58,6 +58,7 @@ struct SchemaValidator {
         }
         if case .array(let values) = value {
             if case .number(let minimum)? = schema["minItems"], Double(values.count) < minimum { return "\(path): too few" }
+            if case .number(let maximum)? = schema["maxItems"], Double(values.count) > maximum { return "\(path): too many" }
             if schema["uniqueItems"] == .bool(true), Set(values.map(JSONWriter.compact)).count < values.count { return "\(path): repeats" }
             if let items = schema["items"] {
                 for (index, item) in values.enumerated() {

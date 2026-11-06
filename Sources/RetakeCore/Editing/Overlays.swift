@@ -84,7 +84,7 @@ public struct Overlays: Equatable, Sendable {
     /// The overlays of `video`, as `plan` places its clips, each framed as `framings` says (from
     /// `EditComposition`), its anchors and elements resolved in its scene's take in `timelines`.
     /// Fails (1), naming where, for an anchor or element that doesn't resolve, a caption that ends
-    /// before it starts, or a touch, spotlight or blur in a take that didn't record its screen.
+    /// before it starts.
     public static func make(
         _ video: Edit, plan: CutPlan, framings: [[(at: Double, framing: ClipFraming)]], timelines: [String: TakeTimeline],
     ) throws(RetakeError) -> Overlays {
@@ -105,22 +105,12 @@ public struct Overlays: Equatable, Sendable {
             func framing(at videoTime: Double) -> ClipFraming {
                 framings[index].last { $0.at <= videoTime + 1e-9 }?.framing ?? framings[index][0].framing
             }
-            func onCanvas(_ rect: CGRect, at videoTime: Double, _ what: String) throws(RetakeError) -> CGRect {
-                guard let placed = framing(at: videoTime).canvasRect(rect) else {
-                    throw RetakeError(.failed, "\(name).\(what): the take of \(clip.take) doesn't record its screen's size; record it again.")
-                }
-                return placed
-            }
             func region(_ region: Edit.Region, at videoTime: Double, padding: Double = 0, _ what: String) throws(RetakeError) -> CGRect {
                 let points: CGRect
                 switch region {
                 case .rect(let rect):
                     let takeTime = placement.from + (videoTime - placement.start) * placement.speed
-                    let screen = timeline.screen(at: takeTime)
-                    if rect.hasShare, screen == nil {
-                        throw RetakeError(.failed, "\(name).\(what).rect: the take of \(clip.take) doesn't record its screen's size, which a share of it needs; record it again.")
-                    }
-                    points = rect.within(CGRect(origin: .zero, size: screen ?? .zero))
+                    points = rect.within(CGRect(origin: .zero, size: timeline.screen(at: takeTime)))
                 case .element(let element, let part):
                     let takeTime = placement.from + (videoTime - placement.start) * placement.speed
                     let found: ScreenElement
@@ -134,7 +124,7 @@ public struct Overlays: Equatable, Sendable {
                     let whole = CGRect(x: frame.x, y: frame.y, width: frame.width, height: frame.height)
                     points = part?.within(whole) ?? whole
                 }
-                return try onCanvas(points.insetBy(dx: -padding, dy: -padding), at: videoTime, what)
+                return framing(at: videoTime).canvasRect(points.insetBy(dx: -padding, dy: -padding))
             }
 
             // A caption that doesn't say when keeps clear of the cross-fades: it comes up once its
@@ -181,9 +171,7 @@ public struct Overlays: Equatable, Sendable {
                 for step in timeline.log.steps where step.start >= placement.from && step.start < placement.to {
                     guard let touch = step.touch else { continue }
                     let at = placement.videoTime(step.start)
-                    guard let toCanvas = framing(at: at).pointsToCanvas else {
-                        throw RetakeError(.failed, "\(name): the take of \(clip.take) doesn't record its screen's size, so its touches can't be drawn; record it again.")
-                    }
+                    let toCanvas = framing(at: at).pointsToCanvas
                     overlays.touches.append(Touch(
                         from: CGPoint(x: touch.x, y: touch.y).applying(toCanvas),
                         to: step.touchEnd.map { CGPoint(x: $0.x, y: $0.y).applying(toCanvas) },
@@ -205,7 +193,8 @@ public struct Overlays: Equatable, Sendable {
                 let end = try time(blur.to, "\(what).to") ?? placement.end
                 let rect = try region(blur.region, at: start, what)
                 // The region found, its framing turns points into canvas pixels.
-                let scale = framing(at: start).pointsToCanvas.map { sqrt(abs($0.a * $0.d - $0.b * $0.c)) } ?? 1
+                let toCanvas = framing(at: start).pointsToCanvas
+                let scale = sqrt(abs(toCanvas.a * toCanvas.d - toCanvas.b * toCanvas.c))
                 overlays.blurs.append(Blur(rect: rect, sigma: blur.radius * scale, start: start, end: end))
             }
 

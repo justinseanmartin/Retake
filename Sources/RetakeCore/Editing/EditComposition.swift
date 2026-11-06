@@ -23,13 +23,12 @@ public struct EditComposition: @unchecked Sendable {
     }
 
     /// The composition of `plan`, each clip from the movie of its take in `movies`, framed by its
-    /// take's step log in `logs` (its `aspect`, and the shapes its frames took), on a canvas of
-    /// `spec`'s size behind which is `background`. A take without a log is framed as one shape,
-    /// filling the screen.
+    /// take's step log in `logs` (its `previewAspect`, its screen, and the shapes its frames took),
+    /// on a canvas of `spec`'s size behind which is `background`.
     public static func make(
         _ plan: CutPlan,
         movies: [String: URL],
-        logs: [String: TakeLog] = [:],
+        logs: [String: TakeLog],
         spec: PreviewSpec,
         background: Color,
     ) async throws(RetakeError) -> EditComposition {
@@ -50,10 +49,12 @@ public struct EditComposition: @unchecked Sendable {
                     throw RetakeError(.failed, "\(movie.lastPathComponent) has no picture.")
                 }
                 let size = try await source.load(.naturalSize)
-                let log = logs[placement.take]
-                let stretches = Self.stretches(of: placement, shapes: log?.shapes ?? [])
+                guard let log = logs[placement.take] else {
+                    throw RetakeError(.failed, "There's no step log of \(placement.take)'s take to cut from.")
+                }
+                let stretches = Self.stretches(of: placement, shapes: log.shapes)
                 framings.append(stretches.map { at, turn in
-                    (placement.videoTime(at), ClipFraming.framing(spec.size, stored: size, turned: turn, aspect: log?.aspect, turns: placement.turns, screen: log?.screen))
+                    (placement.videoTime(at), ClipFraming.framing(spec.size, stored: size, turned: turn, aspect: log.previewAspect, turns: placement.turns, screen: log.screen))
                 })
                 if let blur = placement.turnBlur {
                     for (at, _) in stretches.dropFirst() {
