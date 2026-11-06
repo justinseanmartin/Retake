@@ -70,9 +70,10 @@ public struct Project: Sendable, Equatable {
         return path.hasPrefix(prefix) ? String(path.dropFirst(prefix.count)) : path
     }
 
-    /// The project a command runs in: the configuration file `configuration` names (`--config`),
-    /// otherwise `retake.json` or `Retake/retake.json` in the current directory, read strictly. No
-    /// other directory is searched, so a command never acts on a project it wasn't pointed at.
+    /// The project a command runs in: the configuration file `configuration` names (`--config`, else
+    /// `RETAKE_CONFIG`), otherwise `retake.json` or `Retake/retake.json` in the current directory,
+    /// read strictly. No other directory is searched, so a command never acts on a project it wasn't
+    /// pointed at.
     /// `output` (`--output-dir`) moves where it writes; it needn't exist yet. A file that can't be found
     /// is misuse (2); one that can't be read, or says something it shouldn't, fails (1), naming
     /// each problem.

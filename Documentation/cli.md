@@ -554,7 +554,8 @@ Existing takes are never changed.
 **`--dry-run`** plays the scenes chosen as `record` would, without recording them, for trying a
 scene out while writing it: it launches on each scene's set, plays its setup and steps with their
 holds, prints each step as it plays, and deletes the take's copy of the app's data from the device
-at the end. It writes nothing, and fails (1) at the first step that doesn't run, naming it. It plays
+at the end. It writes nothing to the project, its console log going to a temporary folder as every
+launch's does, and fails (1) at the first step that doesn't run, naming it. It plays
 every step with its hold, as a take would: a step can need the app to have settled after the one
 before, so a dry run that skipped holds could fail where a take wouldn't, or pass where it fails.
 

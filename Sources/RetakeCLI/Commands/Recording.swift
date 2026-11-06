@@ -188,7 +188,8 @@ struct Record: AsyncParsableCommand {
             With no scenes named, records every scene in scenes/<type>/ with no take yet, or every one \
             with --force. With --for, the scenes an edit uses. Scenes named are recorded whether or not \
             they have takes. A new take never replaces one. With --dry-run, plays the scenes chosen \
-            the same way, and writes nothing.
+            the same way, and writes nothing to the project: its console log goes to a temporary \
+            folder, as every launch's does.
             """,
     )
 
