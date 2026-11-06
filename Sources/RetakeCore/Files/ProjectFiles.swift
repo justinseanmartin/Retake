@@ -4,10 +4,58 @@ import Foundation
 public struct ProjectFiles {
     public let project: Project
     let fileManager: FileManager
+    /// The names in a directory as it lists them, or nil when it can't be listed: the seam
+    /// `misnamedFolder(_:)` looks through.
+    let listing: (URL) -> [String]?
 
-    public init(project: Project, fileManager: FileManager = .default) {
+    public init(project: Project, fileManager: FileManager = .default, listing: ((URL) -> [String]?)? = nil) {
         self.project = project
         self.fileManager = fileManager
+        self.listing = listing ?? { try? fileManager.contentsOfDirectory(atPath: $0.path) }
+    }
+
+    /// One of the project's folders there in another case: `Edits/` for `edits/`. A case-sensitive
+    /// volume, such as a clone git made of a folder renamed on a Mac, has no `edits/` at all, and
+    /// a Mac's case-insensitive one finds `edits/` though it's listed as `Edits/`.
+    public struct MisnamedFolder: Equatable, Sendable, CustomStringConvertible {
+        /// The folder as it's listed, relative to the project: `Edits`.
+        public var found: String
+        /// The folder as Retake names it: `edits`.
+        public var expected: String
+
+        public var message: String { "should be named \(expected)/; Retake's folders are lowercase" }
+        public var description: String { "\(found)/ \(message)" }
+    }
+
+    /// `folder`, or the first folder on the way to it from the project's directory, when it's listed
+    /// in another case than Retake names it; nil when every one is listed as named, or one isn't
+    /// there at all. It lists each parent, not stats each casing, so it's for when a folder's
+    /// contents can't be found, and for `validate`.
+    public func misnamedFolder(_ folder: URL) -> MisnamedFolder? {
+        let relative = project.displayPath(folder)
+        guard !relative.hasPrefix("/") else { return nil }
+        var parent = project.root
+        var found: [String] = [], expected: [String] = []
+        for name in relative.split(separator: "/").map(String.init) {
+            guard let entries = listing(parent) else { return nil }
+            expected.append(name)
+            if entries.contains(name) {
+                found.append(name)
+            } else if let other = entries.first(where: { $0.caseInsensitiveCompare(name) == .orderedSame }) {
+                found.append(other)
+                return MisnamedFolder(found: found.joined(separator: "/"), expected: expected.joined(separator: "/"))
+            } else {
+                return nil
+            }
+            parent = parent.appending(path: name, directoryHint: .isDirectory)
+        }
+        return nil
+    }
+
+    /// What to add to a message that `url`, in one of the project's folders, isn't there: that its
+    /// folder is named in another case, when it is; otherwise nothing.
+    public func whyMissing(_ url: URL) -> String {
+        misnamedFolder(url.deletingLastPathComponent()).map { ": \($0)" } ?? ""
     }
 
     /// Problems found across the files read, and warnings, each naming its file.
@@ -48,7 +96,7 @@ public struct ProjectFiles {
     func text(of url: URL, into report: Report) -> String? {
         let name = project.displayPath(url)
         guard let data = fileManager.contents(atPath: url.path) else {
-            report.problem(FileProblem(file: name, path: .root, message: "doesn't exist"))
+            report.problem(FileProblem(file: name, path: .root, message: "doesn't exist\(whyMissing(url))"))
             return nil
         }
         guard let text = String(data: data, encoding: .utf8) else {

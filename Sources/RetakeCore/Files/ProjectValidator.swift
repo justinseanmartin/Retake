@@ -41,7 +41,8 @@ public struct ProjectValidator {
         return nil
     }
 
-    /// Every file of the project, or only `targets`, each checked; problems in files only read to
+    /// Every file of the project, or only `targets`, each checked, and the folders they're in named
+    /// as Retake names them; problems in files only read to
     /// check a target's references aren't reported.
     public func validate(_ targets: [Target]? = nil) -> ProjectFiles.Report {
         let report = ProjectFiles.Report()
@@ -53,6 +54,7 @@ public struct ProjectValidator {
             for type in DeviceType.allCases { scenes += files.names(in: project.scenes(for: type)).map { ($0, type) } }
         }
 
+        checkFolders(targets, report)
         if all || targets?.contains(.configuration) == true { checkConfiguration(report) }
         for name in sets { checkSet(name, report) }
         for (name, type) in scenes { checkScene(name, type, report) }
@@ -61,6 +63,26 @@ public struct ProjectValidator {
     }
 
     // MARK: - Each kind of file
+
+    /// The folders holding the project's files, or `targets`, each listed in the case Retake names
+    /// it: one in another case holds nothing on a case-sensitive volume.
+    func checkFolders(_ targets: [Target]?, _ report: ProjectFiles.Report) {
+        let folders: [URL] = targets.map { targets in
+            targets.compactMap { target in
+                switch target {
+                case .configuration: nil
+                case .set: project.sets
+                case .scene(_, let type): project.scenes(for: type)
+                case .edit: project.edits
+                }
+            }
+        } ?? [project.sets] + DeviceType.allCases.map(project.scenes(for:)) + [project.edits]
+        var named: Set<String> = []
+        for folder in folders {
+            guard let misnamed = files.misnamedFolder(folder), named.insert(misnamed.found).inserted else { continue }
+            report.problem(FileProblem(file: "\(misnamed.found)/", path: .root, message: misnamed.message))
+        }
+    }
 
     func checkConfiguration(_ report: ProjectFiles.Report) {
         guard let defaultSet = project.settings.defaultSet, !exists(files.setURL(defaultSet)) else { return }

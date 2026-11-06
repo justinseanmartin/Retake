@@ -46,7 +46,10 @@ struct Cut: AsyncParsableCommand {
         let files = ProjectFiles(project: located)
         let names = all ? files.names(in: located.edits) : edits
         if let missing = names.first(where: { !FileManager.default.fileExists(atPath: files.editURL($0).path) }) {
-            throw RetakeError(.usage, "There's no edit \"\(missing)\" (\(located.displayPath(files.editURL(missing)))).")
+            throw RetakeError(.usage, "There's no edit \"\(missing)\" (\(located.displayPath(files.editURL(missing))))\(files.whyMissing(files.editURL(missing))).")
+        }
+        if names.isEmpty, let misnamed = files.misnamedFolder(located.edits) {
+            throw RetakeError(.failed, "There are no edits in \(located.displayPath(located.edits)): \(misnamed).")
         }
         var worst = ExitStatus.done
         var written: [URL] = []

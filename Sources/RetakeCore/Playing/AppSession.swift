@@ -13,7 +13,7 @@ public enum AppSession {
             let others = files.names(in: project.sets)
             throw RetakeError(
                 .usage,
-                "\(namedBy): there's no set \"\(name)\" (\(project.displayPath(files.setURL(name))))"
+                "\(namedBy): there's no set \"\(name)\" (\(project.displayPath(files.setURL(name))))\(files.whyMissing(files.setURL(name)))"
                     + (others.isEmpty ? "." : "; there's \(others.joined(separator: ", ")).")
             )
         }
@@ -31,7 +31,7 @@ public enum AppSession {
             let others = files.names(in: project.scenes(for: type))
             throw RetakeError(
                 .usage,
-                "There's no \(type.rawValue) scene \"\(name)\" (\(project.displayPath(url)))"
+                "There's no \(type.rawValue) scene \"\(name)\" (\(project.displayPath(url)))\(files.whyMissing(url))"
                     + (others.isEmpty ? "." : "; there's \(others.joined(separator: ", ")).")
             )
         }

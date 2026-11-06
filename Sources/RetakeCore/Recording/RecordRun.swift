@@ -31,17 +31,22 @@ public enum RecordRun {
     /// The scenes to record, in order, as Documentation/cli.md's table says: those named; or every scene in
     /// `scenes/<type>/`, or every one `edit` uses, either way only those with no take yet unless
     /// `force`. A failed take is never cut from, so it isn't a take for this. Misuse (2) for a scene
-    /// or edit that doesn't exist, or an edit not cut for this device type.
+    /// or edit that doesn't exist, or an edit not cut for this device type; a failure (1) when
+    /// `scenes/<type>/` lists nothing because it's named in another case.
     public static func scenes(
         named: [String], edit: String?, force: Bool, for type: DeviceType, in project: Project,
     ) throws(RetakeError) -> (chosen: [String], alreadyTaken: [String]) {
         let files = ProjectFiles(project: project)
         let available = files.names(in: project.scenes(for: type))
+        if available.isEmpty, let misnamed = files.misnamedFolder(project.scenes(for: type)) {
+            throw RetakeError(.failed, "There are no \(type.rawValue) scenes in \(project.displayPath(project.scenes(for: type))): \(misnamed).")
+        }
         if !named.isEmpty {
             if let missing = named.first(where: { !available.contains($0) }) {
                 throw RetakeError(
                     .usage,
                     "There's no \(type.rawValue) scene \"\(missing)\" (\(project.displayPath(files.sceneURL(missing, for: type))))"
+                        + files.whyMissing(files.sceneURL(missing, for: type))
                         + (available.isEmpty ? "." : "; there's \(available.joined(separator: ", ")).")
                 )
             }
@@ -51,7 +56,7 @@ public enum RecordRun {
         var candidates = available
         if let edit {
             guard FileManager.default.fileExists(atPath: files.editURL(edit).path) else {
-                throw RetakeError(.usage, "There's no edit \"\(edit)\" (\(project.displayPath(files.editURL(edit)))).")
+                throw RetakeError(.usage, "There's no edit \"\(edit)\" (\(project.displayPath(files.editURL(edit))))\(files.whyMissing(files.editURL(edit))).")
             }
             let report = ProjectFiles.Report()
             guard let file = files.readEdit(edit, into: report) else { throw report.error }

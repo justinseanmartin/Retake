@@ -135,6 +135,55 @@ struct ProjectValidatorTests {
         #expect(validator.target(for: root.appending(path: "data/notes.json")) == nil)
     }
 
+    // MARK: Folders named in another case
+
+    /// Renames a folder to another case, in two moves, as a case-insensitive volume needs.
+    func rename(_ path: String, to other: String) throws {
+        let aside = root.appending(path: "\(path)-aside")
+        try FileManager.default.moveItem(at: root.appending(path: path), to: aside)
+        try FileManager.default.moveItem(at: aside, to: root.appending(path: other))
+    }
+
+    @Test func aFolderListedInAnotherCaseIsReportedThoughItsFound() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try edit(#"{"take": "walk", "from": {"step": "open"}, "to": {"step": "done"}}"#)
+        try rename("edits", to: "Edits")
+        try rename("scenes/ipad", to: "scenes/iPad")
+        // The tests' volume is case-insensitive, so both are still found; only their listing differs.
+        #expect(try validate() == [
+            "scenes/iPad/: should be named scenes/ipad/; Retake's folders are lowercase",
+            "Edits/: should be named edits/; Retake's folders are lowercase",
+        ])
+        #expect(try validate([.scene("walk", .iphone)]) == [], "only the named files' folders are checked")
+    }
+
+    @Test func aFileMissingFromAFolderInAnotherCaseSaysWhy() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try rename("scenes", to: "Scenes")
+        let files = ProjectFiles(project: try Project.locate(configuration: nil, currentDirectory: root))
+        let report = ProjectFiles.Report()
+        #expect(files.readScene("absent", for: .iphone, into: report) == nil)
+        #expect(report.problems.map(\.description) == [
+            "scenes/iphone/absent.json: doesn't exist: Scenes/ should be named scenes/; Retake's folders are lowercase",
+        ])
+    }
+
+    @Test func aCaseSensitiveCloneWithOnlyTheOtherCaseSaysWhyItsEmpty() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        // A clone keeping `Edits/`: there's no `edits/` to stat, and the root lists `Edits`.
+        try FileManager.default.removeItem(at: root.appending(path: "edits"))
+        let project = try Project.locate(configuration: nil, currentDirectory: root)
+        let files = ProjectFiles(project: project) { folder in
+            let names = try? FileManager.default.contentsOfDirectory(atPath: folder.path)
+            return folder.standardizedFileURL.path == project.root.path ? (names ?? []) + ["Edits"] : names
+        }
+        #expect(ProjectValidator(files: files).validate().problems.map(\.description) == [
+            "Edits/: should be named edits/; Retake's folders are lowercase",
+        ])
+        #expect(files.whyMissing(files.editURL("video1")) == ": Edits/ should be named edits/; Retake's folders are lowercase")
+        #expect(files.misnamedFolder(project.sets) == nil)
+    }
+
     // MARK: Against the takes
 
     func validateWithTakes() throws -> (problems: [String], warnings: [String]) {

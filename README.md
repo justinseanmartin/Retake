@@ -760,6 +760,10 @@ Retake/
   output/            # takes and videos; gitignored, and movable with --output-dir
 ```
 
+The folders' names are lowercase, and Retake reads them only as named: a folder in another case,
+such as `Edits/`, which git can keep after a folder is renamed on a Mac, is reported, by `validate`
+and by any command that can't find a file in it, rather than read as empty.
+
 Builds and your device aliases are kept outside the repository, in `~/Library/Caches/retake/`, for
 every project: a build rewrites thousands of files each time, and aliases name your own devices.
 

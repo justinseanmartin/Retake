@@ -318,7 +318,11 @@ struct Takes: AsyncParsableCommand {
         if let scene, takes.isEmpty {
             let files = ProjectFiles(project: located)
             guard types.contains(where: { FileManager.default.fileExists(atPath: files.sceneURL(scene, for: $0).path) }) else {
-                throw RetakeError(.usage, "There's no scene \"\(scene)\" for \(types.map(\.rawValue).joined(separator: " or ")).")
+                throw RetakeError(
+                    .usage,
+                    "There's no scene \"\(scene)\" for \(types.map(\.rawValue).joined(separator: " or "))"
+                        + "\(types.lazy.compactMap { files.misnamedFolder(located.scenes(for: $0)) }.first.map { ": \($0)" } ?? "").",
+                )
             }
         }
         if output.json {
