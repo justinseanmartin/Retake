@@ -11,7 +11,7 @@
 //   RETAKE_TAKE        an id for the take, naming its home in tmp/RetakeTakes/
 //   RETAKE_DEFAULTS    the set's defaults, as a JSON object
 //   RETAKE_ASPECT_PORTRAIT, RETAKE_ASPECT_LANDSCAPE
-//                      the shapes the app's windows take, such as 3:4 (README.md, "aspect")
+//                      the shapes the app's windows take, such as 3:4 (README.md, "previewAspect")
 //   RETAKE_APPEARANCE  light or dark, the appearance the app's window scenes are held to
 //   RETAKE_CLEANUP     1 for a launch that only deletes takes' homes and staged files, then exits
 //

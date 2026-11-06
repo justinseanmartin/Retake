@@ -26,7 +26,7 @@ public struct TakeLog: Equatable, Sendable {
     /// nil in a log written before they were recorded.
     public var frames: Int? = nil
     public var dropped: Int? = nil
-    /// The shape the set's `aspect` gave the app's window, portrait and landscape, at the top (or in
+    /// The shape the set's `previewAspect` gave the app's window, portrait and landscape, at the top (or in
     /// landscape, the left) of the screen; nil when the window filled it. The editor crops to it.
     public var aspect: SetFile.AspectChoice? = nil
     /// The device's screen in points, portrait, which the log's touches and frames are in, for the

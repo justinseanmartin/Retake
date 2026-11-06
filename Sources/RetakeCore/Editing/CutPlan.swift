@@ -16,6 +16,13 @@ public struct PreviewSpec: Equatable, Sendable {
     }
 
     public var size: CGSize { CGSize(width: width, height: height) }
+
+    /// The preview's shape in its lowest terms: 443:960 for an iPhone's, 3:4 for an iPad's.
+    public var aspect: SetFile.Aspect {
+        func gcd(_ a: Int, _ b: Int) -> Int { b == 0 ? a : gcd(b, a % b) }
+        let divisor = gcd(width, height)
+        return SetFile.Aspect(width: Double(width / divisor), height: Double(height / divisor))
+    }
 }
 
 /// Where each of an edit's clips falls on the video's clock: the stretch of its take it plays, and
@@ -113,7 +120,7 @@ public struct ClipFraming: Equatable, Sendable {
     }
 
     /// The app's window in a portrait frame of `capture`'s size: the whole frame, or with `aspect`,
-    /// the band of that shape at its top, which the set's `aspect` laid the app out in.
+    /// the band of that shape at its top, which the set's `previewAspect` laid the app out in.
     public static func window(in capture: CGSize, aspect: SetFile.Aspect?) -> CGRect {
         guard let aspect else { return CGRect(origin: .zero, size: capture) }
         let height = min(capture.height, (capture.width * aspect.height / aspect.width).rounded())

@@ -21,20 +21,24 @@ struct SetFileTests {
               "defaults": { "hasSeenOnboarding": true, "sortOrder": "recent" },
               "environment": { "MYAPP_REGION_NEUTRAL_PRICES": "1" },
               "arguments": ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"],
-              "aspect": { "ipad": "3:4" }
+              "previewAspect": true
             }
             """#)
         #expect(result.problems.isEmpty)
         #expect(result.set?.files.map(\.isFolder) == [false, true])
-        #expect(result.set?.aspect[.ipad]?.landscapeShape == SetFile.Aspect(width: 4, height: 3))
-        #expect(result.set?.aspect[.iphone] == nil)
+        #expect(result.set?.previewAspect == true)
     }
 
-    @Test func eachOrientationsShapeCanBeGiven() {
-        let set = read(#"{"aspect": {"ipad": {"portrait": "3:4", "landscape": "16:10"}, "iphone": {"landscape": "19.5:9"}}}"#).set
-        #expect(set?.aspect[.ipad] == SetFile.AspectChoice(portrait: .init(width: 3, height: 4), landscape: .init(width: 16, height: 10)))
-        #expect(set?.aspect[.iphone]?.portrait == nil)
-        #expect(set?.aspect[.iphone]?.landscapeShape == SetFile.Aspect(width: 19.5, height: 9))
+    @Test func previewAspectGivesEachDeviceTypeItsPreviewsShapeAndItsTurn() throws {
+        let set = ResolvedSet(name: "a", previewAspect: true)
+        #expect(set.aspect(for: .iphone) == SetFile.AspectChoice(portrait: .init(width: 443, height: 960), landscape: .init(width: 960, height: 443)))
+        #expect(set.aspect(for: .ipad) == SetFile.AspectChoice(portrait: .init(width: 3, height: 4), landscape: .init(width: 4, height: 3)))
+        for type in DeviceType.allCases {
+            let shape = try #require(set.aspect(for: type)?.portrait)
+            let spec = PreviewSpec.of(type)
+            #expect(shape.width * Double(spec.height) == shape.height * Double(spec.width), "the preview's own shape, for \(type)")
+        }
+        #expect(ResolvedSet(name: "a").aspect(for: .ipad) == nil, "without it the app fills the screen")
     }
 
     @Test(arguments: [
@@ -50,11 +54,7 @@ struct SetFileTests {
         (#"{"environment": {"INSIDEJOB_PORT": "1"}}"#, "sets/a.json: environment.INSIDEJOB_PORT: is Retake's to set: it launches the app with its own INSIDEJOB_ variables"),
         (#"{"environment": {"MY-FLAG": "1"}}"#, #"sets/a.json: environment.MY-FLAG: isn't an environment variable's name: letters, digits and "_", not starting with a digit"#),
         (#"{"environment": {"FLAG": 1}}"#, "sets/a.json: environment.FLAG: expected a string, found a number"),
-        (#"{"aspect": {"ipad": "3x4"}}"#, #"sets/a.json: aspect.ipad: "3x4" isn't a shape: a width and a height, such as 3:4"#),
-        (#"{"aspect": {"ipad": "0:4"}}"#, #"sets/a.json: aspect.ipad: "0:4" isn't a shape: a width and a height, such as 3:4"#),
-        (#"{"aspect": {"ipad": {}}}"#, #"sets/a.json: aspect.ipad: needs "portrait", "landscape", or both"#),
-        (#"{"aspect": {"android": "3:4"}}"#, #"sets/a.json: aspect: unknown key "android""#),
-        (#"{"aspect": {"iPad": "3:4"}}"#, #"sets/a.json: aspect: unknown key "iPad"; did you mean "ipad"?"#),
+        (#"{"aspect": {"ipad": "3:4"}}"#, #"sets/a.json: aspect: is now "previewAspect": true, which gives the app the App Store preview's shape"#),
         (#"{"arguments": "-AppleLanguages (en)"}"#, "sets/a.json: arguments: expected a list, found a string"),
     ])
     func mistakesAreNamed(_ text: String, _ expected: String) {
@@ -93,12 +93,12 @@ struct ResolvedSetTests {
     @Test func aSetLiesOverTheSetsItExtends() throws {
         try write("base", #"""
             {"state": "cloned", "files": {"Documents/a.json": "data/base-a.json", "Documents/b.json": "data/base-b.json"},
-             "defaults": {"x": 1, "y": 1}, "environment": {"A": "base", "B": "base"}, "arguments": ["-one"], "aspect": {"ipad": "3:4"}}
+             "defaults": {"x": 1, "y": 1}, "environment": {"A": "base", "B": "base"}, "arguments": ["-one"], "previewAspect": true}
             """#)
         try write("middle", #"{"extends": "base", "defaults": {"y": 2}, "arguments": ["-two"]}"#)
         try write("top", #"""
             {"extends": "middle", "files": {"Documents/b.json": "data/top-b.json", "Documents/c.json": "data/top-c.json"},
-             "environment": {"B": "top"}, "arguments": ["-three"], "aspect": {"iphone": "9:16"}}
+             "environment": {"B": "top"}, "arguments": ["-three"]}
             """#)
         let result = resolve("top")
         #expect(result.problems.isEmpty)
@@ -111,7 +111,15 @@ struct ResolvedSetTests {
         #expect(set.defaults == [Named("x", .number(1)), Named("y", .number(2))])
         #expect(set.environment == [Named("A", "base"), Named("B", "top")])
         #expect(set.arguments == ["-one", "-two", "-three"])
-        #expect(set.aspect.keys.sorted { $0.rawValue < $1.rawValue } == [.ipad, .iphone])
+        #expect(set.previewAspect, "previewAspect is the base's until a set above it gives one")
+    }
+
+    @Test func anExtendingSetsPreviewAspectOverridesItsBasesEitherWay() throws {
+        try write("shaped", #"{"previewAspect": true}"#)
+        try write("filled", #"{"extends": "shaped", "previewAspect": false}"#)
+        try write("reshaped", #"{"extends": "filled", "previewAspect": true}"#)
+        #expect(resolve("filled").set?.previewAspect == false)
+        #expect(resolve("reshaped").set?.previewAspect == true)
     }
 
     @Test func aSetWithNoStateIsClean() throws {

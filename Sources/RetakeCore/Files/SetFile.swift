@@ -23,7 +23,7 @@ public struct SetFile: Equatable, Sendable {
         public var isFolder: Bool { destination.hasSuffix("/") }
     }
 
-    /// A preview's shape, as its width over its height: `3:4`.
+    /// A window's shape, as its width over its height: `3:4`.
     public struct Aspect: Equatable, Sendable, CustomStringConvertible {
         public var width: Double
         public var height: Double
@@ -39,7 +39,8 @@ public struct SetFile: Equatable, Sendable {
         public var description: String { "\(JSONReader.format(width)):\(JSONReader.format(height))" }
     }
 
-    /// The shape for each orientation; landscape is portrait's turned unless it's given.
+    /// The window's shape for each orientation, as a take's step log records it; landscape is
+    /// portrait's turned unless it's given.
     public struct AspectChoice: Equatable, Sendable {
         public var portrait: Aspect?
         public var landscape: Aspect?
@@ -58,7 +59,9 @@ public struct SetFile: Equatable, Sendable {
     public var defaults: [Named<JSONValue>]
     public var environment: [Named<String>]
     public var arguments: [String]
-    public var aspect: [DeviceType: AspectChoice]
+    /// Whether the app's window takes the App Store preview's shape for the device type recorded,
+    /// rather than filling the screen.
+    public var previewAspect: Bool?
     /// The appearance the app is held to, whatever the device is set to.
     public var appearance: Appearance?
 
@@ -73,7 +76,7 @@ public struct SetFile: Equatable, Sendable {
         defaults: [Named<JSONValue>] = [],
         environment: [Named<String>] = [],
         arguments: [String] = [],
-        aspect: [DeviceType: AspectChoice] = [:],
+        previewAspect: Bool? = nil,
         appearance: Appearance? = nil,
     ) {
         self.extends = extends
@@ -82,7 +85,7 @@ public struct SetFile: Equatable, Sendable {
         self.defaults = defaults
         self.environment = environment
         self.arguments = arguments
-        self.aspect = aspect
+        self.previewAspect = previewAspect
         self.appearance = appearance
     }
 
@@ -95,6 +98,9 @@ extension SetFile {
     public static func read(_ text: String, with reader: JSONReader) -> SetFile? {
         guard let value = reader.parse(text), var object = reader.root(value, kind: "set") else { return nil }
         let problemsBefore = reader.problems.count
+        if object.has("aspect") {
+            reader.problem("is now \"previewAspect\": true, which gives the app the App Store preview's shape", at: object.path("aspect"))
+        }
         let set = SetFile(
             extends: object.optional("extends", reader.nonEmptyString),
             state: object.optional("state") { reader.choice($0, at: $1, as: State.self) },
@@ -102,7 +108,7 @@ extension SetFile {
             defaults: object.optional("defaults") { readDefaults($0, $1, reader) } ?? [],
             environment: object.optional("environment") { readEnvironment($0, $1, reader) } ?? [],
             arguments: object.optional("arguments") { reader.array($0, at: $1, element: reader.string) } ?? [],
-            aspect: object.optional("aspect") { readAspects($0, $1, reader) } ?? [:],
+            previewAspect: object.optional("previewAspect", reader.bool),
             appearance: object.optional("appearance") { reader.choice($0, at: $1, as: Appearance.self) },
         )
         object.finish()
@@ -169,16 +175,7 @@ extension SetFile {
         }?.map { Named($0.key, $0.value) }
     }
 
-    static func readAspects(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> [DeviceType: AspectChoice]? {
-        guard var object = reader.object(value, at: path) else { return nil }
-        defer { object.finish() }
-        var aspects: [DeviceType: AspectChoice] = [:]
-        for type in DeviceType.allCases {
-            aspects[type] = object.optional(type.rawValue) { readAspectChoice($0, $1, reader) }
-        }
-        return aspects
-    }
-
+    /// A step log's `aspect`: `"3:4"` for portrait, or `{ "portrait": …, "landscape": … }`.
     static func readAspectChoice(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> AspectChoice? {
         if case .string = value {
             return readAspect(value, path, reader).map { AspectChoice(portrait: $0) }

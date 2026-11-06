@@ -135,7 +135,7 @@ public struct ResolvedSet: Equatable, Sendable {
     public var defaults: [Named<JSONValue>]
     public var environment: [Named<String>]
     public var arguments: [String]
-    public var aspect: [DeviceType: SetFile.AspectChoice]
+    public var previewAspect: Bool
     public var appearance: SetFile.Appearance?
 
     public init(
@@ -145,7 +145,7 @@ public struct ResolvedSet: Equatable, Sendable {
         defaults: [Named<JSONValue>] = [],
         environment: [Named<String>] = [],
         arguments: [String] = [],
-        aspect: [DeviceType: SetFile.AspectChoice] = [:],
+        previewAspect: Bool = false,
         appearance: SetFile.Appearance? = nil,
     ) {
         self.name = name
@@ -155,13 +155,13 @@ public struct ResolvedSet: Equatable, Sendable {
         self.defaults = defaults
         self.environment = environment
         self.arguments = arguments
-        self.aspect = aspect
+        self.previewAspect = previewAspect
         self.appearance = appearance
     }
 
     /// Lays each set over the one before, from the base: a field a set gives replaces the base's,
-    /// key by key for `files`, `defaults`, `environment` and `aspect`; `arguments` add up, the
-    /// base's first.
+    /// key by key for `files`, `defaults` and `environment`; `arguments` add up, the base's
+    /// first.
     init(name: String, chain fromBase: [SetFile], names: [String]) {
         self.name = name
         self.names = names
@@ -170,7 +170,7 @@ public struct ResolvedSet: Equatable, Sendable {
         var defaults: [Named<JSONValue>] = []
         var environment: [Named<String>] = []
         var arguments: [String] = []
-        var aspect: [DeviceType: SetFile.AspectChoice] = [:]
+        var previewAspect = false
         var appearance: SetFile.Appearance?
         for set in fromBase {
             state = set.state ?? state
@@ -178,7 +178,7 @@ public struct ResolvedSet: Equatable, Sendable {
             defaults = defaults.overlaid(with: set.defaults)
             environment = environment.overlaid(with: set.environment)
             arguments += set.arguments
-            aspect.merge(set.aspect) { $1 }
+            previewAspect = set.previewAspect ?? previewAspect
             appearance = set.appearance ?? appearance
         }
         self.state = state
@@ -186,7 +186,15 @@ public struct ResolvedSet: Equatable, Sendable {
         self.defaults = defaults
         self.environment = environment
         self.arguments = arguments
-        self.aspect = aspect
+        self.previewAspect = previewAspect
         self.appearance = appearance
+    }
+
+    /// The shapes the app's window takes on a device of `type`: with `previewAspect`, the App Store
+    /// preview's in portrait and that turned in landscape; nil, filling the screen, without.
+    public func aspect(for type: DeviceType) -> SetFile.AspectChoice? {
+        guard previewAspect else { return nil }
+        let shape = PreviewSpec.of(type).aspect
+        return SetFile.AspectChoice(portrait: shape, landscape: shape.turned)
     }
 }

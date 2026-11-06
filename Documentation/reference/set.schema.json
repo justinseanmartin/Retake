@@ -66,86 +66,10 @@
         "type": "string"
       }
     },
-    "aspect": {
-      "description": "The preview's shape for a device type: the app's window is sized to it, and the edit crops the band left below.",
-      "type": "object",
-      "properties": {
-        "iphone": {
-          "description": "The shape for portrait, with landscape its shape turned; or each orientation's.",
-          "oneOf": [
-            {
-              "description": "A width and a height, each more than 0: 3:4.",
-              "type": "string",
-              "pattern": "^[0-9]*\\.?[0-9]+:[0-9]*\\.?[0-9]+$",
-              "examples": ["3:4"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "portrait": {
-                  "description": "The shape in portrait.",
-                  "type": "string",
-                  "pattern": "^[0-9]*\\.?[0-9]+:[0-9]*\\.?[0-9]+$",
-                  "examples": ["3:4"]
-                },
-                "landscape": {
-                  "description": "The shape in landscape; portrait's turned unless given.",
-                  "type": "string",
-                  "pattern": "^[0-9]*\\.?[0-9]+:[0-9]*\\.?[0-9]+$",
-                  "examples": ["3:4"]
-                }
-              },
-              "additionalProperties": false,
-              "anyOf": [
-                {
-                  "required": ["portrait"]
-                },
-                {
-                  "required": ["landscape"]
-                }
-              ]
-            }
-          ]
-        },
-        "ipad": {
-          "description": "The shape for portrait, with landscape its shape turned; or each orientation's.",
-          "oneOf": [
-            {
-              "description": "A width and a height, each more than 0: 3:4.",
-              "type": "string",
-              "pattern": "^[0-9]*\\.?[0-9]+:[0-9]*\\.?[0-9]+$",
-              "examples": ["3:4"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "portrait": {
-                  "description": "The shape in portrait.",
-                  "type": "string",
-                  "pattern": "^[0-9]*\\.?[0-9]+:[0-9]*\\.?[0-9]+$",
-                  "examples": ["3:4"]
-                },
-                "landscape": {
-                  "description": "The shape in landscape; portrait's turned unless given.",
-                  "type": "string",
-                  "pattern": "^[0-9]*\\.?[0-9]+:[0-9]*\\.?[0-9]+$",
-                  "examples": ["3:4"]
-                }
-              },
-              "additionalProperties": false,
-              "anyOf": [
-                {
-                  "required": ["portrait"]
-                },
-                {
-                  "required": ["landscape"]
-                }
-              ]
-            }
-          ]
-        }
-      },
-      "additionalProperties": false
+    "previewAspect": {
+      "description": "Sizes the app's window to the App Store preview's shape for the device type recorded, 886:1920 on iPhone and 3:4 on iPad, turned in landscape; the edit crops away the rest of the screen. Otherwise the app fills the screen.",
+      "type": "boolean",
+      "default": false
     },
     "appearance": {
       "description": "Holds the app to light or dark, whatever the device is set to. The launch screen, drawn before the app runs, still follows the device.",

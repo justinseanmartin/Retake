@@ -58,13 +58,12 @@ struct SchemaTests {
         ("retake", ##"{"bundleID": "com example"}"##, false),
         ("retake", ##"{"devices": "ipad"}"##, false),
 
-        ("set", ##"{"extends": "base", "state": "cloned", "files": {"Documents/a.json": "data/a.json", "Library/M/": "data/m/"}, "defaults": {"a": [1, {"b": true}]}, "environment": {"MY_FLAG": "1"}, "arguments": ["-x"], "aspect": {"ipad": "3:4", "iphone": {"landscape": "16:10"}}}"##, true),
+        ("set", ##"{"extends": "base", "state": "cloned", "files": {"Documents/a.json": "data/a.json", "Library/M/": "data/m/"}, "defaults": {"a": [1, {"b": true}]}, "environment": {"MY_FLAG": "1"}, "arguments": ["-x"], "previewAspect": true}"##, true),
         ("set", ##"{"state": "fresh"}"##, false),
         ("set", ##"{"environment": {"RETAKE_X": "1"}}"##, false),
         ("set", ##"{"environment": {"1X": "1"}}"##, false),
-        ("set", ##"{"aspect": {"ipad": "wide"}}"##, false),
-        ("set", ##"{"aspect": {"ipad": {}}}"##, false),
-        ("set", ##"{"aspect": {"watch": "1:1"}}"##, false),
+        ("set", ##"{"aspect": {"ipad": "3:4"}}"##, false),
+        ("set", ##"{"previewAspect": "yes"}"##, false),
         ("set", ##"{"defaults": {"a": null}}"##, false),
 
         ("scene", ##"{"set": "a", "setup": [{"activate": {"label": "Library"}}], "leadIn": 1.5, "tail": 2, "defaultHold": 0.5, "recordsLaunch": true, "orientation": "landscape-left", "steps": [{"tap": {"label": "New", "traits": ["button"], "occurrence": 2}, "hold": 1, "id": "new"}, {"tap": {"x": 1, "y": 2}}, {"type": {"text": "Hi\n", "into": {"value": ""}}}, {"drag": {"from": {"x": 1, "y": 2}, "to": {"x": 3, "y": 4}, "duration": 0.8}}, {"orientation": "portrait"}, {"waitFor": {"hint": "Sends it", "gone": true, "timeout": 5}}, {"activate": {"identifier": "a"}}, {"hold": 2}]}"##, true),

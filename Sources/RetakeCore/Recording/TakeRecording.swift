@@ -134,7 +134,7 @@ public enum TakeRecording {
             log.dropped = summary.dropped
             log.shapes = summary.shapes
             log.screen = screen
-            log.aspect = set.aspect[type].map { SetFile.AspectChoice(portrait: $0.portrait, landscape: $0.landscapeShape) }
+            log.aspect = set.aspect(for: type)
         }
         log.failure = failure?.message
         log.launch = collected.launch

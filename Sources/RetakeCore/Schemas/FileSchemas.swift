@@ -53,17 +53,6 @@ extension ProjectSettings {
 
 extension SetFile {
     public static var schema: FileSchema {
-        let aspect = Schema.string("A width and a height, each more than 0: 3:4.", pattern: #"^[0-9]*\.?[0-9]+:[0-9]*\.?[0-9]+$"#).example("3:4")
-        let choice = Schema.oneOf(
-            "The shape for portrait, with landscape its shape turned; or each orientation's.",
-            [
-                aspect,
-                Schema.object(nil, [
-                    .init("portrait", aspect.described("The shape in portrait.")),
-                    .init("landscape", aspect.described("The shape in landscape; portrait's turned unless given.")),
-                ]).atLeastOne(of: ["portrait", "landscape"]),
-            ],
-        )
         var environmentName = Schema.string(nil, pattern: "^[A-Za-z_][A-Za-z0-9_]*$")
         environmentName.not = [.string(nil, pattern: "^(\(reservedEnvironmentPrefixes.joined(separator: "|")))")]
         let root = Schema.object(
@@ -90,10 +79,9 @@ extension SetFile {
                     values: .string(),
                 )),
                 .init("arguments", .array("Arguments added to the launch, such as -AppleLanguages (en).", of: .string())),
-                .init("aspect", .object(
-                    "The preview's shape for a device type: the app's window is sized to it, and the edit crops the band left below.",
-                    DeviceType.allCases.map { .init($0.rawValue, choice) },
-                )),
+                .init("previewAspect", .bool(
+                    "Sizes the app's window to the App Store preview's shape for the device type recorded, 886:1920 on iPhone and 3:4 on iPad, turned in landscape; the edit crops away the rest of the screen. Otherwise the app fills the screen.",
+                ).defaulting(to: false)),
                 .init("appearance", .choice(
                     "Holds the app to light or dark, whatever the device is set to. The launch screen, drawn before the app runs, still follows the device.",
                     SetFile.Appearance.allCases.map(\.rawValue),

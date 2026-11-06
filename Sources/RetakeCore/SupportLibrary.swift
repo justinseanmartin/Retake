@@ -47,7 +47,7 @@ public struct SupportLibrary: Equatable, Sendable {
             "RETAKE_DEFAULTS": JSONWriter.write(defaults).trimmingCharacters(in: .whitespacesAndNewlines),
         ]
         if let appearance = set.appearance { environment["RETAKE_APPEARANCE"] = appearance.rawValue }
-        if let aspect = set.aspect[type] {
+        if let aspect = set.aspect(for: type) {
             if let portrait = aspect.portrait { environment["RETAKE_ASPECT_PORTRAIT"] = portrait.description }
             if let landscape = aspect.landscapeShape { environment["RETAKE_ASPECT_LANDSCAPE"] = landscape.description }
         }

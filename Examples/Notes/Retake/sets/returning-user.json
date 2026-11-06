@@ -2,5 +2,5 @@
   "extends": "base",
   "files": { "Documents/notes.json": "data/returning-user/notes.json" },
   "defaults": { "sortOrder": "manual" },
-  "aspect": { "ipad": "3:4" }
+  "previewAspect": true
 }

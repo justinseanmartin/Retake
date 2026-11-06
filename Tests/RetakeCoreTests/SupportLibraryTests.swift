@@ -37,15 +37,12 @@ struct SupportLibraryTests {
         #expect(SetFile.read(#"{"appearance": "sepia"}"#, with: reader) == nil)
     }
 
-    @Test func aSetsAspectForTheDeviceTypeBecomesItsShapes() {
-        let set = ResolvedSet(name: "a", aspect: [
-            .ipad: SetFile.AspectChoice(portrait: .init(width: 3, height: 4)),
-            .iphone: SetFile.AspectChoice(portrait: .init(width: 9, height: 19.5), landscape: .init(width: 16, height: 9)),
-        ])
+    @Test func aSetsPreviewAspectBecomesTheDeviceTypesShapes() {
+        let set = ResolvedSet(name: "a", previewAspect: true)
         let ipad = SupportLibrary.environment(for: set, type: .ipad, take: "t")
         #expect(ipad["RETAKE_ASPECT_PORTRAIT"] == "3:4" && ipad["RETAKE_ASPECT_LANDSCAPE"] == "4:3")
         let iphone = SupportLibrary.environment(for: set, type: .iphone, take: "t")
-        #expect(iphone["RETAKE_ASPECT_PORTRAIT"] == "9:19.5" && iphone["RETAKE_ASPECT_LANDSCAPE"] == "16:9")
+        #expect(iphone["RETAKE_ASPECT_PORTRAIT"] == "443:960" && iphone["RETAKE_ASPECT_LANDSCAPE"] == "960:443")
     }
 
     @Test func theLaunchReportIsCheckedAgainstTheTakeAndTheContract() throws {

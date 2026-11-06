@@ -167,8 +167,8 @@ signed-in account — is best fixed by a flag your app reads at launch, which a 
 clean status bar: 9:41, full signal, full battery.
 
 **So does the preview's shape.** App Store previews have fixed shapes, which a device's screen
-rarely matches: an iPad preview is 3:4. A set's [`aspect`](#aspect-the-previews-shape) lays the app out at the preview's shape,
-with no code in the app.
+rarely matches: an iPad preview is 3:4. A set's [`previewAspect`](#previewaspect-the-previews-shape) lays the app out at the preview's
+shape, with no code in the app.
 
 ## Sets: the state a take starts from
 
@@ -187,7 +187,7 @@ its launch environment. A scene names its set, so every take of the scene starts
   "defaults": { "hasSeenOnboarding": true, "sortOrder": "recent" },
   "environment": { "MYAPP_REGION_NEUTRAL_PRICES": "1" },
   "arguments": ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"],
-  "aspect": { "ipad": "3:4" }
+  "previewAspect": true
 }
 ```
 
@@ -201,7 +201,7 @@ this way, not as a plist in `files`: one copied into `Library/Preferences` isn't
 and `arguments` are added to the launch, for your app's own Debug-only flags and for the language
 and locale. `extends` builds on another set, so what every set shares is written once, and a flag
 only one scene needs goes in a small set of its own that extends the one it builds on. `state` and
-`aspect` are below, and every field is in the [set reference](Documentation/reference/set.md).
+`previewAspect` are below, and every field is in the [set reference](Documentation/reference/set.md).
 
 ### `state`: clean, cloned or live
 
@@ -262,17 +262,20 @@ key-value observers, and posts `UserDefaults.didChangeNotification`.
 - **The keychain** is the real one: iOS keeps it even across reinstalls. Keychain state needs a
   launch flag of the app's own.
 
-### `aspect`: the preview's shape
+### `previewAspect`: the preview's shape
 
-With `aspect`, Retake's support library sizes the app's window to that shape, as wide as the screen
-and pinned to its top, and the edit crops the band left below it. The app lays itself out in its
-window as it always does, SwiftUI and UIKit alike: it sees a 3:4 window, with the safe area of a
-window that doesn't reach the home indicator. Nothing in the app needs to know.
+With `"previewAspect": true`, Retake's support library sizes the app's window to the App Store
+preview's shape for the device type being recorded, 886:1920 on an iPhone and 3:4 on an iPad, as
+wide as the screen and pinned to its top, and the edit crops the band left below it. The app lays
+itself out in its window as it always does, SwiftUI and UIKit alike: on an iPad it sees a 3:4
+window, with the safe area of a window that doesn't reach the home indicator. Nothing in the app
+needs to know. Without it, the app fills the screen, and the edit crops the screen evenly to the
+preview's shape instead.
 
-The shape given is for portrait. When a scene turns the device to landscape, the window takes the
-same shape turned (4:3 for 3:4), pinned to the screen's left; `{ "portrait": "3:4", "landscape":
-"16:10" }` sets each. The keyboard and the system's status bar and home indicator aren't the app's
-window, so they still span the screen: a keyboard rises into the band the edit crops.
+When a scene turns the device to landscape, the window takes the same shape turned (4:3 for 3:4),
+pinned to the screen's left. The keyboard and the system's status bar and home indicator aren't the
+app's window, so they still span the screen: a keyboard rises into the band the edit crops. A set
+that extends another can turn `previewAspect` on or off for itself.
 
 An app that sizes its layout from `UIScreen.main.bounds` rather than its window or its views'
 geometry won't follow; one that reads the screen once at launch and then its geometry will.
@@ -612,7 +615,7 @@ that starts in a later clip belongs to that clip.
 An anchor outside the part of the take its clip plays fails the `cut`, naming the caption.
 
 `y` places a caption's centre as a share of the video's height, from 0 at the top to 1 at the
-bottom, measured on the video itself, so after any band an `aspect` crops away. Since it's a share
+bottom, measured on the video itself, so after any band `previewAspect` crops away. Since it's a share
 rather than pixels, one value suits every size of a device type's video; a per-device value is for
 layouts that differ, where each needs the caption clear of something else.
 
