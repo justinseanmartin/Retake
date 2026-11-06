@@ -47,10 +47,10 @@
       "from": { "step": "share", "offset": 0.35 },
       "to": { "step": "sent", "offset": 1.5 },
       "crossfade": 0.3,
-      "blurs": [{ "element": { "hint": "Sends the note to Alex" }, "part": { "x": "62%", "width": "31%" }, "to": { "step": "send", "offset": 0.15 }, "radius": 6 }],
+      "blurs": [{ "element": { "hint": "Sends the note to Alex" }, "part": { "x": "62%", "width": "31%" }, "to": { "step": "send", "offset": 0.15 }, "radius": 4.2 }],
       "iphone": {
         "intent": "On the iPhone, the step log reads the button while its sheet is still rising, 17 points above where it settles.",
-        "blurs": [{ "element": { "hint": "Sends the note to Alex" }, "part": { "x": "58%", "y": 17, "width": "35%" }, "to": { "step": "send", "offset": 0.15 }, "radius": 6 }]
+        "blurs": [{ "element": { "hint": "Sends the note to Alex" }, "part": { "x": "58%", "y": 17, "width": "35%" }, "to": { "step": "send", "offset": 0.15 }, "radius": 2.6 }]
       },
       "sounds": [{ "file": "audio/whoosh.m4a", "at": { "step": "send" }, "volume": 0.6 }],
       "captions": [

@@ -305,7 +305,7 @@ extension EditFile {
         let region = readRegion(&object, reader)
         let from = object.optional("from") { readAnchor($0, $1, reader) }
         let to = object.optional("to") { readAnchor($0, $1, reader) }
-        let radius = object.optional("radius") { reader.number($0, at: $1, .above(0)) } ?? 20
+        let radius = object.optional("radius") { reader.number($0, at: $1, .above(0)) } ?? Edit.Blur.defaultRadius
         return region.map { Edit.Blur(region: $0, from: from, to: to, radius: radius) }
     }
 

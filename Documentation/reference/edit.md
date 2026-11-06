@@ -154,7 +154,7 @@ A blur over an element or a rectangle.
 | `rect` | [rect](#rect) |  |  |
 | `from` | [anchor](#anchor) |  | When it starts; the clip's from when not given. |
 | `to` | [anchor](#anchor) |  | When it ends; the clip's to when not given. |
-| `radius` | number > 0 | `20` | How strong the blur is. |
+| `radius` | number > 0 | `9` | How strong the blur is: the Gaussian blur's radius, its standard deviation, in screen points, scaled to the canvas as the blur's rectangle is. |
 
 Gives exactly one of `element` or `rect`.
 

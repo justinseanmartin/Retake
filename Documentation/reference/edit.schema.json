@@ -569,10 +569,10 @@
           "description": "When it ends; the clip's to when not given."
         },
         "radius": {
-          "description": "How strong the blur is.",
+          "description": "How strong the blur is: the Gaussian blur's radius, its standard deviation, in screen points, scaled to the canvas as the blur's rectangle is.",
           "type": "number",
           "exclusiveMinimum": 0,
-          "default": 20
+          "default": 9
         },
         "iphone": {
           "$ref": "#/$defs/blur-override",
@@ -1402,7 +1402,7 @@
           "description": "When it ends; the clip's to when not given."
         },
         "radius": {
-          "description": "How strong the blur is.",
+          "description": "How strong the blur is: the Gaussian blur's radius, its standard deviation, in screen points, scaled to the canvas as the blur's rectangle is.",
           "type": "number",
           "exclusiveMinimum": 0
         }

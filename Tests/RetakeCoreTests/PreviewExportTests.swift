@@ -6,7 +6,7 @@ import Testing
 struct PreviewExportTests {
     @Test func aTurnsBlurSwellsAndAnEditsHoldsSteady() {
         var overlays = Overlays()
-        overlays.blurs = [.init(rect: CGRect(x: 0, y: 0, width: 10, height: 10), radius: 20, start: 1, end: 2)]
+        overlays.blurs = [.init(rect: CGRect(x: 0, y: 0, width: 10, height: 10), sigma: 20, start: 1, end: 2)]
         let blurs = PreviewExport.blurs(turns: [3...3.5], overlays: overlays, canvas: CGSize(width: 64, height: 96))
         #expect(blurs.map(\.rect) == [CGRect(x: 0, y: 0, width: 64, height: 96), CGRect(x: 0, y: 0, width: 10, height: 10)])
         #expect(blurs[0].sigma(at: 3) == 0 && abs(blurs[0].sigma(at: 3.25) - PreviewExport.turnBlurSigma) < 1e-9, "none at its edges, all at its middle")

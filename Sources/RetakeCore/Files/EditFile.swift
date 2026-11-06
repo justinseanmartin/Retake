@@ -231,7 +231,12 @@ public struct Edit: Equatable, Sendable {
         public var region: Region
         public var from: Anchor?
         public var to: Anchor?
+        /// The Gaussian blur's radius, its standard deviation, in screen points.
         public var radius: Double
+
+        /// About as strong on an iPhone's canvas as 20 canvas pixels, at a 6.1-inch iPhone's 2.25
+        /// canvas pixels a point.
+        public static let defaultRadius = 9.0
     }
 
     /// A frame of another take, popped in over the clip.

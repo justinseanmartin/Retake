@@ -296,7 +296,7 @@ extension EditFile {
             ]).exactlyOne(of: ["element", "rect"])),
             .init("blur", Schema.object("A blur over an element or a rectangle.", region + [
                 .init("from", from), .init("to", to),
-                .init("radius", .number("How strong the blur is.", above: 0).defaulting(to: 20)),
+                .init("radius", .number("How strong the blur is: the Gaussian blur's radius, its standard deviation, in screen points, scaled to the canvas as the blur's rectangle is.", above: 0).defaulting(to: .number(Edit.Blur.defaultRadius))),
             ]).exactlyOne(of: ["element", "rect"])),
             .init("still", .object("A frame of another take, popped in over the clip.", [
                 .init("take", .string("The scene whose latest successful take it's from.", nonEmpty: true)),

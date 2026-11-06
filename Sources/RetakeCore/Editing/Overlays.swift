@@ -34,7 +34,9 @@ public struct Overlays: Equatable, Sendable {
 
     public struct Blur: Equatable, Sendable {
         public var rect: CGRect
-        public var radius: Double
+        /// The Gaussian sigma, in canvas pixels: the edit's `radius`, in screen points, scaled as the
+        /// rectangle is.
+        public var sigma: Double
         public var start: Double
         public var end: Double
     }
@@ -202,7 +204,9 @@ public struct Overlays: Equatable, Sendable {
                 let start = try time(blur.from, "\(what).from") ?? placement.start
                 let end = try time(blur.to, "\(what).to") ?? placement.end
                 let rect = try region(blur.region, at: start, what)
-                overlays.blurs.append(Blur(rect: rect, radius: blur.radius, start: start, end: end))
+                // The region found, its framing turns points into canvas pixels.
+                let scale = framing(at: start).pointsToCanvas.map { sqrt(abs($0.a * $0.d - $0.b * $0.c)) } ?? 1
+                overlays.blurs.append(Blur(rect: rect, sigma: blur.radius * scale, start: start, end: end))
             }
 
             let stillsIn = try time(clip.stillsIn, "stillsIn") ?? placement.start + Overlays.firstStill

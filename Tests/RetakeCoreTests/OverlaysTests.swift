@@ -187,6 +187,29 @@ struct OverlaysTests {
         }
     }
 
+    @Test func aBlursRadiusIsInScreenPointsScaledToTheCanvasAsItsRectangleIs() throws {
+        let reader = JSONReader(file: "edits/video.json")
+        let edit = try #require(EditFile.read(#"""
+            {"devices": ["iphone", "ipad"], "clips": [{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"},
+              "blurs": [{"rect": {"x": 10, "y": 20, "width": 100, "height": 50}}, {"rect": {"x": 0, "y": 0, "width": 10, "height": 10}, "radius": 4}]}]}
+            """#, with: reader), "\(reader.problems)")
+        let timelines = ["walk": timeline()]
+        func blurs(_ type: DeviceType, stored: CGSize, screen: CGSize) throws -> [Overlays.Blur] {
+            let video = try #require(edit.videos[type])
+            let plan = try CutPlan.make(video, timelines: timelines)
+            let framing = ClipFraming.framing(PreviewSpec.of(type).size, stored: stored, turned: 0, aspect: nil, turns: .letterboxed, screen: screen)
+            return try Overlays.make(video, plan: plan, framings: plan.placements.map { [($0.start, framing)] }, timelines: timelines).blurs
+        }
+        // A 6.1-inch iPhone's 393 points across its 1179-pixel capture, filling the 886-pixel-wide
+        // canvas; the iPad's 834 across 1200, filling 1200.
+        let iphone = try blurs(.iphone, stored: CGSize(width: 1179, height: 2556), screen: CGSize(width: 393, height: 852))
+        let ipad = try blurs(.ipad, stored: CGSize(width: 1200, height: 1718), screen: CGSize(width: 834, height: 1194))
+        let iphoneScale = 886.0 / 393
+        #expect(abs(iphone[0].sigma - Edit.Blur.defaultRadius * iphoneScale) < 1e-9 && abs(iphone[0].rect.width - 100 * iphoneScale) < 1e-9)
+        #expect(abs(iphone[0].sigma - 20) < 0.5, "the default looks as 20 canvas pixels did")
+        #expect(abs(ipad[0].sigma - Edit.Blur.defaultRadius * scale) < 1e-9 && abs(ipad[1].sigma - 4 * scale) < 1e-9)
+    }
+
     @Test func stillsInMovesWhenTheStillsPopInAndTheirBackgroundWithThem() throws {
         let placed = try overlays(#"""
             {"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "stillsIn": {"step": "b", "offset": 0.5},

@@ -42,7 +42,7 @@ public enum PreviewExport {
     /// over its rectangle.
     public static func blurs(turns: [ClosedRange<Double>], overlays: Overlays, canvas: CGSize) -> [BlurRegion] {
         turns.map { BlurRegion(start: $0.lowerBound, end: $0.upperBound, rect: CGRect(origin: .zero, size: canvas), sigma: turnBlurSigma, swells: true) }
-            + overlays.blurs.map { BlurRegion(start: $0.start, end: $0.end, rect: $0.rect, sigma: $0.radius) }
+            + overlays.blurs.map { BlurRegion(start: $0.start, end: $0.end, rect: $0.rect, sigma: $0.sigma) }
     }
 
     /// The first pass: `composition` with `layers` drawn over it, `blurs` over those, and
