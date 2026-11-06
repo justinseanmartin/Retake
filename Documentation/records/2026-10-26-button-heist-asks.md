@@ -238,10 +238,13 @@ handshake), but `ServerInfo` reaches only the client's internal session state
 report the screen's size in points either.
 
 **What Retake does meanwhile.** After turning, it reads the screen with `captureInterface()` every
-0.1 s until the elements' frames differ from before the turn and are the same twice running, failing
-after 5 s (`Player.turn`). On the iPad, turning the example to landscape and back ended in 0.76–1.31
-s, once its two-column layout had settled. It can be fooled by a screen whose elements don't move
-when it turns, and costs a capture every 0.1 s; knowing the bounds would make it exact.
+0.1 s until the elements' frames differ from before the turn and have settled, failing after 5 s
+(`Player.turn`). A look has settled when nothing moved since the last, or only a third of the
+elements at most, all of which were moving the look before too, as a looping animation does; and
+something other than those must have moved since before the turn, so an animation alone doesn't pass
+for one. On the iPad, turning the example to landscape and back ended in 0.76–1.31 s, once its
+two-column layout had settled. It can be fooled by a screen whose elements don't move when it turns,
+and costs a capture every 0.1 s; knowing the bounds would make it exact.
 
 ## 11. A touch on an app's own sheet, on iOS 27
 
