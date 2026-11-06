@@ -15,10 +15,13 @@ public struct SoundPlan: Equatable, Sendable {
     }
 
     /// A clip's take's own sound, played with the clip at its speed, fading in and out over these.
+    /// It starts `lead` seconds before the clip's picture, playing the take from as long before the
+    /// clip's `from` at its speed, so it fades in over the same stretch as the clip before's fades out.
     public struct TakeSound: Equatable, Sendable {
         public var clip: Int
         public var fadeIn: Double
         public var fadeOut: Double
+        public var lead: Double = 0
     }
 
     public struct Music: Equatable, Sendable {
@@ -41,6 +44,19 @@ public struct SoundPlan: Equatable, Sendable {
     ) throws(RetakeError) -> SoundPlan {
         func file(_ path: String) -> URL { URL(filePath: path, relativeTo: root).standardizedFileURL }
         var sound = SoundPlan(takeAudioVolume: video.takeAudioVolume)
+        // A clip's sound cross-fades over its audioCrossfade on both sides, the picture over its
+        // crossfade: the clip before's sound fades out over the audioCrossfade before its end, and
+        // this clip's starts as that fade does, ahead of its picture by the difference, fading in to
+        // the clip before's end. Ahead by no more than the take has before the clip's `from`, the clip
+        // before plays, or, when it plays its take's sound on the same track, the clip before that
+        // leaves free.
+        func lead(_ index: Int) -> Double {
+            guard index > 0, let audio = video.clips[index].audioCrossfade else { return 0 }
+            let placement = plan.placements[index], previous = plan.placements[index - 1]
+            var lead = min(audio - placement.crossfade, placement.from / placement.speed, previous.duration - placement.crossfade)
+            if index > 1, video.clips[index - 2].takeAudio { lead = min(lead, placement.start - plan.placements[index - 2].end) }
+            return max(lead, 0)
+        }
         sound.music = video.music.map { Music(file: file($0.file), volume: $0.volume, fadeOut: $0.fadeOut) }
         for (index, clip) in video.clips.enumerated() {
             let placement = plan.placements[index]
@@ -59,9 +75,9 @@ public struct SoundPlan: Equatable, Sendable {
                 sound.cues.append(Cue(file: file(effect.file), at: placement.videoTime(at), volume: effect.volume, duration: effect.duration))
             }
             if clip.takeAudio {
-                let next = video.clips.indices.contains(index + 1) ? video.clips[index + 1] : nil
+                let next = plan.placements.indices.contains(index + 1) ? index + 1 : nil
                 sound.takeSounds.append(TakeSound(
-                    clip: index, fadeIn: placement.crossfade, fadeOut: next.map { $0.audioCrossfade ?? $0.crossfade } ?? 0,
+                    clip: index, fadeIn: placement.crossfade + lead(index), fadeOut: next.map { plan.placements[$0].crossfade + lead($0) } ?? 0, lead: lead(index),
                 ))
             }
         }
@@ -127,10 +143,10 @@ extension EditComposition {
                     guard let movie = movies[placement.take] else { continue }
                     let source = try await audio(of: movie).0
                     let lane = take.clip % 2
-                    let range = CMTimeRange(start: Self.time(placement.from), end: Self.time(placement.to))
-                    let at = Self.time(placement.start)
+                    let range = CMTimeRange(start: Self.time(placement.from - take.lead * placement.speed), end: Self.time(placement.to))
+                    let at = Self.time(placement.start - take.lead)
                     try takeTracks[lane].insertTimeRange(range, of: source, at: at)
-                    takeTracks[lane].scaleTimeRange(CMTimeRange(start: at, duration: range.duration), toDuration: Self.time(placement.duration))
+                    takeTracks[lane].scaleTimeRange(CMTimeRange(start: at, duration: range.duration), toDuration: Self.time(placement.duration + take.lead))
                     let volume = Float(sound.takeAudioVolume)
                     let mix = mixes[lane]
                     mix.setVolume(take.fadeIn > 0 ? 0 : volume, at: at)

@@ -219,7 +219,7 @@ extension EditFile {
             .init("to", .ref("anchor", "Where it ends.")),
             .init("speed", .number("How fast it plays: 2 is twice as fast.", above: 0).defaulting(to: 1)),
             .init("crossfade", .number("Seconds it cross-fades in over the clip before.", atLeast: 0).defaulting(to: 0)),
-            .init("audioCrossfade", .number("Seconds its sound fades in over, when longer than crossfade.", atLeast: 0)),
+            .init("audioCrossfade", .number("Seconds the sound cross-fades over, when longer than crossfade, which the picture still cross-fades over: the clip before's take sound fades out over this long before that clip ends, and this clip's starts as it does, this minus crossfade ahead of the picture and from as far before `from` in the take, fading in until the clip before ends. Each side fades so even when the other plays no take sound. The clip's sound starts no earlier than its take, or the clip before, does.", atLeast: 0)),
             .init("touches", .bool("Draws the take's touches, from the step log.").defaulting(to: true)),
             .init("touchColor", .ref("color", "The colour of the clip's touches; the edit's touchColor when not given.")),
             .init("touchColors", .array("Colours for single touches, over the clip's or the edit's.", of: .object(nil, [

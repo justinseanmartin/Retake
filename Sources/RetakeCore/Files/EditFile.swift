@@ -105,7 +105,8 @@ public struct Edit: Equatable, Sendable {
         public var speed: Double
         /// Seconds the clip cross-fades in over the one before.
         public var crossfade: Double
-        /// Seconds its sound fades in over, when longer than the picture's cross-fade.
+        /// Seconds the sound cross-fades over, on both sides, when longer than the picture's
+        /// cross-fade: this clip's take sound starts the difference ahead of its picture.
         public var audioCrossfade: Double?
         public var touches: Bool
         /// The colour of this clip's touches; the edit's when nil.

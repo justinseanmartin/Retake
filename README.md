@@ -651,7 +651,10 @@ A video's sound is the edit's music, under the sound of its clips:
   than the moment it's for.
 - **A clip's `takeAudio`** plays the take's own sound, recorded from the device, with the clip, at
   the speed the clip plays; the edit's `takeAudioVolume` sets its level for every clip that plays
-  it.
+  it. A clip's `audioCrossfade`, longer than its `crossfade`, cross-fades the sound over longer than
+  the picture: the clip before's sound fades out over it, and the clip's own starts that much before
+  the clip before ends, ahead of its picture, fading in. Each side fades so whether or not the other
+  plays its take's sound.
 - **The edit's `tapSound`** plays as each touch a clip draws (`touches`) lands, at its `volume`: on
   each tap, and at the start of each drag, where its finger comes down.
 

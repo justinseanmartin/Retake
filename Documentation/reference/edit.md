@@ -42,7 +42,7 @@ A stretch of a take, played in order.
 | `to` | [anchor](#anchor) | required | Where it ends. |
 | `speed` | number > 0 | `1` | How fast it plays: 2 is twice as fast. |
 | `crossfade` | number ≥ 0 | `0` | Seconds it cross-fades in over the clip before. |
-| `audioCrossfade` | number ≥ 0 |  | Seconds its sound fades in over, when longer than crossfade. |
+| `audioCrossfade` | number ≥ 0 |  | Seconds the sound cross-fades over, when longer than crossfade, which the picture still cross-fades over: the clip before's take sound fades out over this long before that clip ends, and this clip's starts as it does, this minus crossfade ahead of the picture and from as far before `from` in the take, fading in until the clip before ends. Each side fades so even when the other plays no take sound. The clip's sound starts no earlier than its take, or the clip before, does. |
 | `touches` | boolean | `true` | Draws the take's touches, from the step log. |
 | `touchColor` | [color](#color) |  | The colour of the clip's touches; the edit's touchColor when not given. |
 | `touchColors` | list of [object](#cliptouchcolors) |  | Colours for single touches, over the clip's or the edit's. |

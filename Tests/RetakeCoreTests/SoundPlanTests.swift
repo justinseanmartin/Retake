@@ -34,7 +34,7 @@ struct SoundPlanTests {
             "clips": [
               {"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "speed": 2, "takeAudio": true,
                "sounds": [{"file": "audio/pop.caf", "at": {"step": "b"}, "volume": 0.8, "duration": 0.3}]},
-              {"take": "walk", "from": {"step": "start"}, "to": {"step": "a"}, "crossfade": 0.25, "audioCrossfade": 0.5, "takeAudio": true}
+              {"take": "walk", "from": {"step": "start"}, "to": {"step": "a"}, "crossfade": 0.25, "takeAudio": true}
             ]
             """#)
         let plan = try CutPlan.make(video, timelines: timelines)
@@ -46,7 +46,29 @@ struct SoundPlanTests {
         #expect(sound.cues.map(\.at) == [0.5, 1.25])
         #expect(sound.cues.map(\.file.lastPathComponent) == ["pop.caf", "tap.caf"])
         #expect(sound.cues[0].duration == 0.3 && sound.cues[1].volume == 0.5)
-        #expect(sound.takeSounds == [.init(clip: 0, fadeIn: 0, fadeOut: 0.5), .init(clip: 1, fadeIn: 0.25, fadeOut: 0)])
+        #expect(sound.takeSounds == [.init(clip: 0, fadeIn: 0, fadeOut: 0.25), .init(clip: 1, fadeIn: 0.25, fadeOut: 0)])
+    }
+
+    @Test func anAudioCrossfadeFadesBothSidesTheIncomingSoundStartingAheadOfItsPicture() throws {
+        let video = try video(#"""
+            "clips": [
+              {"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "takeAudio": true},
+              {"take": "walk", "from": {"step": "b"}, "to": {"step": "end"}, "speed": 2, "crossfade": 0.25, "audioCrossfade": 0.75},
+              {"take": "walk", "from": {"step": "b"}, "to": {"step": "end"}, "speed": 2, "crossfade": 0.25, "audioCrossfade": 0.75, "takeAudio": true},
+              {"take": "walk", "from": {"step": "start"}, "to": {"step": "a"}, "crossfade": 0.25, "audioCrossfade": 0.5, "takeAudio": true}
+            ]
+            """#)
+        let plan = try CutPlan.make(video, timelines: timelines)
+        let sound = try SoundPlan.make(video, plan: plan, overlays: Overlays(), timelines: timelines, root: root)
+        // 0–5 s; 4.75–6.75 s; 6.5–8.5 s, its sound from 6 s, 1 s into the take at twice its speed, a
+        // second before its from; 8.25–9.25 s, from the take's start, so nothing ahead of it.
+        #expect(sound.takeSounds == [
+            .init(clip: 0, fadeIn: 0, fadeOut: 0.75),
+            .init(clip: 2, fadeIn: 0.75, fadeOut: 0.25, lead: 0.5),
+            .init(clip: 3, fadeIn: 0.25, fadeOut: 0),
+        ], "each side fades over the audioCrossfade, though clip 1 plays no take sound")
+        let incoming = plan.placements[2]
+        #expect(incoming.start - 0.5 == plan.placements[1].end - 0.75 && incoming.from - 0.5 * incoming.speed == 1, "as the fade before it starts")
     }
 
     @Test func anEffectOutsideItsClipFails() throws {
