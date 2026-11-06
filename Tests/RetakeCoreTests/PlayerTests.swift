@@ -191,7 +191,7 @@ struct PlayerTests {
               label="Delete" [header] (visible)
             """
         #expect(Player.ambiguity(message) == """
-            2 elements match it, so which is meant isn't clear. Name it more closely, with its label, value and identifier together, or give "occurrence" (1 to 2, in the order VoiceOver reads the screen):
+            2 elements match it, so which is meant isn't clear. Name it more closely, by its traits, identifier, value or hint as well, or as a last resort give "occurrence" (1 to 2, in the order VoiceOver reads the screen):
               label="Delete" [button] (visible)
               label="Delete" [header] (visible)
             """)

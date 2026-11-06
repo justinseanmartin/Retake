@@ -249,8 +249,8 @@ public struct Player: Sendable {
         let count = String(match.1) + String(match.2)
         let candidates = message.split(separator: "\n").dropFirst().joined(separator: "\n")
         let range = match.2.isEmpty ? "1 to \(match.1)" : "from 1"
-        return "\(count) elements match it, so which is meant isn't clear. Name it more closely, with its label, value "
-            + "and identifier together, or give \"occurrence\" (\(range), in the order VoiceOver reads the screen):"
+        return "\(count) elements match it, so which is meant isn't clear. Name it more closely, by its traits, "
+            + "identifier, value or hint as well, or as a last resort give \"occurrence\" (\(range), in the order VoiceOver reads the screen):"
             + (candidates.isEmpty ? "" : "\n" + candidates)
     }
 

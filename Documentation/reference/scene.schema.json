@@ -322,7 +322,7 @@
               ]
             },
             "occurrence": {
-              "description": "Which of several matching elements, counted from 1 in the order VoiceOver reads the screen.",
+              "description": "Which of several matching elements, counted from 1 in the order VoiceOver reads the screen. A last resort, since it breaks when the layout changes: name the element closely enough, by its traits, identifier, value or hint, that only it matches.",
               "type": "integer",
               "minimum": 1
             },
@@ -501,7 +501,7 @@
           ]
         },
         "occurrence": {
-          "description": "Which of several matching elements, counted from 1 in the order VoiceOver reads the screen.",
+          "description": "Which of several matching elements, counted from 1 in the order VoiceOver reads the screen. A last resort, since it breaks when the layout changes: name the element closely enough, by its traits, identifier, value or hint, that only it matches.",
           "type": "integer",
           "minimum": 1
         }

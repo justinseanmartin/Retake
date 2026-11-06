@@ -248,6 +248,25 @@ enum ElementOptions {
     }
 }
 
+extension ElementTarget {
+    /// As `compose` takes it: `--label "Delete" --traits button --occurrence 2`.
+    public var options: String {
+        func quoted(_ text: String) -> String {
+            let escaped = text.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+                .replacingOccurrences(of: "\n", with: "\\n").replacingOccurrences(of: "\t", with: "\\t")
+            return "\"\(escaped)\""
+        }
+        var parts: [String] = []
+        if let label { parts.append("--label \(quoted(label))") }
+        if let value { parts.append("--value \(quoted(value))") }
+        if let identifier { parts.append("--identifier \(quoted(identifier))") }
+        if let hint { parts.append("--hint \(quoted(hint))") }
+        if let traits { parts.append("--traits \(traits.joined(separator: ","))") }
+        if let occurrence { parts.append("--occurrence \(occurrence)") }
+        return parts.joined(separator: " ")
+    }
+}
+
 extension ComposeActionSpec {
     static let stepOptions: [ComposeOption] = [
         .option("id", "<name>", "names the step, for edits to anchor to", default: "none"),
@@ -328,7 +347,7 @@ extension ComposeActionSpec {
             .step(Step(nil, hold: try number(given["seconds"]!, "--seconds", above: 0)))
         },
         ComposeActionSpec(
-            name: "inspect", summary: "Prints what's on screen, or only the elements that match, numbered as --occurrence counts them.",
+            name: "inspect", summary: "Prints what's on screen, or only the elements that match, each with the shortest options that pick it out.",
             options: ElementOptions.naming, required: [], isStep: false,
         ) { given throws(ComposeAction.Problem) in
             .inspect(try ElementOptions.target(given))

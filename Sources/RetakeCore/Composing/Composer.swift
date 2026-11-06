@@ -17,9 +17,9 @@ public enum Composer {
     public enum Reply: Sendable {
         /// What's on screen: after launching, or for `inspect`.
         case screen([ScreenElement])
-        /// The elements `inspect` was asked for, in the order VoiceOver reads them, so the first is
-        /// `--occurrence 1`.
-        case matches([ScreenElement])
+        /// The elements `inspect` was asked for, in the order VoiceOver reads them, each with the
+        /// shortest name that picks it out on screen (`ElementTarget.naming`).
+        case matches([Match])
         /// A step that ran and was added, its number, and the screen after it; and, for a tap at a
         /// point on an element a step could name, that step.
         case added(Step, number: Int, [ScreenElement], suggestion: Step? = nil)
@@ -30,6 +30,13 @@ public enum Composer {
         case help(String)
         /// A step that didn't run, or an action that was wrong; nothing was added.
         case failed(String)
+    }
+
+    /// An element `inspect` lists, and the shortest name that picks it out on screen, or nil when
+    /// it has nothing to name it by.
+    public struct Match: Equatable, Sendable {
+        public var element: ScreenElement
+        public var name: ElementTarget?
     }
 
     /// Composes `name` for the device's type: launches on its set (or `set` for a new scene), replays
@@ -160,7 +167,9 @@ public enum Composer {
                 reply(.added(step, number: number, try await driver.elements(), suggestion: suggestion))
             case .inspect(let target):
                 let elements = try await driver.elements()
-                reply(target.map { target in .matches(elements.filter(target.matches)) } ?? .screen(elements))
+                reply(target.map { target in
+                    .matches(elements.indices.filter { target.matches(elements[$0]) }.map { Match(element: elements[$0], name: ElementTarget.naming($0, in: elements)) })
+                } ?? .screen(elements))
             case .set(let hold, let id):
                 guard var last = state.document.steps.last else { reply(.failed("There's no step yet to change.")); continue }
                 if let problem = problem(withID: id, in: state.document.steps.dropLast()) {
@@ -246,18 +255,18 @@ public enum Composer {
     }
 
     /// For a tap at a point in screen points, the element it lands on (the smallest, where several
-    /// overlap), named by its label, when no other element on screen has that label: a step naming
-    /// it follows the element wherever the layout puts it, on every device. Nil for anything else.
+    /// overlap), by the shortest name no other element on screen has (`ElementTarget.naming`): a step
+    /// naming it follows the element wherever the layout puts it, on every device. Nil for anything
+    /// else.
     static func naming(_ step: Step, in elements: [ScreenElement]) -> ElementTarget? {
         guard case .tapPoint(let position)? = step.action, case .points(let x) = position.x, case .points(let y) = position.y else { return nil }
-        let under = elements.compactMap { element in
-            element.frame.flatMap { frame in
-                (frame.x...frame.x + frame.width).contains(x) && (frame.y...frame.y + frame.height).contains(y) ? (element, frame.width * frame.height) : nil
+        let under = elements.indices.compactMap { index in
+            elements[index].frame.flatMap { frame in
+                (frame.x...frame.x + frame.width).contains(x) && (frame.y...frame.y + frame.height).contains(y) ? (index, frame.width * frame.height) : nil
             }
         }
-        guard let element = under.min(by: { $0.1 < $1.1 })?.0, let label = element.label, !label.isEmpty else { return nil }
-        let target = ElementTarget(label: label)
-        return elements.filter(target.matches).count == 1 ? target : nil
+        guard let index = under.min(by: { $0.1 < $1.1 })?.0 else { return nil }
+        return ElementTarget.naming(index, in: elements)
     }
 
     /// What's on screen once it has looked the same twice running, a quarter second apart, so an app

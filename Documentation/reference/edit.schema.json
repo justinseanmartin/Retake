@@ -214,7 +214,7 @@
             "type": "object",
             "properties": {
               "step": {
-                "description": "A step's id, its number from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames.",
+                "description": "A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene.",
                 "oneOf": [
                   {
                     "type": "string",
@@ -852,7 +852,7 @@
       "type": "object",
       "properties": {
         "step": {
-          "description": "A step's id, its number from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames.",
+          "description": "A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene.",
           "oneOf": [
             {
               "type": "string",
@@ -906,7 +906,7 @@
           "minLength": 1
         },
         "step": {
-          "description": "A step's id, its number from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames.",
+          "description": "A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene.",
           "oneOf": [
             {
               "type": "string",
@@ -1032,7 +1032,7 @@
           ]
         },
         "occurrence": {
-          "description": "Which of several matching elements, counted from 1 in the order VoiceOver reads the screen.",
+          "description": "Which of several matching elements, counted from 1 in the order VoiceOver reads the screen. A last resort, since it breaks when the layout changes: name the element closely enough, by its traits, identifier, value or hint, that only it matches.",
           "type": "integer",
           "minimum": 1
         },
@@ -1126,7 +1126,7 @@
             "type": "object",
             "properties": {
               "step": {
-                "description": "A step's id, its number from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames.",
+                "description": "A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene.",
                 "oneOf": [
                   {
                     "type": "string",
@@ -1604,7 +1604,7 @@
       "type": "object",
       "properties": {
         "step": {
-          "description": "A step's id, its number from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames.",
+          "description": "A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene.",
           "oneOf": [
             {
               "type": "string",
@@ -1649,7 +1649,7 @@
           "minLength": 1
         },
         "step": {
-          "description": "A step's id, its number from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames.",
+          "description": "A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene.",
           "oneOf": [
             {
               "type": "string",
@@ -1766,7 +1766,7 @@
           ]
         },
         "occurrence": {
-          "description": "Which of several matching elements, counted from 1 in the order VoiceOver reads the screen.",
+          "description": "Which of several matching elements, counted from 1 in the order VoiceOver reads the screen. A last resort, since it breaks when the layout changes: name the element closely enough, by its traits, identifier, value or hint, that only it matches.",
           "type": "integer",
           "minimum": 1
         }

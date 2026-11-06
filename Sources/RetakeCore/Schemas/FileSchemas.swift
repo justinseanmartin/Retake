@@ -190,7 +190,7 @@ extension SceneFile {
                 "Traits it has, every one, by The Button Heist's names, as `retake compose` prints them.",
                 of: .choice(nil, ElementTarget.knownTraits.sorted()), minItems: 1, unique: true,
             ).example(["header"], ["button", "selected"])),
-            .init("occurrence", .integer("Which of several matching elements, counted from 1 in the order VoiceOver reads the screen.", atLeast: 1)),
+            .init("occurrence", .integer("Which of several matching elements, counted from 1 in the order VoiceOver reads the screen. A last resort, since it breaks when the layout changes: name the element closely enough, by its traits, identifier, value or hint, that only it matches.", atLeast: 1)),
         ]
     }
 
@@ -219,7 +219,7 @@ extension EditFile {
         let from = Schema.ref("anchor", "When it starts; the clip's from when not given.")
         let to = Schema.ref("anchor", "When it ends; the clip's to when not given.")
 
-        let stepReference = Schema.oneOf("A step's id, its number from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames.", [
+        let stepReference = Schema.oneOf("A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene.", [
             .string(nil, nonEmpty: true),
             { var number = Schema.integer(); number.not = [{ var zero = Schema(); zero.choices = [0]; return zero }()]; return number }(),
         ])

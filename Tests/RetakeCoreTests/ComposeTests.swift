@@ -18,7 +18,7 @@ struct ComposeActionTests {
         #expect(try parse("hold --seconds 2 --id rest") == .step(Step(id: "rest", nil, hold: 2)))
     }
 
-    @Test func aTapAtAPointOnAnElementOnlyItsLabelNamesSuggestsNamingIt() {
+    @Test func aTapAtAPointOnAnElementSuggestsTheShortestNameThatPicksItOut() {
         func tap(_ x: Double, _ y: Double) -> Step { Step(.tapPoint(Position(Point(x: x, y: y)))) }
         let row = ScreenElement(label: "Groceries", traits: ["button"], frame: .init(x: 0, y: 100, width: 390, height: 44))
         let badge = ScreenElement(label: "Synced", traits: [], frame: .init(x: 300, y: 110, width: 60, height: 20))
@@ -26,8 +26,51 @@ struct ComposeActionTests {
                         ScreenElement(label: "Library", traits: ["button"], frame: .init(x: 0, y: 800, width: 100, height: 44))]
         #expect(Composer.naming(tap(20, 120), in: elements) == ElementTarget(label: "Groceries"))
         #expect(Composer.naming(tap(320, 120), in: elements) == ElementTarget(label: "Synced"), "the smallest under the point")
-        #expect(Composer.naming(tap(20, 60), in: elements) == nil, "another element has its label")
+        #expect(Composer.naming(tap(20, 60), in: elements) == ElementTarget(label: "Library", traits: ["header"]), "another element has its label, and traits alone would say only what kind of thing it is")
         #expect(Composer.naming(tap(20, 500), in: elements) == nil, "nothing there")
+    }
+
+    @Test func anElementIsNamedByTheFewestFieldsNoOtherElementShares() throws {
+        let delete = { (identifier: String?, value: String?, hint: String?, traits: [String]) in
+            ScreenElement(label: "Delete", value: value, identifier: identifier, hint: hint, traits: traits)
+        }
+        let elements = [
+            delete("delete-groceries", nil, nil, ["button"]),
+            delete(nil, nil, nil, ["header"]),
+            delete(nil, "Book club", nil, ["button"]),
+            delete(nil, nil, "Removes the draft", ["button"]),
+            delete(nil, nil, nil, ["button", "selected"]),
+            delete(nil, nil, nil, ["button"]),
+            delete(nil, nil, nil, ["button"]),
+            ScreenElement(label: "Notes", traits: ["header"]),
+            ScreenElement(label: "Title", value: "Book club"),
+            ScreenElement(label: "Inbox", traits: ["button", "selected"]),
+            ScreenElement(label: "Draft", hint: "Removes the draft", traits: ["button"]),
+            ScreenElement(traits: ["image", "allowsDirectInteraction"]),
+            ScreenElement(),
+        ]
+        let names = elements.indices.map { ElementTarget.naming($0, in: elements) }
+        #expect(names[0] == ElementTarget(identifier: "delete-groceries"), "an identifier alone, in place of the label")
+        #expect(names[1] == ElementTarget(label: "Delete", traits: ["header"]))
+        #expect(names[2] == ElementTarget(label: "Delete", value: "Book club"))
+        #expect(names[3] == ElementTarget(label: "Delete", hint: "Removes the draft"))
+        #expect(names[4] == ElementTarget(label: "Delete", traits: ["selected"]), "the fewest traits that do")
+        #expect(names[5] == ElementTarget(label: "Delete", traits: ["button"], occurrence: 5), "nothing else tells it from the next")
+        #expect(names[6] == ElementTarget(label: "Delete", traits: ["button"], occurrence: 6))
+        #expect(names[7] == ElementTarget(label: "Notes"))
+        #expect(names[11] == ElementTarget(traits: ["image"]), "only traits, and only one of them")
+        #expect(names[12] == nil, "nothing to name it by")
+        // Each name, as a step plays it, picks out the element it was made for, and no other.
+        for (index, name) in names.enumerated() {
+            guard let name else { continue }
+            let matches = elements.indices.filter { name.matches(elements[$0]) }
+            #expect(matches[(name.occurrence ?? 1) - 1] == index && (name.occurrence != nil || matches.count == 1), "element \(index)")
+        }
+    }
+
+    @Test func aSuggestedNameIsOptionsComposeReadsBack() throws {
+        let name = ElementTarget(label: #"Say "hi" \ bye"#, value: "a\tb", identifier: "x", hint: "Opens it", traits: ["button", "selected"], occurrence: 2)
+        #expect(try parse("tap " + name.options) == .step(Step(.tapElement(name))))
     }
 
     @Test func actionsOnTheSceneAddNoStep() throws {
@@ -83,7 +126,7 @@ struct ComposeActionTests {
         let tap = try #require(ComposeActionSpec.all.first { $0.name == "tap" }).usage
         #expect(tap.contains("an element (--label, --value, --identifier, --hint or --traits, one at least), or a point (--x <x> --y <y>)"))
         #expect(!tap.contains("--x <x>  in screen points"), "x and y are in what's required, not listed again")
-        #expect(ComposeActionSpec.overview.split(separator: "\n").contains { $0.hasPrefix("  inspect ") && $0.hasSuffix("numbered as --occurrence counts them.") })
+        #expect(ComposeActionSpec.overview.split(separator: "\n").contains { $0.hasPrefix("  inspect ") && $0.hasSuffix("each with the shortest options that pick it out.") })
     }
 }
 
@@ -195,10 +238,13 @@ struct ComposerSessionTests {
         let delete = { (row: String) in ScreenElement(label: "Delete", value: row, traits: ["button"]) }
         driver.screens = [[delete("Groceries"), ScreenElement(label: "Delete", traits: ["header"]), delete("Book club")]]
         let (_, _, replies) = try await session([#"inspect --label "Delete" --traits button"#, #"inspect --label "Delete" --value "Book club""#, "inspect"], driver: driver)
-        let matches = replies.all.compactMap { reply -> [ScreenElement]? in
+        let matches = replies.all.compactMap { reply -> [Composer.Match]? in
             if case .matches(let elements) = reply { elements } else { nil }
         }
-        #expect(matches == [[delete("Groceries"), delete("Book club")], [delete("Book club")]])
+        #expect(matches == [
+            [.init(element: delete("Groceries"), name: ElementTarget(value: "Groceries")), .init(element: delete("Book club"), name: ElementTarget(value: "Book club"))],
+            [.init(element: delete("Book club"), name: ElementTarget(value: "Book club"))],
+        ], "each named as the whole screen tells it apart")
     }
 
     @Test func anIDMustBeOneAStepCanHave() async throws {

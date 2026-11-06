@@ -356,8 +356,11 @@ placeholder or what's typed in it, as the field has no label of its own), its `i
 as `retake compose` prints them, such as `["header"]` or `["button", "selected"]`, every one of
 which it must have; any of them together. Traits tell apart elements that share a label, such as a
 screen's title and a button named the same. When several elements match, the step fails, listing
-them, and saying to name the one meant more closely, by its traits, value or identifier as well, or
-with `occurrence`, which picks one, counted from 1 in the order VoiceOver reads the screen.
+them, and saying to name the one meant more closely, by its traits, identifier, value or hint as
+well. Do that wherever you can: `retake compose` suggests the shortest name that picks an element
+out. `occurrence` picks one of several that match, counted from 1 in the order VoiceOver reads the
+screen. It's a last resort, for elements nothing else tells apart, since it breaks when the layout
+changes.
 
 **Name elements rather than points wherever you can.** A step that names an element finds it
 wherever the layout puts it, on every device, and after the app's layout changes, where a point
@@ -506,13 +509,13 @@ Every time in an edit — a clip's `from` and `to`, a caption's, spotlight's, bl
 `from` and `to`, a sound's `at`, a still's `at` and `stillsOut` — is an anchor: a moment in the
 clip's take, given by a step and where to go from it.
 
-An anchor's `step` is a step's `id`, its number from 1, or a negative number counting back from the
-last (`-1` is the last step); `start` and `end` are the take's first and last frames, lead-in and
-tail included. From the step, `offset` moves in seconds: forward from the step's end, or back from
-its start. `fraction`, from -1 to 1, moves a share of the gap to the neighbouring step: forward from
-the step's end toward the next step's start, or back from its start toward the previous step's end,
-with the take's `start` and `end` standing in past the first and last steps. `edge` counts from the
-step's other edge instead.
+An anchor's `step` is a step's `id`, its number counted from 1, or a negative number counting back
+from the last (`-1` is the last step); `start` and `end` are the take's first and last frames,
+lead-in and tail included. From the step, `offset` moves in seconds: forward from the step's end, or
+back from its start. `fraction`, from -1 to 1, moves a share of the gap to the neighbouring step:
+forward from the step's end toward the next step's start, or back from its start toward the previous
+step's end, with the take's `start` and `end` standing in past the first and last steps. `edge`
+counts from the step's other edge instead.
 
 An anchor has `offset` or `fraction`, not both; with neither, it's the step's start. A plain number
 of seconds from the take's start still works, and the first `cut` turns it into an anchor against
@@ -529,9 +532,10 @@ different device whose animations run longer. Which kind of anchor to use:
   `hold` doesn't stretch with the app, so a fraction across it lands at different points in the
   animation on different devices.
 
-Ids make an edit readable and survive steps being added to a scene; numbers don't, though `-1`
-always finds the last step. An anchor that doesn't resolve — an unknown id, a number past either
-end, a fraction outside -1 to 1 or with no step on that side — fails the `cut`, naming the clip.
+Anchor to a step's `id` rather than its number. Ids make an edit readable and survive steps being
+added to a scene; numbers don't, though `-1` always finds the last step. An anchor that doesn't
+resolve — an unknown id, a number past either end, a fraction outside -1 to 1 or with no step on
+that side — fails the `cut`, naming the clip.
 
 ### One edit for every device type
 
@@ -581,10 +585,11 @@ spotlight lands on the same button on every device, with no rectangles to measur
 "blurs": [{ "element": { "label": "Name" }, "from": { "step": "type-name" }, "to": { "step": "end" } }]
 ```
 
-An element is matched as a step's target is, so where several share a label, the same choice picks
-one. The frame used is the element's in the latest snapshot at or before the moment. Where only part
-of an element matters, its `part` names it, in points from the element's top-left corner or
-percentages of its frame, the whole frame on any side not given: `"part": { "x": "62%", "width":
+An element is matched as a step's target is, so where several share a label, its traits, identifier,
+value or hint pick one out, as they do for a step; `occurrence`, counted from 1, is the last resort
+there too. The frame used is the element's in the latest snapshot at or before the moment. Where
+only part of an element matters, its `part` names it, in points from the element's top-left corner
+or percentages of its frame, the whole frame on any side not given: `"part": { "x": "62%", "width":
 "31%" }` is the word "Alex" in a "Send to Alex" button. Something moving between snapshots, such as
 a keyboard sliding up, is better covered by a `rect`, in screen points or percentages of the screen
 as the device faced, given per device type where layouts differ.

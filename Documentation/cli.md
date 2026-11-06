@@ -457,21 +457,26 @@ takes the options its step does there; every one but `hold` also takes `--id <na
 | `waitFor` | An element | `--gone`, `--timeout <seconds>` (10) |
 | `hold` | `--seconds <seconds>` | |
 
-A `tap` at a point that lands on an element no other element on screen shares a label with is
-added, and `compose` says so, with the `tap --label` that names it instead: a step that names an
-element finds it wherever the layout puts it, on every device. In `--json`, that step is the
-reply's `suggestion`.
+A `tap` at a point that lands on an element is added, and `compose` says so, with the `tap` that
+names it instead: a step that names an element finds it wherever the layout puts it, on every
+device. The name is the shortest that no other element on screen matches: its `--label`, or its
+label with, or in place of it, its `--identifier`, `--value`, `--hint` or `--traits`, as few as tell
+it apart. Traits name it alone only when it has nothing else. Only when nothing tells it apart from
+another does the name end with an `--occurrence`, and `compose` says that breaks when the layout
+changes. In `--json`, that step is the reply's `suggestion`.
 
 `hold` adds a step that's only a pause, as `{ "hold": 2 }` does in a file. A step's `--hold` is the
 scene's `defaultHold` when it isn't given.
 
 An element is any of `--label <text>`, `--value <text>`, `--identifier <text>`, `--hint <text>` and
-`--traits <trait>,<trait>`, at least one, with `--occurrence <n>` (from 1, optional) to pick one of
-several that match. Other actions act on the scene rather than the app, and add no step:
+`--traits <trait>,<trait>`, at least one, with `--occurrence <n>` (counted from 1, optional) to pick
+one of several that match. Name an element closely enough that only it matches, rather than reaching
+for `--occurrence`: it's a last resort, for elements nothing else tells apart, since it breaks when
+the layout changes. Other actions act on the scene rather than the app, and add no step:
 
 | Action | Required | Optional | Does |
 | --- | --- | --- | --- |
-| `inspect` | | An element | Prints what's on screen again, or only the elements that match, each with the `--occurrence` that picks it. |
+| `inspect` | | An element | Prints what's on screen again, or only the elements that match, each with the options that pick it out. |
 | `set` | `--hold <seconds>` or `--id <name>`, or both | | Changes the last step's hold, or its id, for edits to anchor to. |
 | `undo` | | How many steps, `<n>` (1) | Drops the last step, or the last `<n>`, then launches the app again and replays the rest. |
 | `replay` | | | Launches the app again and replays every step, dropping none. |
@@ -481,9 +486,11 @@ several that match. Other actions act on the scene rather than the app, and add 
 
 `undo` and `help` take their one option bare: `undo 3`, `help tap`. `inspect` with an element, such
 as `inspect --label "Delete"`, is for picking out one of several alike: it lists them in the order
-VoiceOver reads them, numbered as `--occurrence` counts them. `replay` gets the app back to where
-the scene ends after something moved it off course, such as a step that failed partway, without
-dropping anything.
+VoiceOver reads them, each after the shortest options that name it and no other element on screen,
+chosen as a tap's suggestion is, such as `--label "Delete" --traits header` or `--identifier
+"delete-groceries"`. An element nothing tells apart from another gets an `--occurrence` as well.
+`replay` gets the app back to where the scene ends after something moved it off course, such as a
+step that failed partway, without dropping anything.
 
 At a terminal, an action given without an option it needs asks for it, saying which options are
 optional and what they default to. Read from a pipe, as when a script or an agent drives it, the
@@ -491,7 +498,8 @@ action fails instead, naming what's missing, and nothing is asked. With `--json`
 line of JSON, for a program to read: `{"ok": true, "step": {…}, "screen": […]}` after a step,
 `{"ok": false, "error": "…"}` when one doesn't run or an action is wrong, and `{"ok": true,
 "screen": […]}` for `inspect`, the screen as each element's `label`, `value`, `identifier`, `hint`,
-`traits`, `frame` and `activationPoint`, with its `occurrence` when `inspect` was given an element.
+`traits`, `frame` and `activationPoint`, with its `name` when `inspect` was given an element: the
+element as a step names it, such as `{"label": "Delete", "traits": ["header"]}`.
 
 The scene is written after each change, its other fields kept as they are; a new scene's file names
 its set, and is first written with its first step. At the end, the app is launched once more to

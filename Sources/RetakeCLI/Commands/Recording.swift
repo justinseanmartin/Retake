@@ -60,12 +60,15 @@ enum ComposeOutput {
             for element in elements { print("  \(element.line)") }
         case .matches(let elements):
             if elements.isEmpty { print("Nothing on screen matches.") }
-            for (index, element) in elements.enumerated() { print("  --occurrence \(index + 1)  \(element.line)") }
+            for match in elements { print("  \(match.name?.options ?? "(nothing to name it by)")  ·  \(match.element.line)") }
         case .added(let step, let number, let elements, let suggestion):
             print("✓ step \(number)\(step.id.map { " (\($0))" } ?? ""): \(step.line)")
-            if case .tapElement(let target)? = suggestion?.action, let label = target.label {
-                let quoted = "\"" + label.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
-                print("  That point is on \(quoted), which a step can name and follow wherever the layout puts it: undo, then tap --label \(quoted)")
+            if case .tapElement(let target)? = suggestion?.action {
+                if target.occurrence == nil {
+                    print("  That point is on \(target), which a step can name and follow wherever the layout puts it: undo, then tap \(target.options)")
+                } else {
+                    print("  That point is on \(target), which a step can name only by where it comes among those alike, which breaks when the layout changes: undo, then tap \(target.options)")
+                }
             }
             print("On screen, \(elements.count) element\(elements.count == 1 ? "" : "s"):")
             for element in elements { print("  \(element.line)") }
@@ -89,9 +92,9 @@ enum ComposeOutput {
         case .screen(let elements):
             fields = [.init(key: "ok", value: .bool(true)), .init(key: "screen", value: .array(elements.map(\.json)))]
         case .matches(let elements):
-            let numbered = elements.enumerated().map { index, element -> JSONValue in
-                guard case .object(var object) = element.json else { return element.json }
-                object.entries.append(.init(key: "occurrence", value: .number(Double(index + 1))))
+            let numbered = elements.map { match -> JSONValue in
+                guard case .object(var object) = match.element.json, let name = match.name else { return match.element.json }
+                object.entries.append(.init(key: "name", value: name.json))
                 return .object(object)
             }
             fields = [.init(key: "ok", value: .bool(true)), .init(key: "screen", value: .array(numbered))]

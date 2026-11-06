@@ -62,7 +62,7 @@ extension Spot {
 }
 
 extension ElementTarget {
-    var json: JSONValue {
+    public var json: JSONValue {
         var entries: [JSONObject.Entry] = []
         if let label { entries.append(.init(key: "label", value: .string(label))) }
         if let value { entries.append(.init(key: "value", value: .string(value))) }
