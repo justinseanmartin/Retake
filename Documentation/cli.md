@@ -111,7 +111,9 @@ works in: `scenes/<type>/` and `output/takes/<type>/`.
 
 Scenes, sets and edits are named by their file name without `.json`: `create-note` is
 `scenes/<type>/create-note.json`, and `video1` is `edits/video1.json`. Takes are numbered per scene
-and device type, from 1, and are never renumbered.
+and device type, from 1, and are never renumbered. A deleted take's number isn't used again: the
+next take is numbered one past the highest the scene has ever had, kept in a hidden `.last-take`
+file in its takes folder, so a video's record always names the take it was cut from.
 
 ### Reading the project's files
 
@@ -525,7 +527,9 @@ Records a new take of each scene chosen:
 | `retake record --for <edit> --force` | Every scene the edit uses. |
 | `retake record <scene>...` | The scenes named, whether or not they have takes. |
 
-`--force` adds a new take to scenes that already have one; it never replaces a take. When every
+`--force` adds a new take to scenes that already have one; it never replaces a take, nor reuses a
+deleted one's number. A take's number is used up once it starts recording, so one that fails or is
+interrupted is followed by the next number. When every
 scene chosen already has a take, `record` says so and records nothing.
 
 For each scene, in order:
@@ -539,7 +543,7 @@ For each scene, in order:
 3. Plays the setup steps, then records the lead-in, the steps with their holds, and the tail. After
    each step, and when each `waitFor` is satisfied, records the elements on screen in the step log.
 4. Writes `output/takes/<type>/<scene>/<n>.mov` and its step log `<n>.json`, `<n>` being one more
-   than the scene's last take.
+   than the highest take the scene has had, deleted ones included.
 
 After the last scene, when any take was `clean` or `cloned`, launches the app once more to delete
 the take's copy of its data and the staged set files from the device, as [`clean --on-device`](#retake-clean) does,
@@ -593,7 +597,8 @@ Deletes takes and cuts, of both device types unless `--type` names one:
 | `retake clean --unused` | Every unreferenced scene definition and take, and old or failed takes of referenced scenes. Keeps each referenced scene's latest successful take. |
 
 `--takes` and `--cuts` can be given together. It lists what it will delete, naming each take an edit
-is cut from, and asks first, unless `--yes`. Fails (2), deleting nothing, if a scene, take or edit named
+is cut from, and asks first, unless `--yes`. It keeps each scene's takes folder and its
+`.last-take` file, so the numbers of the takes it deletes aren't used again. Fails (2), deleting nothing, if a scene, take or edit named
 doesn't exist.
 
 `--unused` derives what is needed from every edit, including scenes used only for stills. It refuses
@@ -602,7 +607,8 @@ leaves rendered cuts, sets and other project files alone. `--type` limits both t
 definitions to one device type.
 
 Since `cut` selects each scene's latest successful take, deleting later takes is how an edit goes
-back to an earlier one: after `retake clean --takes create-note@5`, the next cut uses take 4.
+back to an earlier one: after `retake clean --takes create-note@5`, the next cut uses take 4, and
+the next take recorded is 6.
 
 `--on-device` deletes, instead, what Retake leaves in the app's container on the device: takes'
 copies of the app's data, and staged set files. `record` does this at the end of a run, so it's for
@@ -612,7 +618,7 @@ again, as from the home screen, and Retake closes it. It never touches the app's
 takes or cuts on the Mac.
 
 Edits are left as they are: they name no takes. `retake clean` then `retake record` starts everything
-over.
+over, though the new takes' numbers carry on from the old ones'.
 
 ### `retake cut`
 
@@ -783,6 +789,7 @@ What's worth keeping, and nothing that's rewritten wholesale:
 | --- | --- |
 | `takes/<type>/<scene>/<n>.mov` | A take's footage. |
 | `takes/<type>/<scene>/<n>.json` | A take's [step log](reference/take.md), and what it was recorded with: device, app version and build, set and state, Retake and Button Heist versions. |
+| `takes/<type>/<scene>/.last-take` | The highest take number the scene has had, so a deleted take's isn't used again. Written when a take starts recording; `clean` keeps it. |
 | `cuts/<type>/<edit>/` | Rendered videos, from `cut`. |
 | `installed.json` | The bundle ID of the app `install` last embedded, for [finding the app](#finding-the-app). |
 

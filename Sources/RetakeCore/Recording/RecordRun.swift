@@ -22,10 +22,11 @@ public enum RecordRun {
         }.sorted { $0.number < $1.number }
     }
 
-    /// The next take's number: one more than the scene's last, failed takes included, since takes
-    /// are never renumbered.
+    /// The next take's number: one more than the highest the scene has ever had for this device
+    /// type, failed and deleted takes included, so a number is never used again. See
+    /// `TakeStore.lastTake(in:)`.
     public static func nextTake(of scene: String, for type: DeviceType, in project: Project) -> Int {
-        (takes(of: scene, for: type, in: project).last?.number ?? 0) + 1
+        TakeStore.lastTake(in: project.takes(for: type).appending(path: scene)) + 1
     }
 
     /// The scenes to record, in order, as Documentation/cli.md's table says: those named; or every scene in

@@ -87,12 +87,18 @@ struct TakeStoreTests {
         }
     }
 
-    @Test func deletingTakesBothFilesAndASceneFolderLeftEmpty() throws {
+    @Test func deletingTakesDeletesBothFilesButKeepsTheirNumbersUsed() throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        let cleaning = try TakeStore.cleaning(takes: [.scene("b"), .take("a", 1)], cuts: ["video1"], for: [.ipad], in: project)
+        let cleaning = try TakeStore.cleaning(takes: [.scene("b"), .take("a", 2)], cuts: ["video1"], for: [.ipad], in: project)
         try TakeStore.delete(cleaning, in: project)
-        #expect(names(TakeStore.takes(for: DeviceType.allCases, in: project)) == ["iphone a@1", "ipad a@2", "ipad c@1"])
-        #expect(!FileManager.default.fileExists(atPath: project.takes(for: .ipad).appending(path: "b").path))
+        #expect(names(TakeStore.takes(for: DeviceType.allCases, in: project)) == ["iphone a@1", "ipad a@1", "ipad c@1"])
+        #expect(RecordRun.nextTake(of: "a", for: .ipad, in: project) == 3, "the deleted highest take's number isn't used again")
+        #expect(RecordRun.nextTake(of: "b", for: .ipad, in: project) == 2, "nor a scene's whose every take is deleted")
+        #expect(RecordRun.nextTake(of: "a", for: .iphone, in: project) == 2, "each device type is numbered apart")
+
+        // Deleting again, with the marker there, keeps it.
+        try TakeStore.delete(TakeStore.cleaning(takes: [.scene("a")], cuts: nil, for: [.ipad], in: project), in: project)
+        #expect(RecordRun.nextTake(of: "a", for: .ipad, in: project) == 3)
         #expect(!FileManager.default.fileExists(atPath: project.cuts(for: .ipad).appending(path: "video1").path))
         #expect(FileManager.default.fileExists(atPath: project.cuts(for: .ipad).appending(path: "video2").path))
     }

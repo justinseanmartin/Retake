@@ -199,14 +199,42 @@ public enum TakeStore {
         return Cleaning(takes: oldTakes, cuts: [], scenes: unusedScenes)
     }
 
-    /// Deletes what `cleaning` chose, and a scene's folder once its last take is gone.
+    /// The hidden file in a scene's takes folder, `.last-take`, holding the highest take number the
+    /// scene has had for that device type, deleted takes included, so a number is never used again.
+    static let marker = ".last-take"
+
+    /// The highest take number a scene's takes folder has had: its marker's, or, in a project from
+    /// before markers, or past the marker, the highest take still on disk; 0 for none.
+    public static func lastTake(in folder: URL) -> Int {
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+        let onDisk = names.compactMap { name -> Int? in
+            let url = URL(filePath: name)
+            guard ["json", "mov"].contains(url.pathExtension), let number = Int(url.deletingPathExtension().lastPathComponent), number > 0 else { return nil }
+            return number
+        }.max() ?? 0
+        let marked = (try? String(contentsOf: folder.appending(path: marker), encoding: .utf8))
+            .flatMap { Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) } ?? 0
+        return max(onDisk, marked)
+    }
+
+    /// Records in the folder's marker that `number` has been used, unless a higher one has.
+    static func markUsed(_ number: Int, in folder: URL) throws {
+        let last = lastTake(in: folder)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Data("\(max(number, last))\n".utf8).write(to: folder.appending(path: marker), options: .atomic)
+    }
+
+    /// Deletes what `cleaning` chose. A scene's takes folder is kept, with its marker, so the
+    /// numbers of the takes deleted aren't used again; in a project from before markers, the marker
+    /// is written first.
     public static func delete(_ cleaning: Cleaning, in project: Project) throws(RetakeError) {
         let files = FileManager.default
         do {
+            for folder in Set(cleaning.takes.map { $0.movie.deletingLastPathComponent() }) {
+                try markUsed(lastTake(in: folder), in: folder)
+            }
             for take in cleaning.takes {
                 for url in [take.movie, take.log] where files.fileExists(atPath: url.path) { try files.removeItem(at: url) }
-                let folder = take.movie.deletingLastPathComponent()
-                if (try? files.contentsOfDirectory(atPath: folder.path))?.isEmpty == true { try files.removeItem(at: folder) }
             }
             for folder in cleaning.cuts { try files.removeItem(at: folder) }
             for scene in cleaning.scenes { try files.removeItem(at: scene) }

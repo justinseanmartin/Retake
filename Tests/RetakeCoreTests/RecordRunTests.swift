@@ -31,9 +31,21 @@ struct RecordRunTests {
         try makeProject()
         defer { try? FileManager.default.removeItem(at: root) }
         #expect(RecordRun.nextTake(of: "a", for: .ipad, in: project) == 2)
-        #expect(RecordRun.nextTake(of: "b", for: .ipad, in: project) == 3)
+        #expect(RecordRun.nextTake(of: "b", for: .ipad, in: project) == 3, "with no marker, one past the highest on disk")
         #expect(RecordRun.nextTake(of: "c", for: .ipad, in: project) == 1)
         #expect(RecordRun.takes(of: "b", for: .ipad, in: project) == [.init(number: 2, failed: true)])
+    }
+
+    @Test func aTakeUsesUpItsNumberWhenItStartsAndAMarkerBehindTheDiskIsPassed() throws {
+        try makeProject()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let folder = project.takes(for: .ipad).appending(path: "c")
+        try TakeRecording.start(.init(scene: "c", take: 1, movie: folder.appending(path: "1.mov")), in: project)
+        #expect(RecordRun.nextTake(of: "c", for: .ipad, in: project) == 2, "a take that wrote nothing still used its number")
+        #expect(try String(contentsOf: folder.appending(path: ".last-take"), encoding: .utf8) == "1\n")
+
+        try write("output/takes/ipad/c/4.json", #"{ "scene": "c" }"#)
+        #expect(RecordRun.nextTake(of: "c", for: .ipad, in: project) == 5, "takes put there by hand count too")
     }
 
     @Test func withNoneNamedOnlyScenesWithoutAGoodTakeAreChosenUnlessForced() throws {

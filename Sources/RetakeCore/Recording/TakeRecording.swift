@@ -24,11 +24,22 @@ public enum TakeRecording {
         public var log: URL { movie.deletingPathExtension().appendingPathExtension("json") }
     }
 
+    /// Makes the take's folder and marks its number used there, so a take that fails or is
+    /// interrupted, even before it writes anything, still uses up its number.
+    static func start(_ target: Target, in project: Project) throws(RetakeError) {
+        let folder = target.movie.deletingLastPathComponent()
+        do {
+            try TakeStore.markUsed(target.take, in: folder)
+        } catch {
+            throw RetakeError(.failed, "Couldn't mark take \(target.take) used in \(project.displayPath(folder)): \(error.localizedDescription)")
+        }
+    }
+
     /// Records `target`'s take of `scene` on its set, through `capture`: launches the app, plays the
     /// setup, records the lead-in, the steps with their holds, and the tail, and writes the movie
     /// and its step log. A take whose step doesn't run is still written, marked failed, for its
     /// footage to show what went wrong, and the failure is thrown after; one that couldn't record at
-    /// all writes nothing. Returns the log.
+    /// all writes no movie or log, though once it has started its number is used up. Returns the log.
     @discardableResult
     public static func record(
         _ target: Target,
@@ -60,11 +71,7 @@ public enum TakeRecording {
             recordedAt: Date(), failure: nil, duration: 0, width: 0, height: 0, frames: 0, dropped: 0, screen: screen, launch: nil,
             clock: TakeLog.Clock(deviceAhead: nil), steps: [], shapes: [],
         )
-        do {
-            try FileManager.default.createDirectory(at: target.movie.deletingLastPathComponent(), withIntermediateDirectories: true)
-        } catch {
-            throw RetakeError(.failed, "Couldn't make \(project.displayPath(target.movie.deletingLastPathComponent())): \(error.localizedDescription)")
-        }
+        try start(target, in: project)
 
         let recorder = try DeviceRecorder(capture)
         recorder.turning(to: TakeWriter.Facing(scene.orientation))

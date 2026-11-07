@@ -430,10 +430,12 @@ The log is what lets an edit draw touches where they happened, find elements to 
 and cut on steps rather than seconds, on any take of the same scene. Retake writes it, and a project
 never edits it; every field is in the [step log reference](Documentation/reference/take.md).
 
-Recording a scene again adds a take; it never replaces one. Takes are numbered per scene, and each
-records the app's version and build, the device, and when it was made, which `retake takes` lists.
-Retake never decides a take is out of date: you know when the app has changed enough to record
-again. `retake clean` then `retake record` starts everything over.
+Recording a scene again adds a take; it never replaces one. Takes are numbered per scene, and a
+deleted take's number isn't used again, so a video's record always names the take it was cut from.
+Each take records the app's version and build, the device, and when it was made, which `retake
+takes` lists. Retake never decides a take is out of date: you know when the app has changed enough
+to record again. `retake clean` then `retake record` starts everything over, numbering on from the
+last takes.
 
 Recording a device reliably takes more care than it looks. Retake handles the failures that
 otherwise cost a take: a break in the stream doesn't end the file; silences, when the device sends

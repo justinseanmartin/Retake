@@ -102,7 +102,9 @@ public struct ProjectStatus: Sendable {
     }
 
     /// A rendered video, and what has changed since: its edit, a newer take of a scene it was cut
-    /// from, or one of its takes recorded again under the same number.
+    /// from, or one of its takes recorded again under the same number. Retake no longer uses a
+    /// number again, but a project from before the takes folder's marker can have deleted a take
+    /// whose number its next take then took, so that last is still checked, by the step log's time.
     static func video(
         _ file: URL, of name: String, for type: DeviceType, edits: [String: EditFile], unreadable: [String: String],
         takes: [String: [TakeStore.Take]], files: ProjectFiles, read: (URL) async throws(RetakeError) -> MovieInfo,
