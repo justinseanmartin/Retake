@@ -244,9 +244,11 @@ closes it.
 In `clean` and `cloned`, Retake replaces `UserDefaults.standard` for the take with an in-memory
 store. The app reads and writes it as it always does, through `UserDefaults` and `@AppStorage`;
 nothing is written to the app's real defaults, and everything is gone when the app quits. In
-`clean`, every take starts from exactly the set's values, whatever the last one changed. In
-`cloned`, a key the set doesn't give, and the take hasn't written or removed, reads through to the
-app's real defaults, so the take sees them without copying them, and can't change them.
+`clean`, every take starts from exactly the set's values, whatever the last one changed. A clean
+start still reads launch arguments (`-key value`, as a set's `arguments` may give) and the global
+domain (such as `AppleLanguages`); only the app's own domain starts empty. In `cloned`, a key the
+set doesn't give, and the take hasn't written or removed, reads through to the app's real defaults,
+so the take sees them without copying them, and can't change them.
 
 It behaves as the real defaults do in the ways an app notices: values the app registers with
 `register(defaults:)` still apply beneath the set's; the typed getters (`bool(forKey:)`,

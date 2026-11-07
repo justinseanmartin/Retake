@@ -13,7 +13,7 @@ Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.
 | `$schema` | string |  | The URL of the schema the file is written against, for editors. Optional; a file is read against this Retake's schema whatever it names. |
 | `set` | string, not empty |  | The set the scene starts on; the project's defaultSet when not given. |
 | `setup` | list of [step](#step) |  | Steps played before recording starts. Nothing anchors to them, so they have no id. |
-| `leadIn` | number ≥ 0 | `1` | Seconds recorded before the first step. |
+| `leadIn` | number ≥ 0 | `1` | Seconds recorded before the first step. For a scene that records its launch, they start once the app is reachable, after the launch is recorded. |
 | `tail` | number ≥ 0 | `1` | Seconds recorded after the last step. |
 | `defaultHold` | number ≥ 0 | `0` | The hold of each step that doesn't give its own. |
 | `recordsLaunch` | boolean | `false` | Starts recording before the app launches, to catch its launch screen. |

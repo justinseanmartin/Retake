@@ -158,7 +158,7 @@ extension SceneFile {
                 FileSchema.schemaKey,
                 .init("set", .string("The set the scene starts on; the project's defaultSet when not given.", nonEmpty: true)),
                 .init("setup", .array("Steps played before recording starts. Nothing anchors to them, so they have no id.", of: .ref("step"))),
-                .init("leadIn", .number("Seconds recorded before the first step.", atLeast: 0).defaulting(to: defaultLeadIn)),
+                .init("leadIn", .number("Seconds recorded before the first step. For a scene that records its launch, they start once the app is reachable, after the launch is recorded.", atLeast: 0).defaulting(to: defaultLeadIn)),
                 .init("tail", .number("Seconds recorded after the last step.", atLeast: 0).defaulting(to: defaultTail)),
                 .init("defaultHold", .number("The hold of each step that doesn't give its own.", atLeast: 0).defaulting(to: defaultDefaultHold)),
                 .init("recordsLaunch", .bool("Starts recording before the app launches, to catch its launch screen.").defaulting(to: defaultRecordsLaunch)),

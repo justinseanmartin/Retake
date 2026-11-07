@@ -146,6 +146,10 @@ Commands print progress for people. Those that report something — `devices`, `
 `doctor`, `embed`, `info`, `validate`, `version` — take `--json` for a stable, machine-readable
 form instead, and `compose --json` answers each action with a line of JSON.
 
+Notes (`note:`), warnings (`warning:`), questions asked at a terminal, and the `✖` error that ends
+a command go to standard error; everything else goes to standard output, including the `✓` and `✖`
+lines `record` and `cut` print for each scene or edit, so a pipe or `--json` gets only the output.
+
 ### Environment variables
 
 Some options can also be set in the environment, for a shell or a script that runs many commands the
@@ -388,7 +392,10 @@ and no device.
 4. Re-signs everything it added, and the app, with the identity and provisioning profile the app was
    signed with, keeping the app's entitlements. `--identity` and `--profile`, or
    `RETAKE_SIGNING_IDENTITY` and `RETAKE_PROVISIONING_PROFILE`, replace either: for an app built
-   without signing, or signed with a profile that doesn't include the device.
+   without signing, or signed with a profile that doesn't include the device. An app built
+   unsigned gets only the minimal development entitlements (the profile's app ID for its bundle ID,
+   its team, `get-task-allow` and its own keychain group), so build an app that needs capabilities
+   signed, for `embed` to keep its own.
 
 The app's own executable isn't changed. The `.app` is changed in place, unless `--output` names
 where to write a copy. Prints the path of the result, or with `--json`, it and what was embedded.
@@ -504,12 +511,35 @@ step that failed partway, without dropping anything.
 
 At a terminal, an action given without an option it needs asks for it, saying which options are
 optional and what they default to. Read from a pipe, as when a script or an agent drives it, the
-action fails instead, naming what's missing, and nothing is asked. With `--json`, each reply is one
-line of JSON, for a program to read: `{"ok": true, "step": {…}, "screen": […]}` after a step,
-`{"ok": false, "error": "…"}` when one doesn't run or an action is wrong, and `{"ok": true,
-"screen": […]}` for `inspect`, the screen as each element's `label`, `value`, `identifier`, `hint`,
-`traits`, `frame` and `activationPoint`, with its `name` when `inspect` was given an element: the
-element as a step names it, such as `{"label": "Delete", "traits": ["header"]}`.
+action fails instead, naming what's missing, and nothing is asked.
+
+With `--json`, each reply is one line of JSON, for a program to read, with `ok` true, or false for
+an error. A step is written as the scene file writes it, and an element as the step log does: its
+`label`, `value`, `identifier`, `hint`, `traits`, `frame` (`[x, y, width, height]`) and
+`activationPoint` (`[x, y]`), in screen points, each left out when it has none.
+
+- **After launching**, and after `undo` and `replay`, which launch again: for a scene that has
+  steps, `{"ok": true, "steps": […]}`, the steps replayed, after `{"ok": false, "error":
+  "Replaying the scene: …"}` if one didn't run; then `{"ok": true, "screen": […]}`, what's on
+  screen.
+- **`inspect`**: `{"ok": true, "screen": […]}`. Given an element, only those that match, each with
+  its `name`, the element as a step names it, such as `{"label": "Delete", "traits": ["header"]}`,
+  left out for an element with nothing to name it by.
+- **A step added**: `{"ok": true, "number": 3, "step": {…}, "screen": […]}`, its number among the
+  scene's steps, from 1, and what's on screen after it; for a tap at a point that lands on an
+  element, with `"suggestion": {…}`, the step that names the element instead.
+- **`set`**: `{"ok": true, "number": 3, "step": {…}}`, the last step as changed.
+- **`steps`**: `{"ok": true, "steps": […]}`.
+- **`help`**: `{"ok": true, "help": "…"}`, the text `help` prints.
+- **An error**: `{"ok": false, "error": "…"}`, for a step that didn't run, or an action that's
+  wrong; nothing is added.
+
+`quit`, and the end of the input, reply nothing.
+
+<!-- schema: none -->
+```json
+{"ok": true, "number": 1, "step": { "tap": { "x": 802, "y": 54 } }, "screen": [{ "label": "Notes", "traits": ["header"], "frame": [20, 96, 160, 41], "activationPoint": [100, 116.5] }, { "label": "New Note", "traits": ["button"], "frame": [780, 32, 44, 44], "activationPoint": [802, 54] }], "suggestion": { "tap": { "label": "New Note" } }}
+```
 
 The scene is written after each change, its other fields kept as they are; a new scene's file names
 its set, and is first written with its first step. At the end, the app is launched once more to
@@ -1029,8 +1059,8 @@ recorded on a later build than the other:
     { "version": "0.7.1" }
   ],
   "takes": [
-    { "scene": "create-note", "take": 3, "retake": "0.1.0", "app": { "version": "1.9.0", "build": "412" }, "device": { "model": "iPhone18,5", "os": "26.6.2 (23G90)" }, "buttonHeist": { "version": "0.7.1" } },
-    { "scene": "share-note", "take": 1, "retake": "0.1.0", "app": { "version": "1.9.0", "build": "415" }, "device": { "model": "iPhone18,5", "os": "26.6.2 (23G90)" }, "buttonHeist": { "version": "0.7.1" } }
+    { "scene": "create-note", "deviceType": "iphone", "recordedAt": "2026-11-06T09:30:00Z", "retake": "0.1.0", "app": { "version": "1.9.0", "build": "412" }, "device": { "model": "iPhone18,5", "os": "26.6.2 (23G90)" }, "buttonHeist": { "version": "0.7.1" } },
+    { "scene": "share-note", "deviceType": "iphone", "recordedAt": "2026-11-06T11:12:40Z", "retake": "0.1.0", "app": { "version": "1.9.0", "build": "415" }, "device": { "model": "iPhone18,5", "os": "26.6.2 (23G90)" }, "buttonHeist": { "version": "0.7.1" } }
   ]
 }
 ```

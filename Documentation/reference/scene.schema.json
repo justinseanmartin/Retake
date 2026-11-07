@@ -22,7 +22,7 @@
       }
     },
     "leadIn": {
-      "description": "Seconds recorded before the first step.",
+      "description": "Seconds recorded before the first step. For a scene that records its launch, they start once the app is reachable, after the launch is recorded.",
       "type": "number",
       "minimum": 0,
       "default": 1

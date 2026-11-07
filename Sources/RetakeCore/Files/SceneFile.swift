@@ -18,7 +18,8 @@ public struct SceneFile: Equatable, Sendable {
     /// Played before recording starts.
     public var setup: [Step]
     public var steps: [Step]
-    /// Seconds recorded before the first step and after the last.
+    /// Seconds recorded before the first step and after the last. A scene that records its launch
+    /// has its lead-in from once the app is reachable.
     public var leadIn: Double
     public var tail: Double
     /// Whether recording starts before the app launches.
