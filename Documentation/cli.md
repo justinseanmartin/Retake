@@ -110,10 +110,18 @@ works in: `scenes/<type>/` and `output/takes/<type>/`.
 ### Names
 
 Scenes, sets and edits are named by their file name without `.json`: `create-note` is
-`scenes/<type>/create-note.json`, and `video1` is `edits/video1.json`. Takes are numbered per scene
-and device type, from 1, and are never renumbered. A deleted take's number isn't used again: the
-next take is numbered one past the highest the scene has ever had, kept in a hidden `.last-take`
-file in its takes folder, so a video's record always names the take it was cut from.
+`scenes/<type>/create-note.json`, and `video1` is `edits/video1.json`. Takes are named by their
+scene: for each device type, a scene has its take, `create-note.mov`, the take that one replaced,
+`create-note.previous.mov`, and its latest failure, `create-note.failed.mov`, each with its step
+log beside it. A video's record names each take it was cut from by its scene, device type and when
+it was recorded.
+
+### Takes from an earlier Retake
+
+An earlier Retake numbered takes, in a folder per scene, `output/takes/<type>/<scene>/1.mov` and so
+on. This Retake doesn't read them: a command that reads takes (`record`, `takes`, `cut`, `status`,
+and `validate`, which reports a problem) fails (1) while any are there, naming each folder and
+saying to delete it with `retake clean --takes <scene>` or by hand, and to record the scene again.
 
 ### Reading the project's files
 
@@ -517,7 +525,7 @@ retake record [<scene>... | --for <edit>] [--force] [--device <device>] [--stop-
               [--dry-run]
 ```
 
-Records a new take of each scene chosen:
+Records each scene chosen again:
 
 | Form | Records |
 | --- | --- |
@@ -527,10 +535,8 @@ Records a new take of each scene chosen:
 | `retake record --for <edit> --force` | Every scene the edit uses. |
 | `retake record <scene>...` | The scenes named, whether or not they have takes. |
 
-`--force` adds a new take to scenes that already have one; it never replaces a take, nor reuses a
-deleted one's number. A take's number is used up once it starts recording, so one that fails or is
-interrupted is followed by the next number. When every
-scene chosen already has a take, `record` says so and records nothing.
+`--force` records again scenes that already have a take. When every scene chosen already has a
+take, `record` says so and records nothing.
 
 For each scene, in order:
 
@@ -542,18 +548,27 @@ For each scene, in order:
    step, saying to `retake embed` or `retake install` the app again.
 3. Plays the setup steps, then records the lead-in, the steps with their holds, and the tail. After
    each step, and when each `waitFor` is satisfied, records the elements on screen in the step log.
-4. Writes `output/takes/<type>/<scene>/<n>.mov` and its step log `<n>.json`, `<n>` being one more
-   than the highest take the scene has had, deleted ones included.
+4. Writes the movie and its step log as `output/takes/<type>/<scene>.recording.mov` and `.json`,
+   then, when every step ran, renames them into place as the scene's take, `<scene>.mov` and
+   `<scene>.json`. The take it replaces becomes `<scene>.previous.*`, deleting the previous one
+   before it, and the scene's latest failure, `<scene>.failed.*`, is deleted: it's no longer the
+   latest news.
 
 After the last scene, when any take was `clean` or `cloned`, launches the app once more to delete
 the take's copy of its data and the staged set files from the device, as [`clean --on-device`](#retake-clean) does,
 so none is left behind.
 
-A take whose step fails is kept, marked failed, for its footage to show what went wrong; no edit is
-cut from it. Recording carries on with the next scene unless `--stop-on-failure` is given, and
-a summary at the end lists each scene's new take or failure.
+A take whose step fails is kept as the scene's latest failure, `<scene>.failed.mov` and `.json`,
+replacing the last, for its footage to show what went wrong; no edit is cut from it, and the take
+and the previous one are left alone. A recording that's interrupted, or can't record at all, keeps
+nothing and changes none of the scene's takes; what it wrote under `.recording` is deleted then, or,
+for one killed outright, by the next recording of the scene. Recording carries on with the next
+scene unless `--stop-on-failure` is given, and a summary at the end lists each scene's new take or
+failure.
 
-Existing takes are never changed.
+Since a stutter or a hitch still counts as success, the take a retake replaces is kept as the
+previous one: when the new take came out worse, [`retake takes --restore <scene>`](#retake-takes)
+puts it back.
 
 **`--dry-run`** plays the scenes chosen as `record` would, without recording them, for trying a
 scene out while writing it: it launches on each scene's set, plays its setup and steps with their
@@ -567,20 +582,30 @@ before, so a dry run that skipped holds could fail where a take wouldn't, or pas
 
 ```
 retake takes [<scene>] [--device <device> | --type <type>] [--json]
+retake takes --restore <scene> [--device <device> | --type <type>]
 ```
 
-Lists takes, of one scene or all: number, when it was recorded, the app's version and build, the
-device and its model, duration, frames dropped, whether it failed, and the edits cut from it. A
+Lists takes, of one scene or all: each scene's take, its previous take and its latest failure, each
+with when it was recorded, the app's version and build, the device and its model, duration, frames
+dropped, why a failure failed, and the edits cut from the take. With `--json`, each has a `kind`:
+`take`, `previous` or `failed`. A
 take whose [step log](reference/take.md) can't be read is listed as failed, saying why: one recorded
 by an earlier Retake that didn't log its screen, frames and dropped frames is to be recorded again,
 and one recorded by a newer Retake, in a later step log `format`, needs Retake updated.
 
 Without `--device` or `--type`, lists takes of both device types.
 
+**`--restore <scene>`** puts back the scene's previous take, in place of the take that replaced it,
+which becomes the previous take in turn, so restoring again undoes it. The next cut uses the take
+put back, and `status` says a video cut from the other is out of date. Fails (2) when the scene has
+no previous take, or has one for both device types and neither `--device` nor `--type` says which.
+Moving the files by hand does the same: rename `<scene>.mov` and `<scene>.json` aside, then the
+`.previous` ones to `<scene>.mov` and `<scene>.json`.
+
 ### `retake clean`
 
 ```
-retake clean [--takes [<scene>[@<take>],...]] [--cuts [<edit>,...]] [--type <type>] [--yes]
+retake clean [--takes [<scene>,...]] [--cuts [<edit>,...]] [--type <type>] [--yes]
 retake clean --unused [--type <type>] [--yes]
 retake clean --on-device [--device <device>]
 ```
@@ -591,24 +616,25 @@ Deletes takes and cuts, of both device types unless `--type` names one:
 | --- | --- |
 | `retake clean` | Every take and every cut. |
 | `retake clean --takes` | Every take. |
-| `retake clean --takes create-note,share-note@2` | Every take of `create-note`, and take 2 of `share-note`. |
+| `retake clean --takes create-note,share-note` | The takes of `create-note` and `share-note`: each one's take, previous take and latest failure. |
 | `retake clean --cuts` | Every cut. |
 | `retake clean --cuts video1` | `video1`'s cuts. |
-| `retake clean --unused` | Every unreferenced scene definition and take, and old or failed takes of referenced scenes. Keeps each referenced scene's latest successful take. |
+| `retake clean --unused` | Every unreferenced scene definition and take, and every previous take and failure. Keeps each referenced scene's take. |
 
-`--takes` and `--cuts` can be given together. It lists what it will delete, naming each take an edit
-is cut from, and asks first, unless `--yes`. It keeps each scene's takes folder and its
-`.last-take` file, so the numbers of the takes it deletes aren't used again. Fails (2), deleting nothing, if a scene, take or edit named
-doesn't exist.
+`--takes` and `--cuts` can be given together. `--takes` also deletes the numbered takes an
+[earlier Retake](#takes-from-an-earlier-retake) left, in `output/takes/<type>/<scene>/`, of the
+scenes named, or of every scene. It lists what it will delete, warning of each take an edit is cut
+from, which the edit needs recorded again before its next cut, and asks first, unless `--yes`.
+Fails (2), deleting nothing, if a scene or edit named has nothing to delete.
+
+`clean` deletes a scene's take, previous take and failure together. To drop only the previous take
+or the failure, delete its two files, `<scene>.previous.*` or `<scene>.failed.*`, by hand, or
+`--unused` drops every one.
 
 `--unused` derives what is needed from every edit, including scenes used only for stills. It refuses
 to delete anything if an edit cannot be read, because that edit's dependencies are unknown. It
 leaves rendered cuts, sets and other project files alone. `--type` limits both takes and scene
-definitions to one device type.
-
-Since `cut` selects each scene's latest successful take, deleting later takes is how an edit goes
-back to an earlier one: after `retake clean --takes create-note@5`, the next cut uses take 4, and
-the next take recorded is 6.
+definitions to one device type. It refuses to run while an earlier Retake's numbered takes are there.
 
 `--on-device` deletes, instead, what Retake leaves in the app's container on the device: takes'
 copies of the app's data, and staged set files. `record` does this at the end of a run, so it's for
@@ -618,7 +644,7 @@ again, as from the home screen, and Retake closes it. It never touches the app's
 takes or cuts on the Mac.
 
 Edits are left as they are: they name no takes. `retake clean` then `retake record` starts everything
-over, though the new takes' numbers carry on from the old ones'.
+over.
 
 ### `retake cut`
 
@@ -627,8 +653,7 @@ retake cut <edit>... [--type <type>] [--draft] [--open]
 retake cut --all [--type <type>] [--draft]
 ```
 
-Renders each edit, for each device type it names (or only `--type`'s), from each scene's latest
-successful take, to
+Renders each edit, for each device type it names (or only `--type`'s), from each scene's take, to
 `output/cuts/<type>/<edit>/`:
 
 - `<edit>-<type>-master.mov`, ProRes, and
@@ -639,13 +664,14 @@ edit's and a turn's, so neither shows what a blur hides. An edit with blurs take
 cut, since its master is written twice: once as the edit is composed, and again with the blurs.
 
 Each video records the takes it was cut from in its [metadata](#a-videos-fields). The edit isn't
-touched, except that a time given in plain seconds becomes an anchor against its scene's latest
-successful take, the latest step to start at or before it and an `offset` from that step's start,
+touched, except that a time given in plain seconds becomes an anchor against its scene's take,
+the latest step to start at or before it and an `offset` from that step's start,
 checked against those takes before the edit is rewritten. A caption's `from` or
 `to` in seconds that is the moment it starts or ends anyway, on every device type, to a sixtieth of
 a second, is dropped instead, so it keeps following its clip; the rewritten edit keeps
 its fields' order, and a `"$schema"` naming one of Retake's schemas is updated to this Retake's. To
-cut from an older take, delete the later takes with [`clean --takes`](#retake-clean) before cutting.
+cut from the take a scene's take replaced, put it back with [`takes --restore`](#retake-takes)
+before cutting.
 
 `--draft` renders a quick, smaller H.264 alone, `<edit>-<type>-draft.mp4`: for checking timing, and
 for sharing where the full size isn't needed, such as a post on social media. A draft outside App
@@ -654,10 +680,7 @@ Store Connect's limits is warned about rather than failed. `--open` opens the re
 Warns, and carries on, when the edit's takes were recorded on more than one build of the app, device
 or iOS version, or Button Heist, naming the takes on each; the video's [metadata](#a-videos-fields) lists all of them.
 
-Warns, and carries on, when a scene's latest take can't be read, cutting the latest that can; when
-none can, fails saying why.
-
-Fails (1) if a scene has no successful take, an anchor doesn't resolve, an element a spotlight
+Fails (1) if a scene has no successful take, saying why when its take can't be read, an anchor doesn't resolve, an element a spotlight
 or blur names isn't in the take's step log at that moment, one device type's takes come from devices
 with different screens (naming the takes on each), or the result is outside App Store Connect's
 limits for a preview, such as its length.
@@ -670,12 +693,19 @@ retake status [--json]
 
 Summarizes the project, per device type:
 
-- each scene, its latest take, and when it was recorded;
-- each edit, and the take of each scene it's cut from: the scene's latest successful one;
-- each video, and whether its edit has changed, or a scene it was cut from has a newer take, since
-  it was rendered.
+- each scene, when its take, its previous take and its latest failure were recorded, and why the
+  failure failed;
+- each edit, and the take of each scene it's cut from, by when it was recorded;
+- each video, and whether it's out of date: its edit has changed since it was rendered, or a scene's
+  take isn't the one its record names by device type and when it was recorded, as when the scene
+  has been recorded again or its previous take put back. A video cut by an earlier Retake, whose
+  record names takes by number, is out of date, since its takes can't be told.
 
-Reports; never fails on what it finds.
+With `--json`, a scene's `take`, `previous` and `failed` are each null when it has none, and an
+edit's `uses` give each scene's take's `recordedAt`.
+
+Reports; never fails on what it finds, except an [earlier Retake's](#takes-from-an-earlier-retake)
+numbered takes, which it refuses.
 
 ### `retake info`
 
@@ -683,7 +713,9 @@ Reports; never fails on what it finds.
 retake info <movie>... [--json]
 ```
 
-Prints the [metadata](#movie-metadata) Retake wrote into each movie: a take, a master, or an `.mp4`. Works on any of
+Prints the [metadata](#movie-metadata) Retake wrote into each movie: a take, a master, or an `.mp4`.
+A video lists each take it was cut from by its scene and when it was recorded; with `--json`, its
+`takes` give each one's `scene`, `deviceType` and `recordedAt`. Works on any of
 them wherever they've been moved to, outside a project as well as in one. Fails (1) for a movie
 Retake didn't write.
 
@@ -715,10 +747,11 @@ Checks the project's files, or the files named, against the schemas, then what a
   edit's scenes, sounds and music;
 - that step ids are unique in a scene, aren't numbers, and aren't `start` or `end`;
 - that every step id an edit references exists in that scene for each device type;
-- with takes recorded, that every anchor resolves in each scene's latest successful take, and every
+- with takes recorded, that every anchor resolves in each scene's take, and every
   element a spotlight or blur names is in the step log at that moment, as `cut` will check. A scene
   with no successful take here, as in a fresh clone or on CI, is warned about rather than failed,
-  and what's cut from it isn't checked. `--offline` skips this.
+  and what's cut from it isn't checked. An [earlier Retake's](#takes-from-an-earlier-retake)
+  numbered takes are a problem, naming each folder to delete. `--offline` skips this.
 
 Needs no device and changes nothing. Prints every problem, not just the first, and fails (1) if
 there's any. Made for CI and pre-commit hooks, and for an agent checking an edit it changed;
@@ -787,9 +820,11 @@ What's worth keeping, and nothing that's rewritten wholesale:
 
 | Path | What |
 | --- | --- |
-| `takes/<type>/<scene>/<n>.mov` | A take's footage. |
-| `takes/<type>/<scene>/<n>.json` | A take's [step log](reference/take.md), and what it was recorded with: device, app version and build, set and state, Retake and Button Heist versions. |
-| `takes/<type>/<scene>/.last-take` | The highest take number the scene has had, so a deleted take's isn't used again. Written when a take starts recording; `clean` keeps it. |
+| `takes/<type>/<scene>.mov` | The scene's take: the latest recording of it that succeeded, which edits are cut from. |
+| `takes/<type>/<scene>.json` | Its [step log](reference/take.md), and what it was recorded with: device, app version and build, set and state, Retake and Button Heist versions. |
+| `takes/<type>/<scene>.previous.mov`, `.json` | The take the scene's take replaced, for [`takes --restore`](#retake-takes) to put back. A new take that succeeds deletes it, keeping the take it replaces here instead. |
+| `takes/<type>/<scene>.failed.mov`, `.json` | The scene's latest failure, kept to show what went wrong. A new failure replaces it, and a new take that succeeds deletes it. |
+| `takes/<type>/<scene>.recording.mov`, `.json` | A take while it's recorded, renamed into place once it's done. One left by a recording killed outright is deleted by the next. |
 | `cuts/<type>/<edit>/` | Rendered videos, from `cut`. |
 | `installed.json` | The bundle ID of the app `install` last embedded, for [finding the app](#finding-the-app). |
 
@@ -850,7 +885,6 @@ Nothing personal is written: not the device's name, nor its UDID.
 | --- | --- |
 | `retake.version` | Retake's version, such as `0.1.0`. |
 | `retake.scene` | The scene's name. |
-| `retake.take` | The take's number. |
 | `retake.set` | The set's name. |
 | `retake.state` | The set's `state`: `clean`, `cloned` or `live`. |
 | `retake.app.bundle-id` | The app's bundle ID. |
@@ -877,7 +911,7 @@ only where the version can't say where the build came from: a local clone.
 | `retake.app.versions` | JSON array: each distinct app version and build among the video's takes, as `{"version", "build"}`. |
 | `retake.devices` | JSON array: each distinct device among the takes, as `{"model", "marketingName", "os"}`. |
 | `retake.buttonheist.versions` | JSON array: each distinct Button Heist among the takes, as `{"version"}`, with `"commit"` for a take recorded by a Retake built from a local clone. |
-| `retake.takes` | JSON array: for each take in the video, its scene, take number, and the take's own fields above. |
+| `retake.takes` | JSON array: for each take in the video, its `scene`, `deviceType` and `recordedAt`, which together name the take and which `status` compares with the scene's take now, and the take's own fields above. A video cut by an earlier Retake gives a `take` number instead of `recordedAt`. |
 
 The three summary fields are always arrays, holding one entry when every take agrees, so a reader
 handles one shape. Entries are in the order the video first shows them, and each pairs values that

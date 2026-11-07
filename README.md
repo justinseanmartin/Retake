@@ -60,12 +60,13 @@ The full command reference is [Documentation/cli.md](Documentation/cli.md), and 
    needs to drive it embedded in the build. Your project doesn't change. (If you install builds
    yourself, `retake embed` does just the embedding.)
 2. **`retake record <scene>`** launches the app on the scene's set, plays its steps, and records the
-   device's screen and sound. Each recording is a new numbered take; earlier takes are kept.
-3. **`retake cut <edit>`** renders the edit from each scene's latest successful take, to a ProRes
+   device's screen and sound. A recording that succeeds becomes the scene's take, and the take it
+   replaces is kept as the previous one.
+3. **`retake cut <edit>`** renders the edit from each scene's take, to a ProRes
    master and an `.mp4` for App Store Connect.
 
 An edit's times are anchored to the scene's steps, so one edit cuts the same video from any take of
-its scenes. `retake cut` always selects the latest successful takes, and the same edit serves iPhone
+its scenes. `retake cut` always uses each scene's take, and the same edit serves iPhone
 and iPad.
 
 ## Install
@@ -430,12 +431,15 @@ The log is what lets an edit draw touches where they happened, find elements to 
 and cut on steps rather than seconds, on any take of the same scene. Retake writes it, and a project
 never edits it; every field is in the [step log reference](Documentation/reference/take.md).
 
-Recording a scene again adds a take; it never replaces one. Takes are numbered per scene, and a
-deleted take's number isn't used again, so a video's record always names the take it was cut from.
-Each take records the app's version and build, the device, and when it was made, which `retake
-takes` lists. Retake never decides a take is out of date: you know when the app has changed enough
-to record again. `retake clean` then `retake record` starts everything over, numbering on from the
-last takes.
+A scene keeps, for each device type, one take: the latest that succeeded, which edits are cut from.
+Recording it again keeps the take it replaces as its previous one, deleting the one before, so a
+retake that came out worse, with a stutter a step can't see, loses nothing: `retake takes --restore
+<scene>` puts the previous take back. A recording that fails is kept as the scene's latest failure,
+to show what went wrong, and leaves the take alone, as does one that's interrupted; a success
+deletes the failure. Each take records the app's version and build, the device, and when it was
+made, which `retake takes` lists, and a video's record names each take it was cut from by when it
+was recorded. Retake never decides a take is out of date: you know when the app has changed enough
+to record again. `retake clean` then `retake record` starts everything over.
 
 Recording a device reliably takes more care than it looks. Retake handles the failures that
 otherwise cost a take: a break in the stream doesn't end the file; silences, when the device sends
@@ -502,12 +506,12 @@ every device type it names, from that type's takes of the same scenes:
 }
 ```
 
-An edit doesn't name its takes: it's always cut from each scene's latest successful take, and the
-video records which those were. Earlier takes stay on disk to compare against; to cut from one,
-delete the takes after it with `retake clean --takes`.
+An edit doesn't name its takes: it's always cut from each scene's take, and the video records which
+those were. The take it replaced stays on disk to compare against; to cut from that one, put it back
+with `retake takes --restore <scene>`.
 
-`retake clean --unused` keeps the latest successful take of every scene any edit uses and deletes
-older or failed takes, along with scene definitions and takes no edit uses.
+`retake clean --unused` keeps the take of every scene any edit uses and deletes previous takes and
+failures, along with scene definitions and takes no edit uses.
 
 ### Anchors: times that follow the app
 
@@ -525,7 +529,7 @@ and `end` standing in past the first and last steps.
 
 An anchor has `offset` or `fraction`, not both; with neither, it's the edge itself. A plain number
 of seconds from the take's start still works, and the first `cut` turns it into an anchor against
-the latest successful take.
+the scene's take.
 
 Since a take's steps are the same however long the app takes over them, an edit anchored to steps
 cuts the same moments from any take of its scenes: a newer take on the same device, or a take on a
@@ -693,8 +697,8 @@ later can be traced to the app and the setup behind it:
 - the device's model, such as "iPad Pro (11-inch) (3rd generation)" (`iPad13,4`), and its iOS
   version.
 
-A take also records its scene, set, state and take number. A video records the edit it was cut from,
-the same details for each take in it, and every app build, device and Button Heist its takes were
+A take also records its scene, set and state. A video records the edit it was cut from, the same
+details for each take in it, with its scene and when it was recorded, and every app build, device and Button Heist its takes were
 recorded with, since they may differ. `retake cut` warns when they do.
 
 `retake info <movie>` prints all of it. Takes and masters are QuickTime movies, so other tools read
