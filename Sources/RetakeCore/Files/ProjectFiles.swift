@@ -188,12 +188,12 @@ public struct ResolvedSet: Equatable, Sendable {
 
     public init(
         name: String,
-        state: SetFile.State = .clean,
+        state: SetFile.State = SetFile.defaultState,
         files: [SetFile.FileCopy] = [],
         defaults: [Named<JSONValue>] = [],
         environment: [Named<String>] = [],
         arguments: [String] = [],
-        previewAspect: Bool = false,
+        previewAspect: Bool = SetFile.defaultPreviewAspect,
         appearance: SetFile.Appearance? = nil,
     ) {
         self.name = name
@@ -213,12 +213,12 @@ public struct ResolvedSet: Equatable, Sendable {
     init(name: String, chain fromBase: [SetFile], names: [String]) {
         self.name = name
         self.names = names
-        var state = SetFile.State.clean
+        var state = SetFile.defaultState
         var files: [Named<String>] = []
         var defaults: [Named<JSONValue>] = []
         var environment: [Named<String>] = []
         var arguments: [String] = []
-        var previewAspect = false
+        var previewAspect = SetFile.defaultPreviewAspect
         var appearance: SetFile.Appearance?
         for set in fromBase {
             state = set.state ?? state

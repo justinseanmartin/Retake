@@ -84,16 +84,16 @@ extension EditFile {
             guard var object = reader.object(value, at: path) else { return nil }
             defer { object.finish() }
             let file = object.required("file", reader.nonEmptyString)
-            let volume = object.optional("volume") { reader.number($0, at: $1, .atLeast(0)) } ?? 1
-            let fadeOut = object.optional("fadeOut") { reader.number($0, at: $1, .atLeast(0)) } ?? 0
+            let volume = object.optional("volume") { reader.number($0, at: $1, .atLeast(0)) } ?? Edit.Sound.defaultVolume
+            let fadeOut = object.optional("fadeOut") { reader.number($0, at: $1, .atLeast(0)) } ?? Edit.Music.defaultFadeOut
             return file.map { Edit.Music(file: $0, volume: volume, fadeOut: fadeOut) }
         }
         let tapSound = root.optional("tapSound") { readSound($0, $1, reader) }
-        let takeAudioVolume = root.optional("takeAudioVolume") { reader.number($0, at: $1, .atLeast(0)) } ?? 1
-        let background = root.optional("background") { readColor($0, $1, reader) } ?? .black
-        let turns = root.optional("turns") { reader.choice($0, at: $1, as: Edit.Turns.self) } ?? .letterboxed
+        let takeAudioVolume = root.optional("takeAudioVolume") { reader.number($0, at: $1, .atLeast(0)) } ?? Edit.defaultTakeAudioVolume
+        let background = root.optional("background") { readColor($0, $1, reader) } ?? Edit.defaultBackground
+        let turns = root.optional("turns") { reader.choice($0, at: $1, as: Edit.Turns.self) } ?? Edit.defaultTurns
         let turnBlur = root.optional("turnBlur") { readTurnBlur($0, $1, reader) }
-        let touchColor = root.optional("touchColor") { readColor($0, $1, reader) } ?? .white
+        let touchColor = root.optional("touchColor") { readColor($0, $1, reader) } ?? Edit.defaultTouchColor
         let clips = root.required("clips") { value, path -> [Edit.Clip]? in
             guard let clips = reader.array(value, at: path, element: { readClip($0, $1, reader) }) else { return nil }
             if case .array(let values) = value, values.isEmpty { reader.problem("needs at least one clip", at: path) }
@@ -150,8 +150,8 @@ extension EditFile {
         let take = object.required("take", reader.nonEmptyString)
         let from = object.required("from") { readAnchor($0, $1, reader) }
         let to = object.required("to") { readAnchor($0, $1, reader) }
-        let speed = object.optional("speed") { reader.number($0, at: $1, .above(0)) } ?? 1
-        let crossfade = object.optional("crossfade") { reader.number($0, at: $1, .atLeast(0)) } ?? 0
+        let speed = object.optional("speed") { reader.number($0, at: $1, .above(0)) } ?? Edit.Clip.defaultSpeed
+        let crossfade = object.optional("crossfade") { reader.number($0, at: $1, .atLeast(0)) } ?? Edit.Clip.defaultCrossfade
         let audioCrossfade = object.optional("audioCrossfade") { reader.number($0, at: $1, .atLeast(0)) }
         if let audioCrossfade, audioCrossfade < crossfade {
             reader.problem(
@@ -159,7 +159,7 @@ extension EditFile {
                 at: object.path("audioCrossfade"),
             )
         }
-        let touches = object.optional("touches", reader.bool) ?? true
+        let touches = object.optional("touches", reader.bool) ?? Edit.Clip.defaultTouches
         let touchColor = object.optional("touchColor") { readColor($0, $1, reader) }
         let touchColors = object.optional("touchColors") { value, path in
             reader.array(value, at: path) { value, path -> Edit.TouchColor? in
@@ -171,7 +171,7 @@ extension EditFile {
                 return Edit.TouchColor(step: step, color: color)
             }
         } ?? []
-        let takeAudio = object.optional("takeAudio", reader.bool) ?? false
+        let takeAudio = object.optional("takeAudio", reader.bool) ?? Edit.Clip.defaultTakeAudio
         let captions = object.optional("captions") { reader.array($0, at: $1) { readCaption($0, $1, reader) } } ?? []
         let sounds = object.optional("sounds") { reader.array($0, at: $1) { readEffect($0, $1, reader) } } ?? []
         let spotlight = object.optional("spotlight") { readSpotlight($0, $1, reader) }
@@ -268,7 +268,7 @@ extension EditFile {
         defer { object.finish() }
         let file = object.required("file", reader.nonEmptyString)
         let at = object.required("at") { readAnchor($0, $1, reader) }
-        let volume = object.optional("volume") { reader.number($0, at: $1, .atLeast(0)) } ?? 1
+        let volume = object.optional("volume") { reader.number($0, at: $1, .atLeast(0)) } ?? Edit.Sound.defaultVolume
         let duration = object.optional("duration") { reader.number($0, at: $1, .above(0)) }
         guard let file, let at else { return nil }
         return Edit.Effect(file: file, at: at, volume: volume, duration: duration)
@@ -278,7 +278,7 @@ extension EditFile {
         guard var object = reader.object(value, at: path) else { return nil }
         defer { object.finish() }
         let file = object.required("file", reader.nonEmptyString)
-        let volume = object.optional("volume") { reader.number($0, at: $1, .atLeast(0)) } ?? 1
+        let volume = object.optional("volume") { reader.number($0, at: $1, .atLeast(0)) } ?? Edit.Sound.defaultVolume
         return file.map { Edit.Sound(file: $0, volume: volume) }
     }
 
@@ -292,8 +292,8 @@ extension EditFile {
         guard var object = reader.object(value, at: path) else { return nil }
         defer { object.finish() }
         let region = readRegion(&object, reader)
-        let padding = object.optional("padding") { reader.number($0, at: $1, .atLeast(0)) } ?? 8
-        let color = object.optional("color") { readColor($0, $1, reader) } ?? .white
+        let padding = object.optional("padding") { reader.number($0, at: $1, .atLeast(0)) } ?? Edit.Spotlight.defaultPadding
+        let color = object.optional("color") { readColor($0, $1, reader) } ?? Edit.Spotlight.defaultColor
         let from = object.optional("from") { readAnchor($0, $1, reader) }
         let to = object.optional("to") { readAnchor($0, $1, reader) }
         return region.map { Edit.Spotlight(region: $0, padding: padding, color: color, from: from, to: to) }
@@ -352,12 +352,13 @@ extension EditFile {
         guard var rect = reader.object(value, at: path) else { return nil }
         defer { rect.finish() }
         let problems = reader.problems.count
+        let all = Edit.Rect.wholeElement
         func side(_ key: String, aboveZero: Bool, otherwise: Length) -> Length? {
             whole ? rect.optional(key) { SceneFile.readLength($0, $1, reader, aboveZero: aboveZero) } ?? otherwise
                 : rect.required(key) { SceneFile.readLength($0, $1, reader, aboveZero: aboveZero) }
         }
-        let x = side("x", aboveZero: false, otherwise: .share(0)), y = side("y", aboveZero: false, otherwise: .share(0))
-        let width = side("width", aboveZero: true, otherwise: .share(1)), height = side("height", aboveZero: true, otherwise: .share(1))
+        let x = side("x", aboveZero: false, otherwise: all.x), y = side("y", aboveZero: false, otherwise: all.y)
+        let width = side("width", aboveZero: true, otherwise: all.width), height = side("height", aboveZero: true, otherwise: all.height)
         guard reader.problems.count == problems, let x, let y, let width, let height else { return nil }
         return Edit.Rect(x: x, y: y, width: width, height: height)
     }

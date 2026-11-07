@@ -158,6 +158,14 @@ extension Schema {
         return schema
     }
 
+    // A default is the reader's own constant, given as the file would write it.
+    func defaulting(to value: Double) -> Schema { defaulting(to: .number(value)) }
+    func defaulting(to value: Bool) -> Schema { defaulting(to: .bool(value)) }
+    func defaulting(to value: String) -> Schema { defaulting(to: .string(value)) }
+    func defaulting(to value: some RawRepresentable<String>) -> Schema { defaulting(to: .string(value.rawValue)) }
+    func defaulting(to value: Color) -> Schema { defaulting(to: .string(value.description)) }
+    func defaulting(to value: Length) -> Schema { defaulting(to: value.fileJSON) }
+
     func example(_ values: JSONValue...) -> Schema {
         var schema = self
         schema.examples += values

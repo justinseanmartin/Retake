@@ -48,6 +48,11 @@ public struct Edit: Equatable, Sendable {
     public var touchColor: Color
     public var clips: [Clip]
 
+    public static let defaultTakeAudioVolume = 1.0
+    public static let defaultBackground = Color.black
+    public static let defaultTurns = Turns.letterboxed
+    public static let defaultTouchColor = Color.white
+
     /// Every scene it plays or takes a still from, in the order it first does.
     public var scenes: [String] {
         clips.flatMap { [$0.take] + $0.stills.map(\.take) }.reduce(into: []) { if !$0.contains($1) { $0.append($1) } }
@@ -57,11 +62,11 @@ public struct Edit: Equatable, Sendable {
         intent: String? = nil,
         music: Music? = nil,
         tapSound: Sound? = nil,
-        takeAudioVolume: Double = 1,
-        background: Color = .black,
-        turns: Turns = .letterboxed,
+        takeAudioVolume: Double = Edit.defaultTakeAudioVolume,
+        background: Color = Edit.defaultBackground,
+        turns: Turns = Edit.defaultTurns,
         turnBlur: TurnBlur? = nil,
-        touchColor: Color = .white,
+        touchColor: Color = Edit.defaultTouchColor,
         clips: [Clip],
     ) {
         self.intent = intent
@@ -87,12 +92,18 @@ public struct Edit: Equatable, Sendable {
         public var file: String
         public var volume: Double
         public var fadeOut: Double
+
+        public static let defaultFadeOut = 0.0
     }
 
     /// A sound file and its level: the tap sound, or the sound a clip's effect plays.
     public struct Sound: Equatable, Sendable {
         public var file: String
         public var volume: Double
+
+        /// As recorded: the level of the music, the tap sound and each effect, unless it gives its
+        /// own.
+        public static let defaultVolume = 1.0
     }
 
     public struct Clip: Equatable, Sendable {
@@ -130,6 +141,11 @@ public struct Edit: Equatable, Sendable {
         /// The edit's when nil.
         public var turns: Turns?
         public var turnBlur: TurnBlur?
+
+        public static let defaultSpeed = 1.0
+        public static let defaultCrossfade = 0.0
+        public static let defaultTouches = true
+        public static let defaultTakeAudio = false
     }
 
     /// A colour covering the clip's picture, and what's drawn over it but its captions: a card,
@@ -217,6 +233,9 @@ public struct Edit: Equatable, Sendable {
         }
 
         var hasShare: Bool { [x, y, width, height].contains(where: \.isShare) }
+
+        /// An element's whole frame: what a `part` is on each side it doesn't give.
+        public static let wholeElement = Rect(x: .share(0), y: .share(0), width: .share(1), height: .share(1))
     }
 
     public struct Spotlight: Equatable, Sendable {
@@ -225,6 +244,9 @@ public struct Edit: Equatable, Sendable {
         public var color: Color
         public var from: Anchor?
         public var to: Anchor?
+
+        public static let defaultPadding = 8.0
+        public static let defaultColor = Color.white
     }
 
     public struct Blur: Equatable, Sendable {

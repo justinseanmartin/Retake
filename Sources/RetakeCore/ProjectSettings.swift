@@ -20,8 +20,11 @@ public struct ProjectSettings: Equatable, Sendable {
 
     public static let defaultHitchWarning = 50.0
 
+    /// `hitchWarning`, or its default, in milliseconds.
+    public var hitchWarningOrDefault: Double { hitchWarning ?? Self.defaultHitchWarning }
+
     /// `hitchWarning`, or its default, in seconds.
-    public var hitchThreshold: Double { (hitchWarning ?? Self.defaultHitchWarning) / 1000 }
+    public var hitchThreshold: Double { hitchWarningOrDefault / 1000 }
 
     public init(
         bundleID: String? = nil, build: Build? = nil, device: String? = nil, defaultSet: String? = nil, output: String? = nil,
@@ -56,7 +59,17 @@ public struct ProjectSettings: Equatable, Sendable {
         /// Objective-C at `-Os`, so the app runs as fast as its users see it.
         public var optimize: Bool
 
-        public init(scheme: String, container: Container? = nil, configuration: String? = nil, allowProvisioningUpdates: Bool = false, optimize: Bool = true) {
+        public static let defaultConfiguration = "Debug"
+        public static let defaultAllowProvisioningUpdates = false
+        public static let defaultOptimize = true
+
+        /// `configuration`, or its default.
+        public var configurationName: String { configuration ?? Self.defaultConfiguration }
+
+        public init(
+            scheme: String, container: Container? = nil, configuration: String? = nil,
+            allowProvisioningUpdates: Bool = SchemeBuild.defaultAllowProvisioningUpdates, optimize: Bool = SchemeBuild.defaultOptimize,
+        ) {
             self.scheme = scheme
             self.container = container
             self.configuration = configuration
@@ -115,8 +128,10 @@ extension ProjectSettings {
                 case nil: break
                 }
                 if let configuration = scheme.configuration { fields.append(.init(key: "configuration", value: .string(configuration))) }
-                if scheme.allowProvisioningUpdates { fields.append(.init(key: "allowProvisioningUpdates", value: .bool(true))) }
-                if !scheme.optimize { fields.append(.init(key: "optimize", value: .bool(false))) }
+                if scheme.allowProvisioningUpdates != SchemeBuild.defaultAllowProvisioningUpdates {
+                    fields.append(.init(key: "allowProvisioningUpdates", value: .bool(scheme.allowProvisioningUpdates)))
+                }
+                if scheme.optimize != SchemeBuild.defaultOptimize { fields.append(.init(key: "optimize", value: .bool(scheme.optimize))) }
             case .command(let command):
                 fields.append(.init(key: "command", value: .string(command.command)))
                 fields.append(.init(key: "app", value: .string(command.app)))
@@ -165,8 +180,8 @@ extension ProjectSettings {
             let workspace = object.optional("workspace", reader.nonEmptyString)
             let project = object.optional("xcodeproj", reader.nonEmptyString)
             let configuration = object.optional("configuration", reader.nonEmptyString)
-            let allow = object.optional("allowProvisioningUpdates", reader.bool) ?? false
-            let optimize = object.optional("optimize", reader.bool) ?? true
+            let allow = object.optional("allowProvisioningUpdates", reader.bool) ?? SchemeBuild.defaultAllowProvisioningUpdates
+            let optimize = object.optional("optimize", reader.bool) ?? SchemeBuild.defaultOptimize
             guard let scheme else { return nil }
             let container: Container? = workspace.map(Container.workspace) ?? project.map(Container.project)
             return .scheme(SchemeBuild(scheme: scheme, container: container, configuration: configuration, allowProvisioningUpdates: allow, optimize: optimize))

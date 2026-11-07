@@ -20,7 +20,7 @@ Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.
 | `app` | [object](#app) | required | The app recorded. |
 | `retake` | string, not empty | required | The version of Retake that recorded it. |
 | `buttonHeist` | [object](#buttonheist) | required | The Button Heist that drove the app: the one embedded in it. |
-| `recordedAt` | string matching `^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z\|[+-][0-9]{2}:?[0-9]{2})$` | required | When the take was recorded, in ISO 8601 to the second, such as 2026-11-06T09:30:00Z. |
+| `recordedAt` | string matching `^[0-9]{4}-(0[1-9]\|1[0-2])-(0[1-9]\|[12][0-9]\|3[01])T([01][0-9]\|2[0-3]):[0-5][0-9]:[0-5][0-9](\.[0-9]+)?(Z\|[+-]([01][0-9]\|2[0-3]):?[0-5][0-9])$` | required | When the take was recorded, in ISO 8601: to the second, with any fraction of it, and Z or the zone's offset, such as 2026-11-06T09:30:00Z. |
 | `failure` | string |  | Why the take failed, for one whose step didn't run; absent for a take that played every step. No edit is cut from a failed take. |
 | `duration` | number ≥ 0 | required | The movie's length, in seconds, to the millisecond. |
 | `size` | list of integer ≥ 0, exactly 2 | required | The movie's size, [width, height], in capture pixels: its first frame's, which every frame is stored in. |
@@ -149,6 +149,6 @@ Gives at least one of `portrait` and `landscape`.
 
 ### shape
 
-A width and a height, such as 3:4.
+A width and a height, each a positive decimal with digits either side of any point, such as 3:4.
 
-Type: string matching `^[0-9]+(\.[0-9]+)?:[0-9]+(\.[0-9]+)?$`.
+Type: string matching `^(0*[1-9][0-9]*(\.[0-9]+)?\|0+\.[0-9]*[1-9][0-9]*):(0*[1-9][0-9]*(\.[0-9]+)?\|0+\.[0-9]*[1-9][0-9]*)$`.

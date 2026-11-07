@@ -14,9 +14,9 @@ extension ProjectSettings {
                 .init("scheme", .string("The scheme to build.", nonEmpty: true)),
                 .init("workspace", .string("The workspace holding the scheme, needed only when the directory holds more than one. \(path)", nonEmpty: true)),
                 .init("xcodeproj", .string("The project holding the scheme, needed only when the directory holds more than one. \(path)", nonEmpty: true)),
-                .init("configuration", .string("The build configuration, which must be development-signed for the device.", nonEmpty: true).defaulting(to: "Debug")),
-                .init("allowProvisioningUpdates", .bool("Lets xcodebuild register the device and update profiles on your team.").defaulting(to: false)),
-                .init("optimize", .bool("Builds with the compiler's optimisation on, Swift at -O and C at -Os, whatever the configuration says, so the app runs as fast as its users see it.").defaulting(to: true)),
+                .init("configuration", .string("The build configuration, which must be development-signed for the device.", nonEmpty: true).defaulting(to: ProjectSettings.SchemeBuild.defaultConfiguration)),
+                .init("allowProvisioningUpdates", .bool("Lets xcodebuild register the device and update profiles on your team.").defaulting(to: ProjectSettings.SchemeBuild.defaultAllowProvisioningUpdates)),
+                .init("optimize", .bool("Builds with the compiler's optimisation on, Swift at -O and C at -Os, whatever the configuration says, so the app runs as fast as its users see it.").defaulting(to: ProjectSettings.SchemeBuild.defaultOptimize)),
             ],
             required: ["scheme"],
         )
@@ -39,10 +39,10 @@ extension ProjectSettings {
                 .init("build", .oneOf("How `retake install` builds the app when it isn't given one: a scheme, or a command of the project's own.", [scheme, command])),
                 .init("device", .string("The device commands use when none is named: an alias, a UDID, or a device's name.", nonEmpty: true)),
                 .init("defaultSet", .string("The set a scene starts on when it names none, and the one `retake compose` gives a new scene.", nonEmpty: true)),
-                .init("output", .string("Where takes and cuts go. \(path)", nonEmpty: true).defaulting(to: "output")),
+                .init("output", .string("Where takes and cuts go. \(path)", nonEmpty: true).defaulting(to: Project.defaultOutputDirectoryName)),
                 .init("hitchWarning", .number(
                     "The milliseconds the app's main thread must miss frames for, at once, for `record` and `cut` to warn of it.", atLeast: 0,
-                ).defaulting(to: .number(ProjectSettings.defaultHitchWarning))),
+                ).defaulting(to: ProjectSettings.defaultHitchWarning)),
             ],
         )
         return FileSchema(kind: "retake", title: "retake.json", root: root, definitions: [])
@@ -63,7 +63,7 @@ extension SetFile {
                 .init("state", .choice(
                     "What the app's data starts as for a take, and whether the take's changes are kept. clean: empty but for the set's files and defaults. cloned: the app's real data with the set's on top, the take's changes thrown away. live: the real data, the take's changes kept.",
                     State.allCases.map(\.rawValue),
-                ).defaulting(to: "clean")),
+                ).defaulting(to: defaultState)),
                 .init("files", .dictionary(
                     "Files and folders put in the app's data before launch: each key is where it goes in the app's data, such as Documents/notes.json, and its value a path relative to the directory holding retake.json. The source may use .. to share fixtures outside the project. A folder ends in / on both sides.",
                     keys: .string(nil, pattern: "^[^/]"),
@@ -81,7 +81,7 @@ extension SetFile {
                 .init("arguments", .array("Arguments added to the launch, such as -AppleLanguages (en).", of: .string())),
                 .init("previewAspect", .bool(
                     "Sizes the app's window to the App Store preview's shape for the device type recorded, 886:1920 on iPhone and 3:4 on iPad, turned in landscape; the edit crops away the rest of the screen. Otherwise the app fills the screen.",
-                ).defaulting(to: false)),
+                ).defaulting(to: defaultPreviewAspect)),
                 .init("appearance", .choice(
                     "Holds the app to light or dark, whatever the device is set to. The launch screen, drawn before the app runs, still follows the device.",
                     SetFile.Appearance.allCases.map(\.rawValue),
@@ -116,7 +116,7 @@ extension SceneFile {
             .init("drag", .object("A straight one-finger drag from one point or element to another. An element is touched at its activation point, as the screen has it just before the drag.", [
                 .init("from", .oneOf("Where the finger comes down: a point, x and y, or an element.", [point, .ref("element")])),
                 .init("to", .oneOf("Where it lifts: a point, x and y, or an element.", [point, .ref("element")])),
-                .init("duration", .number("Seconds the drag takes.", above: 0).defaulting(to: .number(Step.defaultDragDuration))),
+                .init("duration", .number("Seconds the drag takes.", above: 0).defaulting(to: Step.defaultDragDuration)),
             ], required: ["from", "to"])),
             .init("type", .object("Types text key by key on the on-screen keyboard.", [
                 .init("text", .string("What to type; \\n presses return.", nonEmpty: true)),
@@ -127,8 +127,8 @@ extension SceneFile {
             .init("waitFor", Schema.object(
                 "Waits until an element is on screen, or with gone until it isn't. The step fails if it doesn't happen in time.",
                 elementProperties + [
-                    .init("gone", .bool("Waits for the element to leave instead.").defaulting(to: false)),
-                    .init("timeout", .number("Seconds to wait.", above: 0).defaulting(to: .number(Step.defaultWaitTimeout))),
+                    .init("gone", .bool("Waits for the element to leave instead.").defaulting(to: Step.defaultGone)),
+                    .init("timeout", .number("Seconds to wait.", above: 0).defaulting(to: Step.defaultWaitTimeout)),
                 ],
             ).atLeastOne(of: ElementTarget.keys)),
         ]
@@ -155,11 +155,11 @@ extension SceneFile {
                 FileSchema.schemaKey,
                 .init("set", .string("The set the scene starts on; the project's defaultSet when not given.", nonEmpty: true)),
                 .init("setup", .array("Steps played before recording starts. Nothing anchors to them, so they have no id.", of: .ref("step"))),
-                .init("leadIn", .number("Seconds recorded before the first step.", atLeast: 0).defaulting(to: .number(defaultLeadIn))),
-                .init("tail", .number("Seconds recorded after the last step.", atLeast: 0).defaulting(to: .number(defaultTail))),
-                .init("defaultHold", .number("The hold of each step that doesn't give its own.", atLeast: 0).defaulting(to: 0)),
-                .init("recordsLaunch", .bool("Starts recording before the app launches, to catch its launch screen.").defaulting(to: false)),
-                .init("orientation", orientation.described("The orientation the device is turned to before the app launches.").defaulting(to: "portrait")),
+                .init("leadIn", .number("Seconds recorded before the first step.", atLeast: 0).defaulting(to: defaultLeadIn)),
+                .init("tail", .number("Seconds recorded after the last step.", atLeast: 0).defaulting(to: defaultTail)),
+                .init("defaultHold", .number("The hold of each step that doesn't give its own.", atLeast: 0).defaulting(to: defaultDefaultHold)),
+                .init("recordsLaunch", .bool("Starts recording before the app launches, to catch its launch screen.").defaulting(to: defaultRecordsLaunch)),
+                .init("orientation", orientation.described("The orientation the device is turned to before the app launches.").defaulting(to: defaultOrientation)),
                 .init("steps", .array("What the scene does, in order.", of: .ref("step"), minItems: 1)),
             ],
             required: ["steps"],
@@ -194,7 +194,7 @@ extension SceneFile {
 extension EditFile {
     public static var schema: FileSchema {
         let file = Schema.string("A sound file, relative to the directory holding retake.json.", nonEmpty: true)
-        let volume = Schema.number("Its level, where 1 is as recorded.", atLeast: 0).defaulting(to: 1)
+        let volume = Schema.number("Its level, where 1 is as recorded.", atLeast: 0).defaulting(to: Edit.Sound.defaultVolume)
         let turns = Schema.choice(
             "How the video shows the device turning. letterboxed: the app stays upright, landscape letterboxed on the canvas. device: the video stays in the device's frame.",
             Edit.Turns.allCases.map(\.rawValue),
@@ -204,6 +204,7 @@ extension EditFile {
             .init("part", .ref("part")),
             .init("rect", .ref("rect")),
         ]
+        let whole = Edit.Rect.wholeElement
         let from = Schema.ref("anchor", "When it starts; the clip's from when not given.")
         let to = Schema.ref("anchor", "When it ends; the clip's to when not given.")
 
@@ -217,16 +218,16 @@ extension EditFile {
             .init("take", .string("The scene whose latest successful take the clip is cut from.", nonEmpty: true)),
             .init("from", .ref("anchor", "Where the clip starts in the take.")),
             .init("to", .ref("anchor", "Where it ends.")),
-            .init("speed", .number("How fast it plays: 2 is twice as fast.", above: 0).defaulting(to: 1)),
-            .init("crossfade", .number("Seconds it cross-fades in over the clip before.", atLeast: 0).defaulting(to: 0)),
+            .init("speed", .number("How fast it plays: 2 is twice as fast.", above: 0).defaulting(to: Edit.Clip.defaultSpeed)),
+            .init("crossfade", .number("Seconds it cross-fades in over the clip before.", atLeast: 0).defaulting(to: Edit.Clip.defaultCrossfade)),
             .init("audioCrossfade", .number("Seconds the sound cross-fades over, when longer than crossfade, which the picture still cross-fades over: the clip before's take sound fades out over this long before that clip ends, and this clip's starts as it does, this minus crossfade ahead of the picture and from as far before `from` in the take, fading in until the clip before ends. Each side fades so even when the other plays no take sound. The clip's sound starts no earlier than its take, or the clip before, does.", atLeast: 0)),
-            .init("touches", .bool("Draws the take's touches, from the step log.").defaulting(to: true)),
+            .init("touches", .bool("Draws the take's touches, from the step log.").defaulting(to: Edit.Clip.defaultTouches)),
             .init("touchColor", .ref("color", "The colour of the clip's touches; the edit's touchColor when not given.")),
             .init("touchColors", .array("Colours for single touches, over the clip's or the edit's.", of: .object(nil, [
                 .init("step", stepReference),
                 .init("color", .ref("color")),
             ], required: ["step", "color"]))),
-            .init("takeAudio", .bool("Plays the take's own sound with the clip.").defaulting(to: false)),
+            .init("takeAudio", .bool("Plays the take's own sound with the clip.").defaulting(to: Edit.Clip.defaultTakeAudio)),
             .init("captions", .array(nil, of: .ref("caption"))),
             .init("sounds", .array("Sound effects, played at normal speed however fast the clip plays.", of: .ref("sound"))),
             .init("spotlight", .ref("spotlight")),
@@ -290,13 +291,13 @@ extension EditFile {
                 .init("duration", .number("Seconds it plays before fading out, for an effect longer than its moment; all of it when not given.", above: 0)),
             ], required: ["file", "at"])),
             .init("spotlight", Schema.object("Dims the rest of the screen around an element or a rectangle, with a pulsing ring.", region + [
-                .init("padding", .number("Points of space around it.", atLeast: 0).defaulting(to: 8)),
-                .init("color", .ref("color", "The ring's colour.").defaulting(to: "#FFFFFF")),
+                .init("padding", .number("Points of space around it.", atLeast: 0).defaulting(to: Edit.Spotlight.defaultPadding)),
+                .init("color", .ref("color", "The ring's colour.").defaulting(to: Edit.Spotlight.defaultColor)),
                 .init("from", from), .init("to", to),
             ]).exactlyOne(of: ["element", "rect"])),
             .init("blur", Schema.object("A blur over an element or a rectangle.", region + [
                 .init("from", from), .init("to", to),
-                .init("radius", .number("How strong the blur is: the Gaussian blur's radius, its standard deviation, in screen points, scaled to the canvas as the blur's rectangle is.", above: 0).defaulting(to: .number(Edit.Blur.defaultRadius))),
+                .init("radius", .number("How strong the blur is: the Gaussian blur's radius, its standard deviation, in screen points, scaled to the canvas as the blur's rectangle is.", above: 0).defaulting(to: Edit.Blur.defaultRadius)),
             ]).exactlyOne(of: ["element", "rect"])),
             .init("still", .object("A frame of another take, popped in over the clip.", [
                 .init("take", .string("The scene whose latest successful take it's from.", nonEmpty: true)),
@@ -307,13 +308,13 @@ extension EditFile {
                 .init("width", .length(nil, aboveZero: true)), .init("height", .length(nil, aboveZero: true)),
             ], required: ["x", "y", "width", "height"])),
             .init("part", .object("Part of the element, each side in points from its top-left corner or a percentage of its frame; its whole frame on a side not given, as \"part\": { \"x\": \"62%\", \"width\": \"38%\" } is its right 38%.", [
-                .init("x", .length(nil, of: "the element").defaulting(to: "0%")), .init("y", .length(nil, of: "the element").defaulting(to: "0%")),
-                .init("width", .length(nil, aboveZero: true, of: "the element").defaulting(to: "100%")),
-                .init("height", .length(nil, aboveZero: true, of: "the element").defaulting(to: "100%")),
+                .init("x", .length(nil, of: "the element").defaulting(to: whole.x)), .init("y", .length(nil, of: "the element").defaulting(to: whole.y)),
+                .init("width", .length(nil, aboveZero: true, of: "the element").defaulting(to: whole.width)),
+                .init("height", .length(nil, aboveZero: true, of: "the element").defaulting(to: whole.height)),
             ])),
             .init("music", .object("Plays under the whole video.", [
                 .init("file", file), .init("volume", volume),
-                .init("fadeOut", .number("Seconds it fades out over at the end.", atLeast: 0).defaulting(to: 0)),
+                .init("fadeOut", .number("Seconds it fades out over at the end.", atLeast: 0).defaulting(to: Edit.Music.defaultFadeOut)),
             ], required: ["file"])),
             .init("tap-sound", .object("Plays as each touch a clip draws lands: each tap by point, and the start of each drag.", [
                 .init("file", file), .init("volume", volume),
@@ -340,11 +341,11 @@ extension EditFile {
                 .init("devices", .array("The device types it makes a video for.", of: .choice(nil, devices), minItems: 1, unique: true)),
                 .init("music", .ref("music")),
                 .init("tapSound", .ref("tap-sound")),
-                .init("takeAudioVolume", .number("The level of the take's own sound, where a clip plays it.", atLeast: 0).defaulting(to: 1)),
-                .init("background", .ref("color", "The colour of letterbox bands, and of the corners a turn uncovers.").defaulting(to: "#000000")),
-                .init("turns", turns.defaulting(to: "letterboxed")),
+                .init("takeAudioVolume", .number("The level of the take's own sound, where a clip plays it.", atLeast: 0).defaulting(to: Edit.defaultTakeAudioVolume)),
+                .init("background", .ref("color", "The colour of letterbox bands, and of the corners a turn uncovers.").defaulting(to: Edit.defaultBackground)),
+                .init("turns", turns.defaulting(to: Edit.defaultTurns)),
                 .init("turnBlur", .ref("turn-blur")),
-                .init("touchColor", .ref("color", "The colour touches are drawn in: a filled ring, its fill at 45% of the colour's opacity and its rim at 90%.").defaulting(to: "#FFFFFF")),
+                .init("touchColor", .ref("color", "The colour touches are drawn in: a filled ring, its fill at 45% of the colour's opacity and its rim at 90%.").defaulting(to: Edit.defaultTouchColor)),
                 .init("clips", .array(nil, of: .ref("clip"), minItems: 1)),
             ],
             required: ["devices", "clips"],
@@ -400,8 +401,8 @@ extension TakeLog {
                     .init("commit", .string("The commit of the local clone it was built from, for one that was.")),
                 ], required: ["version"])),
                 .init("recordedAt", .string(
-                    "When the take was recorded, in ISO 8601 to the second, such as 2026-11-06T09:30:00Z.",
-                    pattern: #"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z|[+-][0-9]{2}:?[0-9]{2})$"#,
+                    "When the take was recorded, in ISO 8601: to the second, with any fraction of it, and Z or the zone's offset, such as 2026-11-06T09:30:00Z.",
+                    pattern: recordedAtPattern,
                 )),
                 .init("failure", .string("Why the take failed, for one whose step didn't run; absent for a take that played every step. No edit is cut from a failed take.")),
                 .init("duration", .number("The movie's length, in seconds, to the millisecond.", atLeast: 0)),
@@ -466,7 +467,7 @@ extension TakeLog {
             .init("frame", .tuple("Where it is, [x, y, width, height], in screen points.", of: .number(), count: 4)),
             .init("activationPoint", .ref("point", "Where a tap on it touches.")),
         ])
-        let shape = Schema.string("A width and a height, such as 3:4.", pattern: #"^[0-9]+(\.[0-9]+)?:[0-9]+(\.[0-9]+)?$"#)
+        let shape = Schema.string("A width and a height, each a positive decimal with digits either side of any point, such as 3:4.", pattern: SetFile.Aspect.pattern)
         let shapes = Schema.object("The app window's shape in portrait, and in landscape.", [
             .init("portrait", .ref("shape", "Its shape in portrait, at the top of the screen.")),
             .init("landscape", .ref("shape", "Its shape in landscape, at the left of the screen.")),

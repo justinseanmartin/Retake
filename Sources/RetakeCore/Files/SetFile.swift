@@ -37,6 +37,11 @@ public struct SetFile: Equatable, Sendable {
         public var turned: Aspect { Aspect(width: height, height: width) }
 
         public var description: String { "\(JSONReader.format(width)):\(JSONReader.format(height))" }
+
+        /// A shape as a string gives it: two positive decimals, digits on both sides of any point,
+        /// such as `3:4` or `0.75:1`. The reader and the schema both match it.
+        public static let pattern = #"^(\#(positive)):(\#(positive))$"#
+        private static let positive = #"0*[1-9][0-9]*(\.[0-9]+)?|0+\.[0-9]*[1-9][0-9]*"#
     }
 
     /// The window's shape for each orientation, as a take's step log records it; landscape is
@@ -64,6 +69,10 @@ public struct SetFile: Equatable, Sendable {
     public var previewAspect: Bool?
     /// The appearance the app is held to, whatever the device is set to.
     public var appearance: Appearance?
+
+    /// What a set gives when neither it nor a set it extends says.
+    public static let defaultState = State.clean
+    public static let defaultPreviewAspect = false
 
     public enum Appearance: String, CaseIterable, Sendable {
         case light, dark
@@ -193,12 +202,12 @@ extension SetFile {
         return choice
     }
 
-    /// `"3:4"`: a width and a height, each more than 0.
+    /// `"3:4"`: a width and a height, each more than 0, as `Aspect.pattern` gives them.
     static func readAspect(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> Aspect? {
         guard let text = reader.string(value, at: path) else { return nil }
-        let parts = text.split(separator: ":", omittingEmptySubsequences: false)
-        guard parts.count == 2, let width = Double(parts[0]), let height = Double(parts[1]), width > 0, height > 0,
-              width.isFinite, height.isFinite else {
+        let parts = text.split(separator: ":")
+        guard text.range(of: Aspect.pattern, options: .regularExpression) != nil, parts.count == 2,
+              let width = Double(parts[0]), let height = Double(parts[1]) else {
             reader.problem("\"\(text)\" isn't a shape: a width and a height, such as 3:4", at: path)
             return nil
         }

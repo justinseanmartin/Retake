@@ -123,7 +123,20 @@ struct SchemaTests {
         ("take", take(set("shapes", #"[{"at": 0, "size": [1200, 1718]}]"#)), false),
         ("take", take(set("hitches", #"[{"at": 1, "duration": -1}]"#)), false),
         ("take", take(set("pins", "true")), false),
-    ]
+    ] + shapeAndDateCorpus
+
+    /// Shapes and dates at the edge of what's taken: a shape is two positive decimals with digits
+    /// either side of any point, and a date has a time to the second, any fraction, and Z or an
+    /// offset, as ISO8601DateFormatter takes more loosely.
+    static let shapeAndDateCorpus: [(kind: String, text: String, right: Bool)] =
+        [("0.75:1", true), ("886:1920", true), ("010:4", true), (".5:1", false), ("3.:4", false), ("3:0", false), ("0.0:4", false),
+         ("1e3:4", false), ("+3:4", false), ("3:4:5", false), ("3 :4", false)]
+        .map { ("take", take(set("previewAspect", .object(JSONObject([.init(key: "landscape", value: .string($0))])))), $1) }
+        + [("2026-11-06T09:30:00.250Z", true), ("2026-11-06T10:30:00+01:00", true), ("2026-11-06T04:00:00.5-0530", true),
+           ("2026-11-06T09:30:00z", false), ("2026-11-06T09:30:00", false), ("2026-11-06T09:30:00GMT", false),
+           ("2026-11-06T09:30:00+01", false), ("2026-11-06T09:30:00.Z", false), ("2026-11-06T24:00:00Z", false),
+           ("2026-11-06T09:30:00Zjunk", false), ("2026-13-06T09:30:00Z", false), ("2026-11-06 09:30:00Z", false)]
+        .map { ("take", take(set("recordedAt", .string($0))), $1) }
 
     /// Files a reader takes, then ones it refuses, each of which the schema should judge the same.
     static let corpus: [(kind: String, text: String, right: Bool)] = takeCorpus + [
@@ -195,6 +208,83 @@ struct SchemaTests {
         ("edit", ##"{"devices": ["ipad"], "takes": {"ipad": {"a": 0}}, "clips": [{"take": "a", "from": 0, "to": 1}]}"##, false),
         ("edit", ##"{"devices": ["ipad"], "turns": "sideways", "clips": [{"take": "a", "from": 0, "to": 1}]}"##, false),
     ]
+
+    /// Every default a schema gives, by where it is: `build.optimize`, or `#clip.speed` in a
+    /// definition.
+    static func defaults(of file: FileSchema) -> [String: JSONValue] {
+        var found: [String: JSONValue] = [:]
+        func walk(_ schema: Schema, _ path: String) {
+            for property in schema.properties {
+                let at = path.isEmpty ? property.name : "\(path).\(property.name)"
+                if let value = property.schema.defaultValue { found[at] = value }
+                walk(property.schema, at)
+            }
+            for branch in schema.oneOf + schema.anyOf + schema.items { walk(branch, path) }
+        }
+        walk(file.root, "")
+        for definition in file.definitions where !definition.name.hasSuffix("-override") { walk(definition.schema, "#\(definition.name)") }
+        return found
+    }
+
+    /// What the reader makes of each field a schema gives a default, read from a file that gives
+    /// none of them, by the schema's paths.
+    static func readersDefaults(_ kind: String) throws -> [String: JSONValue] {
+        let reader = JSONReader(file: "\(kind).json")
+        switch kind {
+        case "retake":
+            let settings = try #require(ProjectSettings.read(#"{"build": {"scheme": "N"}}"#, with: reader))
+            guard case .scheme(let build)? = settings.build else { Issue.record("not a scheme build"); return [:] }
+            let project = Project(configuration: URL(filePath: "/p/retake.json"), settings: settings)
+            return [
+                "build.configuration": .string(build.configurationName), "build.allowProvisioningUpdates": .bool(build.allowProvisioningUpdates),
+                "build.optimize": .bool(build.optimize), "output": .string(project.output.lastPathComponent),
+                "hitchWarning": .number(settings.hitchWarningOrDefault),
+            ]
+        case "set":
+            let set = ResolvedSet(name: "a", chain: [try #require(SetFile.read("{}", with: reader))], names: ["a"])
+            return ["state": .string(set.state.rawValue), "previewAspect": .bool(set.previewAspect)]
+        case "scene":
+            let scene = try #require(SceneFile.read(#"{"steps": [{"drag": {"from": {"x": 1, "y": 1}, "to": {"x": 2, "y": 2}}}, {"waitFor": {"label": "a"}}]}"#, with: reader))
+            guard case .drag(_, _, let duration)? = scene.steps[0].action, case .waitFor(_, let gone, let timeout)? = scene.steps[1].action else {
+                Issue.record("not a drag and a waitFor"); return [:]
+            }
+            return [
+                "#step.drag.duration": .number(duration), "#step.waitFor.gone": .bool(gone), "#step.waitFor.timeout": .number(timeout),
+                "leadIn": .number(scene.leadIn), "tail": .number(scene.tail), "defaultHold": .number(scene.defaultHold),
+                "recordsLaunch": .bool(scene.recordsLaunch), "orientation": .string(scene.orientation.rawValue),
+            ]
+        case "edit":
+            let file = try #require(EditFile.read(##"""
+            {"devices": ["ipad"], "music": {"file": "m.m4a"}, "tapSound": {"file": "t.m4a"},
+             "clips": [{"take": "a", "from": 0, "to": 1, "sounds": [{"file": "s.m4a", "at": 0}],
+                        "spotlight": {"rect": {"x": 0, "y": 0, "width": 1, "height": 1}}, "blurs": [{"element": {"label": "a"}, "part": {}}]}]}
+            """##, with: reader))
+            let edit = try #require(file.videos[.ipad]), clip = edit.clips[0]
+            let spotlight = try #require(clip.spotlight), music = try #require(edit.music)
+            guard case .element(_, let part?) = clip.blurs[0].region else { Issue.record("not an element's part"); return [:] }
+            return [
+                "takeAudioVolume": .number(edit.takeAudioVolume), "background": .string(edit.background.description),
+                "turns": .string(edit.turns.rawValue), "touchColor": .string(edit.touchColor.description),
+                "#clip.speed": .number(clip.speed), "#clip.crossfade": .number(clip.crossfade), "#clip.touches": .bool(clip.touches),
+                "#clip.takeAudio": .bool(clip.takeAudio), "#sound.volume": .number(clip.sounds[0].volume),
+                "#music.volume": .number(music.volume), "#music.fadeOut": .number(music.fadeOut),
+                "#tap-sound.volume": .number(try #require(edit.tapSound).volume),
+                "#spotlight.padding": .number(spotlight.padding), "#spotlight.color": .string(spotlight.color.description),
+                "#blur.radius": .number(clip.blurs[0].radius),
+                "#part.x": part.x.fileJSON, "#part.y": part.y.fileJSON, "#part.width": part.width.fileJSON, "#part.height": part.height.fileJSON,
+            ]
+        default:
+            return [:]
+        }
+    }
+
+    @Test(arguments: FileSchema.kinds)
+    func theSchemasDefaultsAreWhatTheReadersTake(_ kind: String) throws {
+        let schema = Self.defaults(of: try #require(FileSchema.named(kind)))
+        let readers = try Self.readersDefaults(kind)
+        #expect(Set(schema.keys) == Set(readers.keys))
+        for (path, value) in schema { #expect(readers[path] == value, "\(kind): \(path)") }
+    }
 
     @Test(arguments: corpus.indices)
     func theSchemaAndTheReaderAgree(_ index: Int) throws {

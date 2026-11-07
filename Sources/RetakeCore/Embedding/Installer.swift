@@ -97,7 +97,7 @@ public enum Installer {
         }
         arguments += [
             "-scheme", build.scheme,
-            "-configuration", build.configuration ?? "Debug",
+            "-configuration", build.configurationName,
             "-destination", "id=\(udid)",
             "-derivedDataPath", derivedData.path,
         ]

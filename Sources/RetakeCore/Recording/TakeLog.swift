@@ -282,6 +282,21 @@ extension TakeLog {
     /// `format` is this one.
     public static let format = 1
 
+    /// `recordedAt` as a log gives it, in ISO 8601: a date, a time to the second with any fraction of
+    /// it, and `Z` or a zone's offset, with or without its colon, such as 2026-11-06T09:30:00Z or
+    /// 2026-11-06T10:30:00.250+01:00. The reader and the schema both match it. A day past its
+    /// month's end, such as the 31st of April, matches, and is read as the days after it.
+    public static let recordedAtPattern =
+        #"^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\.[0-9]+)?(Z|[+-]([01][0-9]|2[0-3]):?[0-5][0-9])$"#
+
+    /// The moment `text` names, if it matches `recordedAtPattern`.
+    static func recordedAt(_ text: String) -> Date? {
+        guard text.range(of: recordedAtPattern, options: .regularExpression) != nil else { return nil }
+        let formatter = ISO8601DateFormatter()
+        if text.contains(".") { formatter.formatOptions.insert(.withFractionalSeconds) }
+        return formatter.date(from: text)
+    }
+
     /// A step log as Retake wrote it, read strictly, as every file Retake reads is; nil, with the
     /// reader's problems saying why, when it isn't one. One of a later `format` is refused with
     /// only that said, since the rest of it is a newer Retake's to read.
@@ -343,8 +358,8 @@ extension TakeLog {
         }
         let recordedAt = root.required("recordedAt") { value, path -> Date? in
             guard let text = reader.string(value, at: path) else { return nil }
-            guard let date = ISO8601DateFormatter().date(from: text) else {
-                reader.problem("\"\(text)\" isn't a date and time in ISO 8601", at: path)
+            guard let date = recordedAt(text) else {
+                reader.problem("\"\(text)\" isn't a date and time in ISO 8601, such as 2026-11-06T09:30:00Z", at: path)
                 return nil
             }
             return date

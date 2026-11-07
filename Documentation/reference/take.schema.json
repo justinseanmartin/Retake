@@ -99,9 +99,9 @@
       "additionalProperties": false
     },
     "recordedAt": {
-      "description": "When the take was recorded, in ISO 8601 to the second, such as 2026-11-06T09:30:00Z.",
+      "description": "When the take was recorded, in ISO 8601: to the second, with any fraction of it, and Z or the zone's offset, such as 2026-11-06T09:30:00Z.",
       "type": "string",
-      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(Z|[+-][0-9]{2}:?[0-9]{2})$"
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]+)?(Z|[+-]([01][0-9]|2[0-3]):?[0-5][0-9])$"
     },
     "failure": {
       "description": "Why the take failed, for one whose step didn't run; absent for a take that played every step. No edit is cut from a failed take.",
@@ -411,9 +411,9 @@
       ]
     },
     "shape": {
-      "description": "A width and a height, such as 3:4.",
+      "description": "A width and a height, each a positive decimal with digits either side of any point, such as 3:4.",
       "type": "string",
-      "pattern": "^[0-9]+(\\.[0-9]+)?:[0-9]+(\\.[0-9]+)?$"
+      "pattern": "^(0*[1-9][0-9]*(\\.[0-9]+)?|0+\\.[0-9]*[1-9][0-9]*):(0*[1-9][0-9]*(\\.[0-9]+)?|0+\\.[0-9]*[1-9][0-9]*)$"
     }
   }
 }

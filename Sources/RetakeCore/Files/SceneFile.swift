@@ -29,6 +29,10 @@ public struct SceneFile: Equatable, Sendable {
 
     public static let defaultLeadIn = 1.0
     public static let defaultTail = 1.0
+    public static let defaultRecordsLaunch = false
+    public static let defaultOrientation = Orientation.portrait
+    /// `defaultHold`'s own default: no pause after a step.
+    public static let defaultDefaultHold = 0.0
 
     public init(
         set: String? = nil,
@@ -36,9 +40,9 @@ public struct SceneFile: Equatable, Sendable {
         steps: [Step],
         leadIn: Double = SceneFile.defaultLeadIn,
         tail: Double = SceneFile.defaultTail,
-        recordsLaunch: Bool = false,
-        orientation: Orientation = .portrait,
-        defaultHold: Double = 0,
+        recordsLaunch: Bool = SceneFile.defaultRecordsLaunch,
+        orientation: Orientation = SceneFile.defaultOrientation,
+        defaultHold: Double = SceneFile.defaultDefaultHold,
     ) {
         self.set = set
         self.defaultHold = defaultHold
@@ -92,6 +96,7 @@ public struct Step: Equatable, Sendable {
 
     public static let defaultDragDuration = 0.5
     public static let defaultWaitTimeout = 10.0
+    public static let defaultGone = false
 }
 
 /// A point on the screen, in its points.
@@ -196,9 +201,9 @@ extension SceneFile {
         let steps = object.required("steps") { readSteps($0, $1, reader, isSetup: false) }
         let leadIn = object.optional("leadIn") { reader.number($0, at: $1, .atLeast(0)) } ?? defaultLeadIn
         let tail = object.optional("tail") { reader.number($0, at: $1, .atLeast(0)) } ?? defaultTail
-        let recordsLaunch = object.optional("recordsLaunch", reader.bool) ?? false
-        let orientation = object.optional("orientation") { reader.choice($0, at: $1, as: Orientation.self) } ?? .portrait
-        let defaultHold = object.optional("defaultHold") { reader.number($0, at: $1, .atLeast(0)) } ?? 0
+        let recordsLaunch = object.optional("recordsLaunch", reader.bool) ?? defaultRecordsLaunch
+        let orientation = object.optional("orientation") { reader.choice($0, at: $1, as: Orientation.self) } ?? defaultOrientation
+        let defaultHold = object.optional("defaultHold") { reader.number($0, at: $1, .atLeast(0)) } ?? defaultDefaultHold
         if let steps, steps.isEmpty, case .array(let values)? = object.value("steps"), values.isEmpty {
             reader.problem("needs at least one step", at: object.path("steps"))
         }
@@ -316,7 +321,7 @@ extension SceneFile {
             if object.has("into"), into == nil { return nil }
             return .type(text: text, into: into)
         case "waitFor":
-            let gone = object.optional("gone", reader.bool) ?? false
+            let gone = object.optional("gone", reader.bool) ?? Step.defaultGone
             let timeout = object.optional("timeout") { reader.number($0, at: $1, .above(0)) } ?? Step.defaultWaitTimeout
             return readElement(&object, reader).map { .waitFor($0, gone: gone, timeout: timeout) }
         default:
