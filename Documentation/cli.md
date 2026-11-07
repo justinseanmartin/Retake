@@ -464,7 +464,7 @@ takes the options its step does there; every one but `hold` also takes `--id <na
 | `type` | `--text <text>`, where `\n` presses return | An element to type into (the field already being typed in) |
 | `activate` | An element | |
 | `orientation` | `--to portrait`, `portrait-upside-down`, `landscape-left` or `landscape-right` | |
-| `waitFor` | An element | `--gone`, `--timeout <seconds>` (10) |
+| `waitFor` | An element | `--gone`, `--timeout <seconds>` (10, at most The Button Heist's longest wait, 60 unless `BUTTONHEIST_MAX_WAIT_TIMEOUT` raises it) |
 | `hold` | `--seconds <seconds>` | |
 
 A `tap` at a point that lands on an element is added, and `compose` says so, with the `tap` that

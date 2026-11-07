@@ -346,7 +346,10 @@ Each step does one thing, led by what it does:
 - **`orientation`** turns the device, to `portrait`, `portrait-upside-down`, `landscape-left` or
   `landscape-right`, with no hand on it, and ends when the app has turned.
 - **`waitFor`** waits until an element is on screen, or with `"gone": true` until it isn't, for up
-  to `timeout` seconds, 10 unless given. The step fails if it doesn't happen.
+  to `timeout` seconds, 10 unless given. The step fails if it doesn't happen. The Button Heist waits
+  at most 60 seconds, so a longer `timeout` is refused when the scene is read, unless
+  `BUTTONHEIST_MAX_WAIT_TIMEOUT` raises the limit: The Button Heist reads it both where Retake runs
+  and in the app, so set it in Retake's environment and in the set's `environment`.
 
 After what it does, a step can give its `hold`, the pause after it, so the take has room to breathe;
 the edit trims what it doesn't need. A tap's hold runs from when the tap is sent, so taps land a

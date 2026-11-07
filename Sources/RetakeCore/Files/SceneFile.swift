@@ -1,4 +1,5 @@
 import Foundation
+import ThePlans
 
 /// A scene, as its file in `scenes/<type>/` says it: a set and the steps played on it. See
 /// README.md, "Scenes: the walk through the app".
@@ -97,6 +98,32 @@ public struct Step: Equatable, Sendable {
     public static let defaultDragDuration = 0.5
     public static let defaultWaitTimeout = 10.0
     public static let defaultGone = false
+
+    /// The environment The Button Heist's longest wait is read from: Retake's own, as The Button
+    /// Heist reads it where Retake makes a step's plan; a test gives its own.
+    @TaskLocal static var environment = ProcessInfo.processInfo.environment
+
+    /// The Button Heist's longest wait, in seconds, unless `maximumWaitTimeoutVariable` says otherwise.
+    public static let defaultMaximumWaitTimeout = WaitTimeout.defaultMaximumSeconds
+    public static let maximumWaitTimeoutVariable = WaitTimeout.maximumSecondsEnvironmentKey
+
+    /// The longest `waitFor` The Button Heist takes, in seconds: 60, or what
+    /// `BUTTONHEIST_MAX_WAIT_TIMEOUT` gives, of 30 or more, read as The Button Heist reads it. A
+    /// longer one would fail only once the step was played.
+    public static var maximumWaitTimeout: Double {
+        guard let text = environment[maximumWaitTimeoutVariable], let seconds = Double(text), seconds.isFinite, seconds >= 30 else {
+            return defaultMaximumWaitTimeout
+        }
+        return seconds
+    }
+
+    /// Why `timeout` is too long for The Button Heist, in a clause to follow its name; nil when it isn't.
+    public static func waitTimeoutProblem(_ timeout: Double) -> String? {
+        let maximum = maximumWaitTimeout
+        guard timeout > maximum else { return nil }
+        return "\(Point.number(timeout)) s is longer than The Button Heist waits, at most \(Point.number(maximum)) s; "
+            + "\(maximumWaitTimeoutVariable) raises that, set where Retake runs and in the set's environment, for the app"
+    }
 }
 
 /// A point on the screen, in its points.
@@ -322,7 +349,14 @@ extension SceneFile {
             return .type(text: text, into: into)
         case "waitFor":
             let gone = object.optional("gone", reader.bool) ?? Step.defaultGone
-            let timeout = object.optional("timeout") { reader.number($0, at: $1, .above(0)) } ?? Step.defaultWaitTimeout
+            let timeout = object.optional("timeout") { value, path -> Double? in
+                guard let timeout = reader.number(value, at: path, .above(0)) else { return nil }
+                if let problem = Step.waitTimeoutProblem(timeout) {
+                    reader.problem(problem, at: path)
+                    return nil
+                }
+                return timeout
+            } ?? Step.defaultWaitTimeout
             return readElement(&object, reader).map { .waitFor($0, gone: gone, timeout: timeout) }
         default:
             return nil

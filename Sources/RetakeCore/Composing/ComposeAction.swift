@@ -327,6 +327,7 @@ extension ComposeActionSpec {
             required: ["element"], isStep: true,
         ) { given throws(ComposeAction.Problem) in
             let timeout = try given["timeout"].map { text throws(ComposeAction.Problem) in try number(text, "--timeout", above: 0) } ?? Step.defaultWaitTimeout
+            if let problem = Step.waitTimeoutProblem(timeout) { throw .wrong("--timeout \(problem).") }
             return .step(Step(.waitFor(try ElementOptions.target(given)!, gone: given["gone"] != nil, timeout: timeout)))
         },
         ComposeActionSpec(

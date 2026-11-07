@@ -1,6 +1,7 @@
 import Foundation
-import RetakeCore
+@testable import RetakeCore
 import Testing
+import ThePlans
 
 struct SceneFileTests {
     func read(_ text: String) -> (scene: SceneFile?, problems: [String]) {
@@ -12,6 +13,24 @@ struct SceneFileTests {
     /// A scene's steps, given as the JSON inside `"steps": [ … ]`.
     func steps(_ steps: String) -> (scene: SceneFile?, problems: [String]) {
         read(#"{"steps": [\#(steps)]}"#)
+    }
+
+    @Test func aWaitLongerThanTheButtonHeistTakesIsRefusedUnlessItsLimitIsRaised() {
+        let long = #"{"waitFor": {"label": "Synced", "timeout": 61}}"#
+        Step.$environment.withValue([:]) {
+            #expect(steps(long).problems == [
+                "scenes/ipad/create-note.json: steps[0].waitFor.timeout: 61 s is longer than The Button Heist waits, at most 60 s; BUTTONHEIST_MAX_WAIT_TIMEOUT raises that, set where Retake runs and in the set's environment, for the app",
+            ])
+            #expect(steps(#"{"waitFor": {"label": "Synced", "timeout": 60}}"#).problems.isEmpty)
+        }
+        Step.$environment.withValue([Step.maximumWaitTimeoutVariable: "120"]) {
+            #expect(steps(long).scene?.steps.first?.action == .waitFor(ElementTarget(label: "Synced"), gone: false, timeout: 61))
+            #expect(steps(#"{"waitFor": {"label": "Synced", "timeout": 121}}"#).problems.first?.contains("at most 120 s") == true)
+        }
+        Step.$environment.withValue([Step.maximumWaitTimeoutVariable: "10"]) {
+            #expect(Step.maximumWaitTimeout == 60, "The Button Heist ignores a limit under 30")
+        }
+        #expect(Step.maximumWaitTimeout == WaitTimeout.maximumSeconds, "read where The Button Heist reads it, as a step's plan is made")
     }
 
     @Test func theREADMEsExampleReads() {

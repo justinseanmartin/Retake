@@ -332,9 +332,10 @@
               "default": false
             },
             "timeout": {
-              "description": "Seconds to wait.",
+              "description": "Seconds to wait: at most The Button Heist's longest wait, by default 60 s, which BUTTONHEIST_MAX_WAIT_TIMEOUT raises, set where Retake runs and in the set's environment, for the app.",
               "type": "number",
               "exclusiveMinimum": 0,
+              "maximum": 60,
               "default": 10
             }
           },

@@ -128,7 +128,10 @@ extension SceneFile {
                 "Waits until an element is on screen, or with gone until it isn't. The step fails if it doesn't happen in time.",
                 elementProperties + [
                     .init("gone", .bool("Waits for the element to leave instead.").defaulting(to: Step.defaultGone)),
-                    .init("timeout", .number("Seconds to wait.", above: 0).defaulting(to: Step.defaultWaitTimeout)),
+                    .init("timeout", .number(
+                        "Seconds to wait: at most The Button Heist's longest wait, by default \(Point.number(Step.defaultMaximumWaitTimeout)) s, which \(Step.maximumWaitTimeoutVariable) raises, set where Retake runs and in the set's environment, for the app.",
+                        above: 0, atMost: Step.defaultMaximumWaitTimeout,
+                    ).defaulting(to: Step.defaultWaitTimeout)),
                 ],
             ).atLeastOne(of: ElementTarget.keys)),
         ]

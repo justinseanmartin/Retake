@@ -13,7 +13,8 @@ struct SchemaTests {
         let read: Bool = switch kind {
         case "retake": ProjectSettings.read(text, with: reader) != nil
         case "set": SetFile.read(text, with: reader) != nil
-        case "scene": SceneFile.read(text, with: reader) != nil
+        // Under The Button Heist's default longest wait, which the schema gives.
+        case "scene": Step.$environment.withValue([:]) { SceneFile.read(text, with: reader) != nil }
         case "take": TakeLog.read(text, with: reader) != nil
         default: EditFile.read(text, with: reader) != nil
         }
@@ -160,6 +161,8 @@ struct SchemaTests {
         ("set", ##"{"defaults": {"a": null}}"##, false),
 
         ("scene", ##"{"set": "a", "setup": [{"activate": {"label": "Library"}}], "leadIn": 1.5, "tail": 2, "defaultHold": 0.5, "recordsLaunch": true, "orientation": "landscape-left", "steps": [{"tap": {"label": "New", "traits": ["button"], "occurrence": 2}, "hold": 1, "id": "new"}, {"tap": {"x": 1, "y": 2}}, {"type": {"text": "Hi\n", "into": {"value": ""}}}, {"drag": {"from": {"x": 1, "y": 2}, "to": {"x": 3, "y": 4}, "duration": 0.8}}, {"orientation": "portrait"}, {"waitFor": {"hint": "Sends it", "gone": true, "timeout": 5}}, {"activate": {"identifier": "a"}}, {"hold": 2}]}"##, true),
+        ("scene", ##"{"steps": [{"waitFor": {"label": "Synced", "timeout": 60}}]}"##, true),
+        ("scene", ##"{"steps": [{"waitFor": {"label": "Synced", "timeout": 61}}]}"##, false),
         ("scene", ##"{"steps": []}"##, false),
         ("scene", ##"{"steps": [{"id": "a"}]}"##, false),
         ("scene", ##"{"steps": [{"tap": {"label": "a"}, "drag": {"from": {"x": 1, "y": 1}, "to": {"x": 2, "y": 2}}}]}"##, false),

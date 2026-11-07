@@ -119,6 +119,17 @@ struct ComposeActionTests {
         #expect(throws: ComposeAction.Problem.wrong(message)) { try parse(line) }
     }
 
+    @Test func aWaitLongerThanTheButtonHeistTakesIsRefusedUnlessItsLimitIsRaised() {
+        let line = "waitFor --label Synced --timeout 61"
+        Step.$environment.withValue([:]) {
+            #expect(throws: ComposeAction.Problem.wrong(
+                "--timeout 61 s is longer than The Button Heist waits, at most 60 s; BUTTONHEIST_MAX_WAIT_TIMEOUT raises that, set where Retake runs and in the set's environment, for the app.",
+            )) { try parse(line) }
+        }
+        let raised = Step.$environment.withValue([Step.maximumWaitTimeoutVariable: "90"]) { try? parse(line) }
+        #expect(raised == .step(Step(.waitFor(ElementTarget(label: "Synced"), gone: false, timeout: 61))))
+    }
+
     @Test func helpSaysWhatsRequiredAndWhatsOptionalWithItsDefault() throws {
         let drag = try #require(ComposeActionSpec.all.first { $0.name == "drag" }).usage
         #expect(drag.contains("Required:\n  --from <x>,<y>"))
