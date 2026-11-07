@@ -11,35 +11,30 @@ public enum TakeRecording {
     /// Where a take is written, and what it's of.
     public struct Target: Sendable {
         public var scene: String
-        public var take: Int
-        /// The take's movie; its step log is beside it, as `.json`.
-        public var movie: URL
+        /// The device type's takes folder, which the take is kept in as `<scene>.mov` and
+        /// `<scene>.json`, or `<scene>.failed.*`, and recorded into first as `<scene>.recording.*`.
+        public var folder: URL
 
-        public init(scene: String, take: Int, movie: URL) {
+        public init(scene: String, folder: URL) {
             self.scene = scene
-            self.take = take
-            self.movie = movie
+            self.folder = folder
         }
 
-        public var log: URL { movie.deletingPathExtension().appendingPathExtension("json") }
-    }
+        /// The movie and step log it's recorded into, until it's done.
+        public var recording: (movie: URL, log: URL) { TakeStore.recording(of: scene, in: folder) }
 
-    /// Makes the take's folder and marks its number used there, so a take that fails or is
-    /// interrupted, even before it writes anything, still uses up its number.
-    static func start(_ target: Target, in project: Project) throws(RetakeError) {
-        let folder = target.movie.deletingLastPathComponent()
-        do {
-            try TakeStore.markUsed(target.take, in: folder)
-        } catch {
-            throw RetakeError(.failed, "Couldn't mark take \(target.take) used in \(project.displayPath(folder)): \(error.localizedDescription)")
-        }
+        /// Where it's kept, once done, as `kind`.
+        public func kept(_ kind: TakeStore.Kind) -> (movie: URL, log: URL) { TakeStore.files(of: scene, kind.suffix, in: folder) }
     }
 
     /// Records `target`'s take of `scene` on its set, through `capture`: launches the app, plays the
     /// setup, records the lead-in, the steps with their holds, and the tail, and writes the movie
-    /// and its step log. A take whose step doesn't run is still written, marked failed, for its
-    /// footage to show what went wrong, and the failure is thrown after; one that couldn't record at
-    /// all writes no movie or log, though once it has started its number is used up. Returns the log.
+    /// and its step log, under a name of their own until they're done. Then a take that succeeded
+    /// becomes the scene's take, the one it replaces its previous take, as
+    /// `TakeStore.keepRecording` says. A take whose step doesn't run is kept as the scene's
+    /// latest failure, for its footage to show what went wrong, and the failure is thrown after;
+    /// one that couldn't record at all, or is interrupted, keeps nothing and leaves the scene's
+    /// takes as they were. Returns the log.
     @discardableResult
     public static func record(
         _ target: Target,
@@ -61,7 +56,7 @@ public enum TakeRecording {
             throw RetakeError(.environment, "Couldn't read \(device.name)'s screen size from devicectl, which the step log needs for its touches and frames.")
         }
         var log = TakeLog(
-            scene: target.scene, take: target.take, set: set.name, state: set.state, deviceType: type,
+            scene: target.scene, set: set.name, state: set.state, deviceType: type,
             device: TakeLog.DeviceInfo(
                 model: device.model ?? "unknown", marketingName: device.marketingName,
                 os: [device.osVersion, device.osBuild.map { "(\($0))" }].compactMap { $0 }.joined(separator: " "),
@@ -71,7 +66,16 @@ public enum TakeRecording {
             recordedAt: Date(), failure: nil, duration: 0, width: 0, height: 0, frames: 0, dropped: 0, screen: screen, launch: nil,
             clock: TakeLog.Clock(deviceAhead: nil), steps: [], shapes: [],
         )
-        try start(target, in: project)
+        TakeStore.discardRecording(of: target.scene, in: target.folder)
+        do {
+            try FileManager.default.createDirectory(at: target.folder, withIntermediateDirectories: true)
+        } catch {
+            throw RetakeError(.failed, "Couldn't make \(project.displayPath(target.folder)): \(error.localizedDescription)")
+        }
+        // Until it's kept, an interrupted or unwritten recording is deleted, and the takes are untouched.
+        var kept = false
+        defer { if !kept { TakeStore.discardRecording(of: target.scene, in: target.folder) } }
+        let movie = target.recording.movie
 
         let recorder = try DeviceRecorder(capture)
         recorder.turning(to: TakeWriter.Facing(scene.orientation))
@@ -88,7 +92,7 @@ public enum TakeRecording {
 
         var failure: RetakeError?
         do throws(RetakeError) {
-            try await AppSession.run("\(target.scene)-\(target.take)", in: project, set: set, scene: scene, on: device, report: report, cleanUp: cleanUp) { () throws(RetakeError) in
+            try await AppSession.run(target.scene, in: project, set: set, scene: scene, on: device, report: report, cleanUp: cleanUp) { () throws(RetakeError) in
                 // Recording from before launch catches the launch screen, and everything up to the
                 // first step, which the launch marks place.
                 if scene.recordsLaunch, !collected.recording {
@@ -96,7 +100,7 @@ public enum TakeRecording {
                     // device turning from however the last one left it.
                     try Launcher.turn(device, to: scene.orientation)
                     try? await Task.sleep(for: .seconds(Self.turnSettles))
-                    try await recorder.start(writingTo: target.movie, describing: header)
+                    try await recorder.start(writingTo: movie, describing: header)
                     collected.startRecording(at: recorder.startedAt)
                 }
             } _: { driver, launched throws(RetakeError) in
@@ -104,7 +108,7 @@ public enum TakeRecording {
                 do throws(RetakeError) {
                     try await player.play(scene, named: target.scene, on: driver) { () throws(RetakeError) in
                         if !collected.recording {
-                            try await recorder.start(writingTo: target.movie, describing: header)
+                            try await recorder.start(writingTo: movie, describing: header)
                             collected.startRecording(at: recorder.startedAt)
                         }
                         collected.clock = MovieClock(start: collected.startedAt!, deviceAhead: deviceAhead)
@@ -156,9 +160,15 @@ public enum TakeRecording {
             if let warning = log.hitchWarning(over: project.settings.hitchThreshold) { report(.warning(warning)) }
         }
         do {
-            try Data((JSONWriter.write(log.json) + "\n").utf8).write(to: target.log)
+            try Data((JSONWriter.write(log.json) + "\n").utf8).write(to: target.recording.log)
         } catch {
-            throw RetakeError(.failed, "Couldn't write \(project.displayPath(target.log)): \(error.localizedDescription)")
+            throw RetakeError(.failed, "Couldn't write \(project.displayPath(target.recording.log)): \(error.localizedDescription)")
+        }
+        kept = true
+        do {
+            try TakeStore.keepRecording(of: target.scene, in: target.folder, failed: failure != nil)
+        } catch {
+            throw RetakeError(.failed, "Couldn't keep the take of \(target.scene) in \(project.displayPath(target.folder)): \(error.localizedDescription)")
         }
         if let failure { throw failure }
         return log

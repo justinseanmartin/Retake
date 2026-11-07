@@ -21,31 +21,31 @@ struct CutPreparerTests {
         try Data(text.utf8).write(to: url)
     }
 
-    /// Take `number` of walk: `a` at 1–1.5 s, `b` at 2–3 s, `duration` long.
-    func record(_ number: Int, duration: Double = 6, failure: String? = nil) throws {
+    /// A take of walk: `a` at 1–1.5 s, `b` at 2–3 s, `duration` long; with a `failure`, kept as its
+    /// failure, and with `offset`, its steps that much later.
+    func record(duration: Double = 6, failure: String? = nil, offset: Double = 0) throws {
         var log = TakeTimelineTests.timeline().log
         log.scene = "walk"
-        log.take = number
         log.failure = failure
         log.duration = duration
-        log.steps = Array(log.steps.prefix(2))
-        try write("output/takes/ipad/walk/\(number).json", JSONWriter.write(log.json))
-        try write("output/takes/ipad/walk/\(number).mov", "")
+        log.steps = Array(log.steps.prefix(2)).map { var step = $0; step.start += offset; step.end += offset; return step }
+        let name = "output/takes/ipad/walk\(failure == nil ? "" : ".failed")"
+        try write("\(name).json", JSONWriter.write(log.json))
+        try write("\(name).mov", "")
     }
 
     @Test func anEditThatNamesItsTakesIsRefused() throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        try record(1)
+        try record()
         try write("edits/video.json", #"{"devices": ["ipad"], "takes": {"ipad": {"walk": 1}}, "clips": [{"take": "walk", "from": {"step": "a"}, "to": {"step": "b"}}]}"#)
         let error = #expect(throws: RetakeError.self) { try CutPreparer.prepare("video", in: project) }
         #expect(error?.message.contains("an edit doesn't name its takes") == true)
     }
 
-    @Test func secondsBecomeAnchorsInTheLatestSuccessfulTake() throws {
+    @Test func secondsBecomeAnchorsInTheTakeNotTheFailure() throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        try record(1)
-        try record(2)
-        try record(3, failure: "step 2 didn't run")
+        try record()
+        try record(failure: "step 2 didn't run", offset: 1)
         try write("edits/video.json", #"{"devices": ["ipad"], "clips": [{"take": "walk", "from": 2.25, "to": 3}]}"#)
 
         let result = try CutPreparer.prepare("video", in: project)
@@ -60,14 +60,14 @@ struct CutPreparerTests {
 
             """)
         #expect(result.changes == [
-            #"clips[0].from: 2.25 s into walk take 2 (ipad) becomes { "step": "b", "offset": 0.25 }"#,
-            #"clips[0].to: 3 s into walk take 2 (ipad) becomes { "step": "b", "offset": 1 }"#,
-        ], "the failed take 3 isn't the latest successful one")
+            #"clips[0].from: 2.25 s into walk's take (ipad) becomes { "step": "b", "offset": 0.25 }"#,
+            #"clips[0].to: 3 s into walk's take (ipad) becomes { "step": "b", "offset": 1 }"#,
+        ], "the later failure, its steps a second later, isn't cut from")
     }
 
     @Test func theStillsTimesInSecondsBecomeAnchorsToo() throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        try record(1)
+        try record()
         try write("edits/video.json", #"{"devices": ["ipad"], "clips": [{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}, "stillsIn": 2.25, "stillsOut": 4, "stills": [{"take": "walk", "at": 1}]}]}"#)
         let edit = try #require(EditFile.read(try CutPreparer.prepare("video", in: project).text, with: JSONReader(file: "video.json"))?.videos[.ipad])
         #expect(edit.clips[0].stillsIn == .step(.init(step: .id("b"), offset: 0.25)))
@@ -76,7 +76,7 @@ struct CutPreparerTests {
 
     @Test func aCaptionsTimeThatsItsDefaultMomentIsDroppedRatherThanAnchored() throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        try record(1)
+        try record()
         // The first clip plays 1–3 s; the next fades in over its last 0.5 s, so its caption, unless
         // told, is up from 1 s, and goes at 2.5 s.
         try write("edits/video.json", #"""
@@ -90,19 +90,19 @@ struct CutPreparerTests {
         let edit = try #require(EditFile.read(result.text, with: JSONReader(file: "video.json"))?.videos[.ipad])
         #expect(edit.clips[0].captions[0].from == nil && edit.clips[0].captions[0].to == nil)
         #expect(edit.clips[0].captions[1].to?.anchor == .step(.init(step: .id("b"))), "a moment of its own is anchored: b starts at 2 s")
-        #expect(result.changes.contains("clips[0].captions[0].to: 2.5 s into walk take 1 is when the caption ends anyway; it's dropped"), "\(result.changes)")
+        #expect(result.changes.contains("clips[0].captions[0].to: 2.5 s into walk's take is when the caption ends anyway; it's dropped"), "\(result.changes)")
     }
 
     @Test func anEditWhoseTimesAreAnchorsHasNoChanges() throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        try record(1)
+        try record()
         try write("edits/video.json", #"{"devices": ["ipad"], "clips": [{"take": "walk", "from": {"step": "a"}, "to": {"step": "b"}}]}"#)
         #expect(try CutPreparer.prepare("video", in: project).changes.isEmpty)
     }
 
     @Test func onlyRetakesOwnSchemaIsBroughtUpToDate() throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        try record(1)
+        try record()
         func prepared(_ schema: String) throws -> JSONValue? {
             try write("edits/video.json", #"{"$schema": "\#(schema)", "devices": ["ipad"], "clips": [{"take": "walk", "from": {"step": "a"}, "to": {"step": "b"}}]}"#)
             return try JSONParser.parse(CutPreparer.prepare("video", in: project).text)[path: "$schema"]
@@ -116,7 +116,7 @@ struct CutPreparerTests {
         defer { try? FileManager.default.removeItem(at: root) }
         try write("edits/video.json", #"{"devices": ["ipad"], "clips": [{"take": "walk", "from": 1, "to": {"step": "b", "offset": 2.5, "edge": "end"}}]}"#)
         #expect(throws: RetakeError.self) { try CutPreparer.prepare("video", in: project) }
-        try record(1, duration: 4)
+        try record(duration: 4)
         do {
             _ = try CutPreparer.prepare("video", in: project)
             Issue.record("rewritten onto a take too short for it")

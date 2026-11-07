@@ -215,7 +215,7 @@ extension EditFile {
         let clip = Schema.object("A stretch of a take, played in order.", [
             .init("id", .string("Names the clip, for a caption to run on into it. Unique in the edit.", nonEmpty: true)),
             .init("intent", .string("What the clip is there to show, for whoever changes the video later. Not read by the render.")),
-            .init("take", .string("The scene whose latest successful take the clip is cut from.", nonEmpty: true)),
+            .init("take", .string("The scene whose take the clip is cut from.", nonEmpty: true)),
             .init("from", .ref("anchor", "Where the clip starts in the take.")),
             .init("to", .ref("anchor", "Where it ends.")),
             .init("speed", .number("How fast it plays: 2 is twice as fast.", above: 0).defaulting(to: Edit.Clip.defaultSpeed)),
@@ -300,7 +300,7 @@ extension EditFile {
                 .init("radius", .number("How strong the blur is: the Gaussian blur's radius, its standard deviation, in screen points, scaled to the canvas as the blur's rectangle is.", above: 0).defaulting(to: Edit.Blur.defaultRadius)),
             ]).exactlyOne(of: ["element", "rect"])),
             .init("still", .object("A frame of another take, popped in over the clip.", [
-                .init("take", .string("The scene whose latest successful take it's from.", nonEmpty: true)),
+                .init("take", .string("The scene whose take it's from.", nonEmpty: true)),
                 .init("at", .ref("anchor", "The moment in that take.")),
             ], required: ["take", "at"])),
             .init("rect", .object("A rectangle of the screen, each side in screen points or a percentage of the screen as the device faced.", [
@@ -377,11 +377,11 @@ extension TakeLog {
         let size = Schema.tuple("[width, height], in capture pixels.", of: .integer(nil, atLeast: 0), count: 2)
         let aspect = Schema.oneOf(nil, [.ref("shape"), .ref("preview-aspect")])
         let root = Schema.object(
-            "A take's step log, `<n>.json` beside its movie `<n>.mov` in the output directory's `takes/<type>/<scene>/`: what was recorded, with what, and when each step happened on the movie's own clock, where it touched, and what was on screen after it. Retake writes it when it records the take, and reads it to list, clean and cut takes; a project doesn't write or edit it. Times are \(seconds); positions and sizes on the screen are its points, portrait, to the hundredth.",
+            "A take's step log, `<scene>.json` beside its movie `<scene>.mov` in the output directory's `takes/<type>/`, or `<scene>.previous.json` or `<scene>.failed.json` beside theirs: what was recorded, with what, and when each step happened on the movie's own clock, where it touched, and what was on screen after it. Retake writes it when it records the take, and reads it to list, clean and cut takes; a project doesn't write or edit it. Times are \(seconds); positions and sizes on the screen are its points, portrait, to the hundredth.",
             [
                 .init("format", format),
                 .init("scene", .string("The scene recorded, as its file in `scenes/<type>/` is named, without `.json`.", nonEmpty: true)),
-                .init("take", .integer("The take's number among the scene's, from 1, which its movie and log are named by.", atLeast: 1)),
+                .init("take", Schema.integer(nil, atLeast: 1).deprecated("Deprecated: the take's number among the scene's, from 1, which takes recorded when they were numbered give. Still read, and ignored.")),
                 .init("set", .string("The set the scene started on.", nonEmpty: true)),
                 .init("state", .choice("The set's state, which the take's data started from.", SetFile.State.allCases.map(\.rawValue))),
                 .init("deviceType", .choice("The type of device recorded.", DeviceType.allCases.map(\.rawValue))),
@@ -435,7 +435,7 @@ extension TakeLog {
                 ], required: ["at", "duration"]))),
             ],
             required: [
-                "scene", "take", "set", "state", "deviceType", "device", "app", "retake", "buttonHeist", "recordedAt", "duration", "size",
+                "scene", "set", "state", "deviceType", "device", "app", "retake", "buttonHeist", "recordedAt", "duration", "size",
                 "screen", "frames", "dropped", "clock", "steps", "shapes",
             ],
         )

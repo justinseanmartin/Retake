@@ -1,8 +1,8 @@
 import Foundation
 
 /// Prepares an edit for `retake cut`: turns any time still in plain seconds into an anchor against
-/// its scene's latest successful take, which is what a time in seconds is read against, and checks
-/// every anchor resolves in the latest takes before the edit is rewritten. See Documentation/cli.md,
+/// its scene's take, which is what a time in seconds is read against, and checks
+/// every anchor resolves in the takes before the edit is rewritten. See Documentation/cli.md,
 /// the cut.
 public enum CutPreparer {
     public struct Result: Sendable {
@@ -28,10 +28,11 @@ public enum CutPreparer {
             throw RetakeError(.usage, "\(name) isn't cut for \(missing.rawValue): its devices are \(edit.devices.map(\.rawValue).joined(separator: ", ")).")
         }
         let types = edit.devices.filter { requested?.contains($0) ?? true }
+        try TakeStore.refuseOldLayout(for: types, in: project)
         var changes: [String] = []
 
         func log(_ scene: String, _ type: DeviceType) -> TakeLog? {
-            TakeStore.takes(of: scene, for: [type], in: project).last(where: \.successful)?.recorded
+            TakeStore.take(of: scene, for: type, in: project).flatMap { $0.successful ? $0.recorded : nil }
         }
         var problems: [String] = []
         // Where each time in seconds was, by its path, for those it turns into a caption's default.
@@ -58,8 +59,8 @@ public enum CutPreparer {
                         return entry
                     }
                     let anchor = anchor(for: seconds, in: source.0)
-                    changes.append("\(at): \(JSONReader.format(seconds)) s into \(scene) take \(source.0.take) (\(source.1.rawValue)) becomes \(JSONWriter.compact(anchor))")
-                    convertedPaths[at] = "\(JSONReader.format(seconds)) s into \(scene) take \(source.0.take)"
+                    changes.append("\(at): \(JSONReader.format(seconds)) s into \(scene)'s take (\(source.1.rawValue)) becomes \(JSONWriter.compact(anchor))")
+                    convertedPaths[at] = "\(JSONReader.format(seconds)) s into \(scene)'s take"
                     return .init(key: entry.key, value: anchor)
                 }))
             default:
@@ -80,7 +81,7 @@ public enum CutPreparer {
         let newText = JSONWriter.fitting(.object(root))
         guard !changes.isEmpty else { return Result(text: newText, changes: []) }
 
-        // Every anchor and element resolves in the latest takes, or nothing is written.
+        // Every anchor and element resolves in the takes, or nothing is written.
         let reader = JSONReader(file: project.displayPath(url))
         guard let prepared = EditFile.read(newText, with: reader) else {
             throw RetakeError(.failed, reader.problems.map(\.description).joined(separator: "\n"))

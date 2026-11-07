@@ -14,7 +14,6 @@ public enum MovieMetadata {
             ("com.apple.quicktime.creationdate", ISO8601DateFormatter().string(from: log.recordedAt)),
             ("retake.version", log.retake),
             ("retake.scene", log.scene),
-            ("retake.take", String(log.take)),
             ("retake.set", log.set),
             ("retake.state", log.state.rawValue),
             ("retake.app.bundle-id", log.app.bundleID),
@@ -39,7 +38,9 @@ public enum MovieMetadata {
         public var type: DeviceType
         public var bundleID: String
         public var renderedAt: Date
-        /// Each clip's take, in the order the video plays them, each once.
+        /// Each clip's take, in the order the video plays them, each once. The record names each
+        /// by its scene, device type and when it was recorded, which `status` compares with the
+        /// scene's take now.
         public var takes: [TakeLog]
 
         public init(retake: String = RetakeVersion.current.version, edit: String, type: DeviceType, bundleID: String, renderedAt: Date = Date(), takes: [TakeLog]) {
@@ -74,7 +75,8 @@ public enum MovieMetadata {
         public var takeRecords: [JSONValue] {
             takes.map { take in
                 TakeLog.object([
-                    ("scene", .string(take.scene)), ("take", .number(Double(take.take))), ("retake", .string(take.retake)),
+                    ("scene", .string(take.scene)), ("deviceType", .string(take.deviceType.rawValue)),
+                    ("recordedAt", .string(ISO8601DateFormatter().string(from: take.recordedAt))), ("retake", .string(take.retake)),
                     ("app", TakeLog.object([("version", take.app.version.map(JSONValue.string)), ("build", take.app.build.map(JSONValue.string))])),
                     ("device", TakeLog.object([("model", .string(take.device.model)), ("os", .string(take.device.os))])),
                     ("buttonHeist", TakeLog.object([("version", .string(take.buttonHeist.version)), ("commit", take.buttonHeist.commit.map(JSONValue.string))])),

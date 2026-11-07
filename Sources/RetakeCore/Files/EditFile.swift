@@ -109,7 +109,7 @@ public struct Edit: Equatable, Sendable {
     public struct Clip: Equatable, Sendable {
         public var id: String?
         public var intent: String?
-        /// The scene whose latest successful take the clip is cut from.
+        /// The scene whose take the clip is cut from.
         public var take: String
         public var from: Anchor
         public var to: Anchor
@@ -263,7 +263,7 @@ public struct Edit: Equatable, Sendable {
 
     /// A frame of another take, popped in over the clip.
     public struct Still: Equatable, Sendable {
-        /// The scene whose latest successful take it's from.
+        /// The scene whose take it's from.
         public var take: String
         public var at: Anchor
     }

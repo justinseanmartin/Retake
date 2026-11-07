@@ -1,21 +1,41 @@
 import Foundation
 
-/// Takes and cuts on disk, as `takes` lists them and `clean` deletes them. See Documentation/cli.md,
-/// "retake takes" and "retake clean".
+/// Takes on disk, as `record` keeps them, `takes` lists them and `clean` deletes them. A scene has,
+/// for each device type, in `output/takes/<type>/`: its take, `<scene>.mov` with its step log
+/// `<scene>.json`, the latest that succeeded, which edits are cut from; the take that one replaced,
+/// `<scene>.previous.*`; and its latest failure, `<scene>.failed.*`, until a take succeeds. See
+/// Documentation/cli.md, "retake takes" and "retake clean".
 public enum TakeStore {
-    /// A take: its movie and step log, in `output/takes/<type>/<scene>/`, either of which may be
-    /// missing, and what its step log says.
+    /// Which of a scene's takes it is.
+    public enum Kind: String, CaseIterable, Sendable {
+        /// The latest successful take, which edits are cut from.
+        case take
+        /// The take the current one replaced, for `takes --restore` to put back.
+        case previous
+        /// The latest take that failed, kept to show what went wrong.
+        case failed
+
+        /// What follows the scene in its files' names: nothing, `.previous` or `.failed`.
+        public var suffix: String { self == .take ? "" : ".\(rawValue)" }
+    }
+
+    /// What follows the scene in the names of a take still being recorded, which is renamed into
+    /// place once it's done.
+    static let recordingSuffix = ".recording"
+    /// What follows it in a take's names while `takes --restore` swaps it with the previous one.
+    static let restoringSuffix = ".restoring"
+
+    /// A take: its movie and step log, either of which may be missing, and what its step log says.
     public struct Take: Equatable, Sendable {
         public var type: DeviceType
         public var scene: String
-        public var number: Int
+        public var kind: Kind
         public var movie: URL
         public var log: URL
         /// What the step log says; nil when it's missing or can't be read, `problem` saying why.
         public var recorded: TakeLog?
         public var problem: String?
-        /// The edits cut from it, by name: those that use its scene, when it's the scene's latest
-        /// successful take.
+        /// The edits cut from it, by name: those that use its scene, when it's the scene's take.
         public var usedBy: [String] = []
 
         /// A take that failed, or whose step log can't say it didn't, which no edit is cut from.
@@ -23,37 +43,62 @@ public enum TakeStore {
         /// A complete take whose recording succeeded and whose movie and log can both be read.
         public var successful: Bool { !failed && problem == nil }
 
-        /// How messages name it: `create-note@3`.
-        public var name: String { "\(scene)@\(number)" }
+        /// How messages name it: `create-note`, `create-note (previous)`, `create-note (failed)`.
+        public var name: String { kind == .take ? scene : "\(scene) (\(kind.rawValue))" }
     }
 
-    /// Every take of `scene`, or of every scene, for each of `types` in turn, by scene and number.
+    /// A take's movie and step log in a device type's takes folder: `<scene><suffix>.mov` and `.json`.
+    static func files(of scene: String, _ suffix: String, in folder: URL) -> (movie: URL, log: URL) {
+        (folder.appending(path: "\(scene)\(suffix).mov"), folder.appending(path: "\(scene)\(suffix).json"))
+    }
+
+    /// The scene and kind a file in a takes folder belongs to, from its name; nil for one that isn't
+    /// a take's, or is one being recorded or restored.
+    static func parse(_ name: String) -> (scene: String, kind: Kind)? {
+        let url = URL(filePath: name)
+        guard !name.hasPrefix("."), ["json", "mov"].contains(url.pathExtension) else { return nil }
+        let base = url.deletingPathExtension().lastPathComponent
+        if base.hasSuffix(recordingSuffix) || base.hasSuffix(restoringSuffix) { return nil }
+        for kind in [Kind.previous, .failed] where base.hasSuffix(kind.suffix) {
+            let scene = String(base.dropLast(kind.suffix.count))
+            return scene.isEmpty ? nil : (scene, kind)
+        }
+        return (base, .take)
+    }
+
+    /// Every take of `scene`, or of every scene, for each of `types` in turn: by scene, then its
+    /// take, previous and failure.
     public static func takes(of scene: String? = nil, for types: [DeviceType], in project: Project) -> [Take] {
-        let files = FileManager.default
-        var takes = types.flatMap { type -> [Take] in
+        let users = users(in: project)
+        return types.flatMap { type -> [Take] in
             let folder = project.takes(for: type)
-            let scenes = scene.map { [$0] } ?? ((try? files.contentsOfDirectory(atPath: folder.path)) ?? []).sorted()
-            return scenes.flatMap { scene -> [Take] in
-                let sceneFolder = folder.appending(path: scene, directoryHint: .isDirectory)
-                let names = (try? files.contentsOfDirectory(atPath: sceneFolder.path)) ?? []
-                let numbers = Set(names.compactMap { name -> Int? in
-                    let url = URL(filePath: name)
-                    guard ["json", "mov"].contains(url.pathExtension), let number = Int(url.deletingPathExtension().lastPathComponent), number > 0 else { return nil }
-                    return number
-                })
-                return numbers.sorted().map { number in take(number, of: scene, for: type, in: sceneFolder, project: project) }
+            let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+            var found = Set<String>()
+            var keys: [(scene: String, kind: Kind)] = []
+            for name in names {
+                guard let (fileScene, kind) = parse(name), scene == nil || fileScene == scene,
+                      found.insert("\(fileScene)\(kind.suffix)").inserted else { continue }
+                keys.append((fileScene, kind))
+            }
+            keys.sort { ($0.scene, Kind.allCases.firstIndex(of: $0.kind)!) < ($1.scene, Kind.allCases.firstIndex(of: $1.kind)!) }
+            return keys.map { key in
+                var take = take(key.scene, key.kind, for: type, in: folder, project: project)
+                if key.kind == .take, take.successful { take.usedBy = users[SceneKey(type: type, scene: key.scene)] ?? [] }
+                return take
             }
         }
-        let users = users(in: project)
-        for (key, indices) in Dictionary(grouping: takes.indices, by: { SceneKey(type: takes[$0].type, scene: takes[$0].scene) }) {
-            guard let latest = indices.last(where: { takes[$0].successful }) else { continue }
-            takes[latest].usedBy = users[key] ?? []
-        }
-        return takes
     }
 
-    static func take(_ number: Int, of scene: String, for type: DeviceType, in folder: URL, project: Project) -> Take {
-        let movie = folder.appending(path: "\(number).mov"), log = folder.appending(path: "\(number).json")
+    /// The take of `scene` that edits are cut from, if it has one, whether or not it can be read.
+    public static func take(of scene: String, for type: DeviceType, in project: Project) -> Take? {
+        let folder = project.takes(for: type)
+        let (movie, log) = files(of: scene, Kind.take.suffix, in: folder)
+        guard [movie, log].contains(where: { FileManager.default.fileExists(atPath: $0.path) }) else { return nil }
+        return take(scene, .take, for: type, in: folder, project: project)
+    }
+
+    static func take(_ scene: String, _ kind: Kind, for type: DeviceType, in folder: URL, project: Project) -> Take {
+        let (movie, log) = files(of: scene, kind.suffix, in: folder)
         var recorded: TakeLog?, problem: String?
         if let data = FileManager.default.contents(atPath: log.path) {
             let reader = JSONReader(file: project.displayPath(log))
@@ -63,7 +108,7 @@ public enum TakeStore {
             problem = "\(project.displayPath(log)) is missing"
         }
         if recorded != nil, !FileManager.default.fileExists(atPath: movie.path) { problem = "\(project.displayPath(movie)) is missing" }
-        return Take(type: type, scene: scene, number: number, movie: movie, log: log, recorded: recorded, problem: problem)
+        return Take(type: type, scene: scene, kind: kind, movie: movie, log: log, recorded: recorded, problem: problem)
     }
 
     struct SceneKey: Hashable {
@@ -85,67 +130,142 @@ public enum TakeStore {
         return users
     }
 
-    /// Which takes `clean --takes` names: a scene's every take, or one take of it.
-    public enum TakeChoice: Equatable, Sendable {
-        case scene(String)
-        case take(String, Int)
+    // MARK: - Takes from an earlier Retake
 
-        /// `create-note`, or `create-note@3`.
-        public static func parse(_ text: String) throws(RetakeError) -> TakeChoice {
-            let parts = text.split(separator: "@", omittingEmptySubsequences: false).map(String.init)
-            guard let scene = parts.first, !scene.isEmpty, parts.count <= 2 else {
-                throw RetakeError(.usage, "\"\(text)\" isn't a scene, or a scene's take as <scene>@<take>, such as create-note@3.")
-            }
-            guard parts.count == 2 else { return .scene(scene) }
-            guard let number = Int(parts[1]), number >= 1 else {
-                throw RetakeError(.usage, "\"\(text)\": takes are numbered from 1, so give one such as \(scene)@3.")
-            }
-            return .take(scene, number)
-        }
-
-        func includes(_ take: Take) -> Bool {
-            switch self {
-            case .scene(let scene): take.scene == scene
-            case .take(let scene, let number): take.scene == scene && take.number == number
-            }
-        }
-
-        var name: String {
-            switch self {
-            case .scene(let scene): scene
-            case .take(let scene, let number): "\(scene)@\(number)"
+    /// The scenes' folders an earlier Retake left in the takes folders of `types`: one per scene,
+    /// `<scene>/`, of numbered takes, `<n>.mov` and `<n>.json`, which this Retake doesn't read.
+    public static func oldFolders(for types: [DeviceType], in project: Project) -> [URL] {
+        let files = FileManager.default
+        return types.flatMap { type -> [URL] in
+            let folder = project.takes(for: type)
+            return ((try? files.contentsOfDirectory(atPath: folder.path)) ?? []).filter { !$0.hasPrefix(".") }.sorted().compactMap { name in
+                let url = folder.appending(path: name, directoryHint: .isDirectory)
+                let names = (try? files.contentsOfDirectory(atPath: url.path)) ?? []
+                let numbered = names.contains { name in
+                    name == ".last-take" || name.range(of: #"^[0-9]+\.(json|mov)$"#, options: .regularExpression) != nil
+                }
+                return numbered ? url : nil
             }
         }
     }
 
+    /// Fails (1) when the takes folders of `types` hold an earlier Retake's numbered takes, saying
+    /// to delete them and record the scenes again.
+    public static func refuseOldLayout(for types: [DeviceType], in project: Project) throws(RetakeError) {
+        let old = oldFolders(for: types, in: project)
+        guard !old.isEmpty else { return }
+        let scenes = old.map(\.lastPathComponent).reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
+        let one = old.count == 1
+        throw RetakeError(
+            .failed,
+            "\(old.map { project.displayPath($0) + "/" }.joined(separator: ", ")) \(one ? "holds" : "hold") numbered takes from an earlier Retake, "
+                + "which this one doesn't read. Delete \(one ? "it" : "them") with `retake clean --takes \(scenes.joined(separator: ","))`, "
+                + "or remove \(one ? "the folder" : "the folders"), and record \(scenes.count == 1 ? "the scene" : "the scenes") again.",
+        )
+    }
+
+    // MARK: - Recording
+
+    /// Where a take of `scene` is written while it's recorded, in the device type's takes folder:
+    /// `<scene>.recording.mov` and `.json`, renamed into place by `keepRecording` once it's done.
+    public static func recording(of scene: String, in folder: URL) -> (movie: URL, log: URL) {
+        files(of: scene, recordingSuffix, in: folder)
+    }
+
+    /// Deletes what's left of a recording of `scene` that didn't finish, leaving its takes alone.
+    public static func discardRecording(of scene: String, in folder: URL) {
+        let (movie, log) = recording(of: scene, in: folder)
+        for url in [movie, log] { try? FileManager.default.removeItem(at: url) }
+    }
+
+    /// Keeps the finished recording of `scene`. One that succeeded becomes the take, the take it
+    /// replaces becomes the previous one, the old previous one is deleted, and so is the scene's
+    /// latest failure, which is no longer news. One that failed becomes the latest failure,
+    /// replacing the last, and leaves the take and the previous one alone.
+    public static func keepRecording(of scene: String, in folder: URL, failed: Bool) throws {
+        let recording = recording(of: scene, in: folder)
+        if failed {
+            try move(recording, to: files(of: scene, Kind.failed.suffix, in: folder))
+            return
+        }
+        let take = files(of: scene, Kind.take.suffix, in: folder)
+        try move(take, to: files(of: scene, Kind.previous.suffix, in: folder))
+        try move(recording, to: take)
+        try remove(files(of: scene, Kind.failed.suffix, in: folder))
+    }
+
+    /// Moves a take's movie and log, replacing those at `destination`; one that's missing leaves
+    /// none in its place. Nothing is touched when neither is there to move.
+    static func move(_ source: (movie: URL, log: URL), to destination: (movie: URL, log: URL)) throws {
+        let files = FileManager.default
+        guard files.fileExists(atPath: source.movie.path) || files.fileExists(atPath: source.log.path) else { return }
+        try remove(destination)
+        for (from, to) in [(source.movie, destination.movie), (source.log, destination.log)] where files.fileExists(atPath: from.path) {
+            try files.moveItem(at: from, to: to)
+        }
+    }
+
+    static func remove(_ take: (movie: URL, log: URL)) throws {
+        for url in [take.movie, take.log] where FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
+    }
+
+    /// `takes --restore`: puts back the take of `scene` that the current one replaced, the two
+    /// swapping places, so restoring again undoes it. Misuse (2) when there's no previous take.
+    public static func restore(_ scene: String, for type: DeviceType, in project: Project) throws(RetakeError) {
+        let folder = project.takes(for: type)
+        let take = files(of: scene, Kind.take.suffix, in: folder)
+        let previous = files(of: scene, Kind.previous.suffix, in: folder)
+        guard [previous.movie, previous.log].contains(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
+            throw RetakeError(.usage, "There's no previous \(type.rawValue) take of \(scene) to put back.")
+        }
+        let aside = files(of: scene, restoringSuffix, in: folder)
+        do {
+            try move(take, to: aside)
+            try move(previous, to: take)
+            try move(aside, to: previous)
+        } catch {
+            throw RetakeError(.failed, "Couldn't put back the previous take of \(scene) in \(project.displayPath(folder)): \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - Cleaning
+
     /// What `clean` deletes.
     public struct Cleaning: Equatable, Sendable {
         public var takes: [Take]
+        /// Scenes' folders of an earlier Retake's numbered takes.
+        public var oldTakes: [URL] = []
         /// Each edit's folder of cuts, for a device type.
         public var cuts: [URL]
         /// Scene definitions no edit uses, for a device type.
         public var scenes: [URL] = []
 
-        /// The takes it deletes that an edit is cut from; its next cut uses the latest successful
-        /// take left.
+        /// The takes it deletes that an edit is cut from; its next cut needs the scene recorded again.
         public var used: [Take] { takes.filter { !$0.usedBy.isEmpty } }
+
+        public var isEmpty: Bool { takes.isEmpty && oldTakes.isEmpty && cuts.isEmpty && scenes.isEmpty }
+        public var count: Int { takes.count + oldTakes.count + cuts.count + scenes.count }
     }
 
     /// What `clean` would delete: with neither `takes` nor `cuts` given, every take and cut;
-    /// otherwise those given, where an empty list is every one. Misuse (2) for a scene, take or
-    /// edit named that has nothing to delete.
-    public static func cleaning(takes: [TakeChoice]?, cuts: [String]?, for types: [DeviceType], in project: Project) throws(RetakeError) -> Cleaning {
+    /// otherwise those given, where an empty list is every one. A scene named loses its take, its
+    /// previous one and its failure, and any folder of an earlier Retake's numbered takes. Misuse
+    /// (2) for a scene or edit named that has nothing to delete.
+    public static func cleaning(takes: [String]?, cuts: [String]?, for types: [DeviceType], in project: Project) throws(RetakeError) -> Cleaning {
         let everything = takes == nil && cuts == nil
-        var chosen: [Take] = []
+        var chosen: [Take] = [], old: [URL] = []
         if everything || takes != nil {
-            let all = Self.takes(for: types, in: project)
-            if let choices = takes, !choices.isEmpty {
-                for choice in choices where !all.contains(where: choice.includes) {
-                    throw RetakeError(.usage, "There's no take \(choice.name)\(types.count == 1 ? " for \(types[0].rawValue)" : "") to delete.")
+            let all = Self.takes(for: types, in: project), allOld = oldFolders(for: types, in: project)
+            if let scenes = takes, !scenes.isEmpty {
+                for scene in scenes where !all.contains(where: { $0.scene == scene }) && !allOld.contains(where: { $0.lastPathComponent == scene }) {
+                    throw RetakeError(.usage, "There's no take of \(scene)\(types.count == 1 ? " for \(types[0].rawValue)" : "") to delete.")
                 }
-                chosen = all.filter { take in choices.contains { $0.includes(take) } }
+                chosen = all.filter { scenes.contains($0.scene) }
+                old = allOld.filter { scenes.contains($0.lastPathComponent) }
             } else {
-                chosen = all
+                (chosen, old) = (all, allOld)
             }
         }
         var folders: [URL] = []
@@ -164,13 +284,15 @@ public enum TakeStore {
                 folders = all
             }
         }
-        return Cleaning(takes: chosen, cuts: folders)
+        return Cleaning(takes: chosen, oldTakes: old, cuts: folders)
     }
 
-    /// What `clean --unused` deletes: every take except the latest successful one of a scene an
-    /// edit uses, and every scene definition no edit uses. Fails before choosing anything if an
-    /// edit can't be read, since its dependencies aren't safe to infer.
+    /// What `clean --unused` deletes: every take but the take of a scene an edit uses, so every
+    /// previous take and failure too, and every scene definition no edit uses. Fails before
+    /// choosing anything if an edit can't be read, since its dependencies aren't safe to infer, or
+    /// if an earlier Retake's numbered takes are there.
     public static func unused(for types: [DeviceType], in project: Project) throws(RetakeError) -> Cleaning {
+        try refuseOldLayout(for: types, in: project)
         let projectFiles = ProjectFiles(project: project)
         var needed = Dictionary(uniqueKeysWithValues: types.map { ($0, Set<String>()) })
         for name in projectFiles.names(in: project.edits) {
@@ -178,66 +300,27 @@ public enum TakeStore {
             guard let edit = projectFiles.readEdit(name, into: report) else { throw report.error }
             for type in types {
                 guard let video = edit.videos[type] else { continue }
-                for clip in video.clips {
-                    needed[type, default: []].insert(clip.take)
-                    needed[type, default: []].formUnion(clip.stills.map(\.take))
-                }
+                needed[type, default: []].formUnion(video.scenes)
             }
         }
-
-        let allTakes = takes(for: types, in: project)
-        let latest = Dictionary(grouping: allTakes.filter { $0.successful }) { "\($0.type.rawValue)/\($0.scene)" }
-            .mapValues { $0.map(\.number).max()! }
-        let oldTakes = allTakes.filter { take in
-            guard needed[take.type]?.contains(take.scene) == true else { return true }
-            return take.number != latest["\(take.type.rawValue)/\(take.scene)"]
+        let unneeded = takes(for: types, in: project).filter { take in
+            take.kind != .take || needed[take.type]?.contains(take.scene) != true
         }
         let unusedScenes = types.flatMap { type in
             projectFiles.names(in: project.scenes(for: type)).filter { needed[type]?.contains($0) != true }
                 .map { projectFiles.sceneURL($0, for: type) }
         }
-        return Cleaning(takes: oldTakes, cuts: [], scenes: unusedScenes)
+        return Cleaning(takes: unneeded, cuts: [], scenes: unusedScenes)
     }
 
-    /// The hidden file in a scene's takes folder, `.last-take`, holding the highest take number the
-    /// scene has had for that device type, deleted takes included, so a number is never used again.
-    static let marker = ".last-take"
-
-    /// The highest take number a scene's takes folder has had: its marker's, or, in a project from
-    /// before markers, or past the marker, the highest take still on disk; 0 for none.
-    public static func lastTake(in folder: URL) -> Int {
-        let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
-        let onDisk = names.compactMap { name -> Int? in
-            let url = URL(filePath: name)
-            guard ["json", "mov"].contains(url.pathExtension), let number = Int(url.deletingPathExtension().lastPathComponent), number > 0 else { return nil }
-            return number
-        }.max() ?? 0
-        let marked = (try? String(contentsOf: folder.appending(path: marker), encoding: .utf8))
-            .flatMap { Int($0.trimmingCharacters(in: .whitespacesAndNewlines)) } ?? 0
-        return max(onDisk, marked)
-    }
-
-    /// Records in the folder's marker that `number` has been used, unless a higher one has.
-    static func markUsed(_ number: Int, in folder: URL) throws {
-        let last = lastTake(in: folder)
-        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        try Data("\(max(number, last))\n".utf8).write(to: folder.appending(path: marker), options: .atomic)
-    }
-
-    /// Deletes what `cleaning` chose. A scene's takes folder is kept, with its marker, so the
-    /// numbers of the takes deleted aren't used again; in a project from before markers, the marker
-    /// is written first.
+    /// Deletes what `cleaning` chose.
     public static func delete(_ cleaning: Cleaning, in project: Project) throws(RetakeError) {
         let files = FileManager.default
         do {
-            for folder in Set(cleaning.takes.map { $0.movie.deletingLastPathComponent() }) {
-                try markUsed(lastTake(in: folder), in: folder)
+            for take in cleaning.takes { try remove((take.movie, take.log)) }
+            for folder in cleaning.oldTakes + cleaning.cuts + cleaning.scenes where files.fileExists(atPath: folder.path) {
+                try files.removeItem(at: folder)
             }
-            for take in cleaning.takes {
-                for url in [take.movie, take.log] where files.fileExists(atPath: url.path) { try files.removeItem(at: url) }
-            }
-            for folder in cleaning.cuts { try files.removeItem(at: folder) }
-            for scene in cleaning.scenes { try files.removeItem(at: scene) }
         } catch {
             throw RetakeError(.failed, "Couldn't delete everything: \(error.localizedDescription)")
         }

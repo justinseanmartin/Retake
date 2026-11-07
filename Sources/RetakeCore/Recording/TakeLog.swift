@@ -1,6 +1,6 @@
 import Foundation
 
-/// A take's step log, written beside its movie as `<n>.json`: what was recorded, with what, and
+/// A take's step log, written beside its movie as `<scene>.json`: what was recorded, with what, and
 /// when each step happened on the movie's own clock, where it touched, and what was on screen after
 /// it. Edits cut on it, draw touches from it and find elements in it. See README.md, "Takes", and
 /// Documentation/reference/take.md, generated from `TakeLog.schema`.
@@ -9,7 +9,6 @@ import Foundation
 /// saying the take was recorded by a newer Retake, so a breaking change can add one cleanly.
 public struct TakeLog: Equatable, Sendable {
     public var scene: String
-    public var take: Int
     public var set: String
     public var state: SetFile.State
     public var deviceType: DeviceType
@@ -58,7 +57,7 @@ public struct TakeLog: Equatable, Sendable {
         let over = (hitches ?? []).filter { $0.duration >= threshold && $0.at + $0.duration > firstStep }
         guard let longest = over.max(by: { $0.duration < $1.duration }) else { return nil }
         let step = steps.first { longest.at >= $0.start - 0.05 && longest.at <= $0.end + 0.1 }
-        return "\(scene) take \(take): \(Self.describe(over, over: threshold)) at \(TakeTimeline.seconds(longest.at))"
+        return "\(scene): \(Self.describe(over, over: threshold)) at \(TakeTimeline.seconds(longest.at))"
             + (step.map { ", during step \($0.number)" } ?? ", between steps") + "."
     }
 
@@ -179,7 +178,6 @@ extension TakeLog {
     public var json: JSONValue {
         var object: [JSONObject.Entry] = [
             .init(key: "scene", value: .string(scene)),
-            .init(key: "take", value: .number(Double(take))),
             .init(key: "set", value: .string(set)),
             .init(key: "state", value: .string(state.rawValue)),
             .init(key: "deviceType", value: .string(deviceType.rawValue)),
@@ -333,7 +331,9 @@ extension TakeLog {
             return (numbers[0], numbers[1])
         }
         let scene = root.required("scene", reader.nonEmptyString)
-        let take = root.required("take") { reader.integer($0, at: $1, atLeast: 1) }
+        // `take`, its number among the scene's, is what logs recorded when takes were numbered
+        // give, which still read, and mean nothing now.
+        _ = root.optional("take") { reader.integer($0, at: $1, atLeast: 1) }
         let set = root.required("set", reader.nonEmptyString)
         let state = root.required("state") { reader.choice($0, at: $1, as: SetFile.State.self) }
         let deviceType = root.required("deviceType") { reader.choice($0, at: $1, as: DeviceType.self) }
@@ -450,12 +450,12 @@ extension TakeLog {
                 return Hitch(at: at, duration: duration)
             }
         }
-        guard reader.problems.isEmpty, let scene, let take, let set, let state, let deviceType, let device, let app, let retake,
+        guard reader.problems.isEmpty, let scene, let set, let state, let deviceType, let device, let app, let retake,
               let buttonHeist, let recordedAt, let duration, let dimensions, let frames, let dropped, let screen, let clock, let steps,
               let shapes
         else { return nil }
         return TakeLog(
-            scene: scene, take: take, set: set, state: state, deviceType: deviceType, device: device, app: app, retake: retake,
+            scene: scene, set: set, state: state, deviceType: deviceType, device: device, app: app, retake: retake,
             buttonHeist: buttonHeist, recordedAt: recordedAt, failure: failure, duration: duration, width: dimensions.0,
             height: dimensions.1, frames: frames, dropped: dropped, previewAspect: previewAspect, screen: screen, launch: launch, clock: clock, steps: steps, shapes: shapes,
             hitches: hitches,

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.1/take.schema.json",
   "title": "A step log",
-  "description": "A take's step log, `<n>.json` beside its movie `<n>.mov` in the output directory's `takes/<type>/<scene>/`: what was recorded, with what, and when each step happened on the movie's own clock, where it touched, and what was on screen after it. Retake writes it when it records the take, and reads it to list, clean and cut takes; a project doesn't write or edit it. Times are seconds into the movie, to the millisecond; positions and sizes on the screen are its points, portrait, to the hundredth.",
+  "description": "A take's step log, `<scene>.json` beside its movie `<scene>.mov` in the output directory's `takes/<type>/`, or `<scene>.previous.json` or `<scene>.failed.json` beside theirs: what was recorded, with what, and when each step happened on the movie's own clock, where it touched, and what was on screen after it. Retake writes it when it records the take, and reads it to list, clean and cut takes; a project doesn't write or edit it. Times are seconds into the movie, to the millisecond; positions and sizes on the screen are its points, portrait, to the hundredth.",
   "type": "object",
   "properties": {
     "format": {
@@ -16,9 +16,10 @@
       "minLength": 1
     },
     "take": {
-      "description": "The take's number among the scene's, from 1, which its movie and log are named by.",
+      "description": "Deprecated: the take's number among the scene's, from 1, which takes recorded when they were numbered give. Still read, and ignored.",
       "type": "integer",
-      "minimum": 1
+      "minimum": 1,
+      "deprecated": true
     },
     "set": {
       "description": "The set the scene started on.",
@@ -256,7 +257,6 @@
   },
   "required": [
     "scene",
-    "take",
     "set",
     "state",
     "deviceType",

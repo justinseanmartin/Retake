@@ -3,40 +3,16 @@ import Foundation
 /// `retake record`: choosing the scenes, then recording a take of each, or with `--dry-run`, playing
 /// each without recording it. See Documentation/cli.md, "retake record".
 public enum RecordRun {
-    /// A take on disk: its number, and whether it failed.
-    public struct ExistingTake: Equatable, Sendable {
-        public var number: Int
-        public var failed: Bool
-    }
-
-    /// A scene's takes for a device type, in `RetakeOutput/takes/<type>/<scene>/`, by number: each
-    /// `<n>.json` step log, failed when it says so.
-    public static func takes(of scene: String, for type: DeviceType, in project: Project) -> [ExistingTake] {
-        let folder = project.takes(for: type).appending(path: scene)
-        let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
-        return names.compactMap { name -> ExistingTake? in
-            guard name.hasSuffix(".json"), let number = Int(name.dropLast(5)), number > 0 else { return nil }
-            let text = try? String(contentsOf: folder.appending(path: name), encoding: .utf8)
-            let failed = text.flatMap { try? JSONParser.parse($0) }.map { $0[path: "failure"] != nil } ?? true
-            return ExistingTake(number: number, failed: failed)
-        }.sorted { $0.number < $1.number }
-    }
-
-    /// The next take's number: one more than the highest the scene has ever had for this device
-    /// type, failed and deleted takes included, so a number is never used again. See
-    /// `TakeStore.lastTake(in:)`.
-    public static func nextTake(of scene: String, for type: DeviceType, in project: Project) -> Int {
-        TakeStore.lastTake(in: project.takes(for: type).appending(path: scene)) + 1
-    }
-
     /// The scenes to record, in order, as Documentation/cli.md's table says: those named; or every scene in
     /// `scenes/<type>/`, or every one `edit` uses, either way only those with no take yet unless
-    /// `force`. A failed take is never cut from, so it isn't a take for this. Misuse (2) for a scene
-    /// or edit that doesn't exist, or an edit not cut for this device type; a failure (1) when
-    /// `scenes/<type>/` lists nothing because it's named in another case.
+    /// `force`. A failure is never cut from, so it isn't a take for this. Misuse (2) for a scene or
+    /// edit that doesn't exist, or an edit not cut for this device type; a failure (1) when
+    /// `scenes/<type>/` lists nothing because it's named in another case, or when the takes folder
+    /// holds an earlier Retake's numbered takes.
     public static func scenes(
         named: [String], edit: String?, force: Bool, for type: DeviceType, in project: Project,
     ) throws(RetakeError) -> (chosen: [String], alreadyTaken: [String]) {
+        try TakeStore.refuseOldLayout(for: [type], in: project)
         let files = ProjectFiles(project: project)
         let available = files.names(in: project.scenes(for: type))
         if available.isEmpty, let misnamed = files.misnamedFolder(project.scenes(for: type)) {
@@ -71,14 +47,16 @@ public enum RecordRun {
             }
         }
         if force { return (candidates, []) }
-        let taken = candidates.filter { scene in takes(of: scene, for: type, in: project).contains { !$0.failed } }
+        let taken = candidates.filter { scene in TakeStore.take(of: scene, for: type, in: project).map { !$0.failed } ?? false }
         return (candidates.filter { !taken.contains($0) }, taken)
     }
 
     /// What became of one scene: its new take, or why it failed, or for a dry run, that it played.
     public struct Outcome: Sendable {
         public var scene: String
-        public var take: Int?
+        /// Where its take is, once it's recorded one, whether or not it succeeded: `<scene>.mov`, or
+        /// `<scene>.failed.mov`.
+        public var movie: URL?
         public var duration: Double?
         public var failure: RetakeError?
     }
@@ -109,19 +87,27 @@ public enum RecordRun {
                 let (scene, set) = try AppSession.scene(name, in: project, for: type)
                 needsCleanUp = needsCleanUp || set.state != .live
                 if dryRun {
-                    player.report(.scene(name, take: nil))
+                    player.report(.scene(name, recording: false))
                     try await AppSession.run("dry-run-\(name)", in: project, set: set, scene: scene, on: device, report: player.report, cleanUp: false) { driver, _ throws(RetakeError) in
                         try await player.play(scene, named: name, on: driver)
                     }
                 } else {
                     guard let capture else { throw RetakeError(.environment, "\(device.name)'s screen isn't offered for recording.") }
-                    let number = nextTake(of: name, for: type, in: project)
-                    outcome.take = number
-                    player.report(.scene(name, take: number))
-                    let movie = project.takes(for: type).appending(path: "\(name)/\(number).mov")
-                    let target = TakeRecording.Target(scene: name, take: number, movie: movie)
-                    let log = try await TakeRecording.record(target, scene: scene, set: set, in: project, on: device, capture: capture, player: player, cleanUp: false)
-                    outcome.duration = log.duration
+                    player.report(.scene(name, recording: true))
+                    let target = TakeRecording.Target(scene: name, folder: project.takes(for: type))
+                    let started = Date()
+                    do throws(RetakeError) {
+                        let log = try await TakeRecording.record(target, scene: scene, set: set, in: project, on: device, capture: capture, player: player, cleanUp: false)
+                        outcome.duration = log.duration
+                        outcome.movie = target.kept(.take).movie
+                    } catch {
+                        // A failure kept now, rather than one from before that a recording which
+                        // couldn't write anything left alone.
+                        if let kept = ProjectStatus.modified(target.kept(.failed).log), kept >= started.addingTimeInterval(-1) {
+                            outcome.movie = target.kept(.failed).movie
+                        }
+                        throw error
+                    }
                 }
             } catch {
                 outcome.failure = error

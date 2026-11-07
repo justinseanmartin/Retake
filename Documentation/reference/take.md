@@ -2,7 +2,7 @@
 
 # A step log
 
-A take's step log, `<n>.json` beside its movie `<n>.mov` in the output directory's `takes/<type>/<scene>/`: what was recorded, with what, and when each step happened on the movie's own clock, where it touched, and what was on screen after it. Retake writes it when it records the take, and reads it to list, clean and cut takes; a project doesn't write or edit it. Times are seconds into the movie, to the millisecond; positions and sizes on the screen are its points, portrait, to the hundredth.
+A take's step log, `<scene>.json` beside its movie `<scene>.mov` in the output directory's `takes/<type>/`, or `<scene>.previous.json` or `<scene>.failed.json` beside theirs: what was recorded, with what, and when each step happened on the movie's own clock, where it touched, and what was on screen after it. Retake writes it when it records the take, and reads it to list, clean and cut takes; a project doesn't write or edit it. Times are seconds into the movie, to the millisecond; positions and sizes on the screen are its points, portrait, to the hundredth.
 
 Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.1/take.schema.json>, and `retake schema take` prints it.
 
@@ -12,7 +12,7 @@ Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.
 | --- | --- | --- | --- |
 | `format` | `1` |  | The step log's format. Retake doesn't write it: a log without it is format 1, the only one so far. A log of a later format was recorded by a newer Retake, and this one refuses it, saying to update Retake. |
 | `scene` | string, not empty | required | The scene recorded, as its file in `scenes/<type>/` is named, without `.json`. |
-| `take` | integer ≥ 1 | required | The take's number among the scene's, from 1, which its movie and log are named by. |
+| `take` | integer ≥ 1 |  | Deprecated: the take's number among the scene's, from 1, which takes recorded when they were numbered give. Still read, and ignored. |
 | `set` | string, not empty | required | The set the scene started on. |
 | `state` | `"clean"`, `"cloned"` or `"live"` | required | The set's state, which the take's data started from. |
 | `deviceType` | `"iphone"` or `"ipad"` | required | The type of device recorded. |

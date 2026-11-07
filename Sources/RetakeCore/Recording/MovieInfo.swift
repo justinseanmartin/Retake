@@ -61,7 +61,6 @@ public enum MovieInfo: Equatable, Sendable {
         return TakeLog.object([
             ("retake", TakeLog.object([("version", string("retake.version"))])),
             ("scene", string("retake.scene")),
-            ("take", fields["retake.take"].flatMap(Double.init).map(JSONValue.number)),
             ("deviceType", string("retake.device.type")),
             ("set", string("retake.set")),
             ("state", string("retake.state")),
@@ -128,8 +127,7 @@ public enum MovieInfo: Equatable, Sendable {
 
         switch self {
         case .take:
-            let number = record[path: "take"].flatMap { if case .number(let n) = $0 { Int(n) } else { nil } }
-            var lines = ["Take \(number.map(String.init) ?? "?") of \(string("scene") ?? "?"), for \(string("deviceType") ?? "?")"]
+            var lines = ["Take of \(string("scene") ?? "?"), for \(string("deviceType") ?? "?")"]
             if let recorded = string("recordedAt") { lines.append(row("Recorded", recorded)) }
             lines.append(row("Set", "\(string("set") ?? "?") (\(string("state") ?? "?"))"))
             lines.append(row("App", [string("bundleID"), app(record[path: "app"])].compactMap(\.self).filter { !$0.isEmpty }.joined(separator: " ")))
@@ -144,13 +142,17 @@ public enum MovieInfo: Equatable, Sendable {
             lines.append(row("Devices", values("devices").map(device).joined(separator: "; ")))
             lines.append(row("Button Heist", values("buttonHeistVersions").map(buttonHeist).joined(separator: ", ")))
             let takes = values("takes")
+            // A take by its scene and when it was recorded; a video cut when takes were numbered
+            // names it by number instead.
+            func name(_ take: JSONValue) -> String {
+                let when = take[path: "recordedAt"]?.stringValue ?? take[path: "take"].map { "take \(JSONWriter.compact($0))" }
+                return "\(take[path: "scene"]?.stringValue ?? "?")\(when.map { " (\($0))" } ?? "")"
+            }
             if mixed.isEmpty {
-                let names = takes.map { "\($0[path: "scene"]?.stringValue ?? "?")@\($0[path: "take"].map(JSONWriter.compact) ?? "?")" }
-                lines.append(row("Takes", names.joined(separator: ", ")))
+                lines.append(row("Takes", takes.map(name).joined(separator: ", ")))
             } else {
                 for (index, take) in takes.enumerated() {
-                    let name = "\(take[path: "scene"]?.stringValue ?? "?")@\(take[path: "take"].map(JSONWriter.compact) ?? "?")"
-                    lines.append(row(index == 0 ? "Takes" : "", "\(name): \(app(take[path: "app"])), \(device(take[path: "device"])), The Button Heist \(buttonHeist(take[path: "buttonHeist"]))"))
+                    lines.append(row(index == 0 ? "Takes" : "", "\(name(take)): \(app(take[path: "app"])), \(device(take[path: "device"])), The Button Heist \(buttonHeist(take[path: "buttonHeist"]))"))
                 }
             }
             lines.append(row("Retake", string("retake", "version") ?? "?"))

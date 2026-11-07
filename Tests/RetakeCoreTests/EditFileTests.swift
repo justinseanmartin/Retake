@@ -151,7 +151,7 @@ struct EditFileTests {
         (#"{"devices": ["iphone", "iphone"], "clips": [{"take": "a", "from": 0, "to": 1}]}"#, #"edits/video1.json: devices[1]: "iphone" is given more than once"#),
         (#"{"devices": ["iphone"], "ipad": {"turns": "device"}, "clips": [{"take": "a", "from": 0, "to": 1}]}"#, "edits/video1.json: ipad: overrides ipad, which isn't one of this edit's devices"),
         (#"{"devices": ["iphone"], "iphone": {"devices": ["ipad"]}, "clips": [{"take": "a", "from": 0, "to": 1}]}"#, #"edits/video1.json: iphone: "devices" can't be given for one device type"#),
-        (#"{"devices": ["iphone"], "takes": {"iphone": {"a": 1}}, "clips": [{"take": "a", "from": 0, "to": 1}]}"#, #"edits/video1.json: takes: an edit doesn't name its takes: cut uses each scene's latest successful take, and `retake clean --takes` goes back to an earlier one; delete "takes""#),
+        (#"{"devices": ["iphone"], "takes": {"iphone": {"a": 1}}, "clips": [{"take": "a", "from": 0, "to": 1}]}"#, #"edits/video1.json: takes: an edit doesn't name its takes: cut uses each scene's take, and `retake takes --restore` puts back the one before it; delete "takes""#),
         (#"{"devices": ["iphone"], "clips": []}"#, "edits/video1.json: clips: needs at least one clip"),
         (#"{"devices": ["iphone"], "clips": [{"id": "x", "take": "a", "from": 0, "to": 1}, {"id": "x", "take": "a", "from": 0, "to": 1}]}"#, #"edits/video1.json: clips[1].id: "x" is already clips[0]'s id; ids are unique in an edit"#),
         (#"{"devices": ["iphone"], "clips": [{"take": "a", "from": 0, "to": 1, "blurs": [{"rect": {"x": 0, "y": 0, "width": 1, "height": 1}, "part": {"x": "50%"}}]}]}"#, #"edits/video1.json: clips[0].blurs[0].part: is a part of an "element", which isn't given"#),

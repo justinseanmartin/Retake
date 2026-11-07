@@ -37,7 +37,7 @@ A stretch of a take, played in order.
 | --- | --- | --- | --- |
 | `id` | string, not empty |  | Names the clip, for a caption to run on into it. Unique in the edit. |
 | `intent` | string |  | What the clip is there to show, for whoever changes the video later. Not read by the render. |
-| `take` | string, not empty | required | The scene whose latest successful take the clip is cut from. |
+| `take` | string, not empty | required | The scene whose take the clip is cut from. |
 | `from` | [anchor](#anchor) | required | Where the clip starts in the take. |
 | `to` | [anchor](#anchor) | required | Where it ends. |
 | `speed` | number > 0 | `1` | How fast it plays: 2 is twice as fast. |
@@ -164,7 +164,7 @@ A frame of another take, popped in over the clip.
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `take` | string, not empty | required | The scene whose latest successful take it's from. |
+| `take` | string, not empty | required | The scene whose take it's from. |
 | `at` | [anchor](#anchor) | required | The moment in that take. |
 
 ### rect

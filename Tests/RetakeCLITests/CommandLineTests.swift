@@ -26,8 +26,9 @@ struct CommandLineTests {
         ["record", "--for", "video1", "--force", "--stop-on-failure"],
         ["record", "create-note", "share-note", "--device", "iphone"],
         ["takes", "create-note", "--type", "ipad", "--json"],
+        ["takes", "--restore", "create-note", "--type", "ipad"],
         ["clean", "--takes", "--type", "ipad", "--yes"],
-        ["clean", "--takes", "create-note,share-note@2", "--cuts"],
+        ["clean", "--takes", "create-note,share-note", "--cuts"],
         ["clean", "--cuts", "video1,video2", "--yes"],
         ["clean", "--unused", "--type", "ipad", "--yes"],
         ["clean", "--yes", "--takes"],
@@ -57,6 +58,7 @@ struct CommandLineTests {
         ["record", "create-note", "--dry-run", "--from", "3"],
         ["record", "create-note", "--for", "video1"],
         ["takes", "--device", "ipad", "--type", "ipad"],
+        ["takes", "create-note", "--restore", "share-note"],
         ["discard", "create-note", "2"],
         ["clean", "--videos"],
         ["clean", "--on-device", "--takes"],
@@ -89,7 +91,7 @@ struct CommandLineTests {
         #expect(Retake.optionalValuesGiven(["clean", "--takes", "--cuts", "video1", "--yes"]) == ["clean", "--takes=*", "--cuts", "video1", "--yes"])
         #expect(Retake.optionalValuesGiven(["clean", "--cuts"]) == ["clean", "--cuts=*"])
         #expect(Retake.optionalValuesGiven(["record", "--takes"]) == ["record", "--takes"], "only clean's")
-        #expect(Clean.list("*") == [] && Clean.list(nil) == nil && Clean.list("a, b@2,") == ["a", "b@2"])
+        #expect(Clean.list("*") == [] && Clean.list(nil) == nil && Clean.list("a, b,") == ["a", "b"])
     }
 
     @Test func helpExitsWith0OnStandardOutput() async {

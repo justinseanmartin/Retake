@@ -2,7 +2,7 @@ import Foundation
 @testable import RetakeCore
 import Testing
 
-/// Choosing scenes and numbering takes, in a project made up in a temporary folder.
+/// Choosing scenes to record, in a project made up in a temporary folder.
 struct RecordRunTests {
     let root = FileManager.default.temporaryDirectory.appending(path: "retake-record-\(UUID().uuidString)")
     var project: Project { Project(configuration: root.appending(path: "retake.json")) }
@@ -13,12 +13,13 @@ struct RecordRunTests {
         try text.write(to: url, atomically: true, encoding: .utf8)
     }
 
-    /// Scenes `a`, `b` and `c` for the iPad; `a` has a good take 1, `b` a failed take 2 after a good
-    /// take 1 was discarded, `c` none; and an edit using `c` then `a`.
+    /// Scenes `a`, `b` and `c` for the iPad; `a` has a take, `b` only a failure, `c` none; and an
+    /// edit using `c` then `a`.
     func makeProject() throws {
         for scene in ["a", "b", "c"] { try write("scenes/ipad/\(scene).json", #"{ "steps": [{ "hold": 1 }] }"#) }
-        try write("output/takes/ipad/a/1.json", #"{ "scene": "a" }"#)
-        try write("output/takes/ipad/b/2.json", #"{ "scene": "b", "failure": "step 1 didn't run" }"#)
+        try write("output/takes/ipad/a.json", JSONWriter.write(TakeLogReadingTests.log(scene: "a").json))
+        try write("output/takes/ipad/a.mov", "")
+        try write("output/takes/ipad/b.failed.json", JSONWriter.write(TakeLogReadingTests.log(scene: "b", failure: "step 1 didn't run").json))
         try write("edits/video1.json", """
             { "devices": ["ipad"], "clips": [
               { "take": "c", "from": { "step": "start" }, "to": { "step": "end" } },
@@ -27,32 +28,11 @@ struct RecordRunTests {
             """)
     }
 
-    @Test func takesAreNumberedAfterTheLastOnDiskFailedOrNot() throws {
-        try makeProject()
-        defer { try? FileManager.default.removeItem(at: root) }
-        #expect(RecordRun.nextTake(of: "a", for: .ipad, in: project) == 2)
-        #expect(RecordRun.nextTake(of: "b", for: .ipad, in: project) == 3, "with no marker, one past the highest on disk")
-        #expect(RecordRun.nextTake(of: "c", for: .ipad, in: project) == 1)
-        #expect(RecordRun.takes(of: "b", for: .ipad, in: project) == [.init(number: 2, failed: true)])
-    }
-
-    @Test func aTakeUsesUpItsNumberWhenItStartsAndAMarkerBehindTheDiskIsPassed() throws {
-        try makeProject()
-        defer { try? FileManager.default.removeItem(at: root) }
-        let folder = project.takes(for: .ipad).appending(path: "c")
-        try TakeRecording.start(.init(scene: "c", take: 1, movie: folder.appending(path: "1.mov")), in: project)
-        #expect(RecordRun.nextTake(of: "c", for: .ipad, in: project) == 2, "a take that wrote nothing still used its number")
-        #expect(try String(contentsOf: folder.appending(path: ".last-take"), encoding: .utf8) == "1\n")
-
-        try write("output/takes/ipad/c/4.json", #"{ "scene": "c" }"#)
-        #expect(RecordRun.nextTake(of: "c", for: .ipad, in: project) == 5, "takes put there by hand count too")
-    }
-
     @Test func withNoneNamedOnlyScenesWithoutAGoodTakeAreChosenUnlessForced() throws {
         try makeProject()
         defer { try? FileManager.default.removeItem(at: root) }
         let unforced = try RecordRun.scenes(named: [], edit: nil, force: false, for: .ipad, in: project)
-        #expect(unforced.chosen == ["b", "c"] && unforced.alreadyTaken == ["a"], "a failed take isn't one an edit can pin")
+        #expect(unforced.chosen == ["b", "c"] && unforced.alreadyTaken == ["a"], "a failure isn't a take an edit can be cut from")
         #expect(try RecordRun.scenes(named: [], edit: nil, force: true, for: .ipad, in: project).chosen == ["a", "b", "c"])
     }
 

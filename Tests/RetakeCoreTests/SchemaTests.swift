@@ -49,8 +49,8 @@ struct SchemaTests {
         }
     }
 
-    /// The newest take of each of the example project's scenes, where it has been recorded, and the
-    /// tests' own step logs: each fits the schema and reads.
+    /// The example project's takes, where it has been recorded, and the tests' own step logs: each
+    /// fits the schema and reads.
     @Test func theNewestTakesAndTheFixturesStepLogsFitTheSchemaAndRead() throws {
         var logs: [(String, String)] = [
             ("the fixture", JSONWriter.write(TakeLogReadingTests.log(failure: "step 2 didn't run").json)),
@@ -60,12 +60,8 @@ struct SchemaTests {
         let files = FileManager.default
         for type in DeviceType.allCases {
             let folder = takes.appending(path: type.rawValue)
-            for scene in ((try? files.contentsOfDirectory(atPath: folder.path)) ?? []).sorted() {
-                let names = (try? files.contentsOfDirectory(atPath: folder.appending(path: scene).path)) ?? []
-                let numbers = names.filter { $0.hasSuffix(".mov") }.compactMap { Int($0.dropLast(4)) }
-                guard let newest = numbers.max(), names.contains("\(newest).json") else { continue }
-                let url = folder.appending(path: "\(scene)/\(newest).json")
-                logs.append(("\(type.rawValue)/\(scene)/\(newest).json", try String(contentsOf: url, encoding: .utf8)))
+            for name in ((try? files.contentsOfDirectory(atPath: folder.path)) ?? []).sorted() where TakeStore.parse(name) != nil && name.hasSuffix(".json") {
+                logs.append(("\(type.rawValue)/\(name)", try String(contentsOf: folder.appending(path: name), encoding: .utf8)))
             }
         }
         for (name, text) in logs {
@@ -99,6 +95,8 @@ struct SchemaTests {
     static let takeCorpus: [(kind: String, text: String, right: Bool)] = [
         ("take", take { _ in }, true),
         ("take", take(set("format", "1")), true),
+        ("take", take(set("take", "3")), true),
+        ("take", take(set("take", "0")), false),
         ("take", take { entries in entries[entries.firstIndex { $0.key == "previewAspect" }!].key = "aspect" }, true),
         ("take", take(set("previewAspect", #""3:4""#)), true),
         ("take", take(set("previewAspect", #"{"landscape": "4:3"}"#)), true),

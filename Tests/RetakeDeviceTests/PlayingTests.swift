@@ -14,7 +14,7 @@ extension OnDevice {
             let played = Played()
             let player = Player(report: { if case .finished(let step, _) = $0 { played.add(step.number) } })
             let outcomes = await RecordRun.run([scene], in: example.project, on: example.device, capture: nil, dryRun: true, stopOnFailure: false, player: player)
-            #expect(outcomes.count == 1 && outcomes[0].failure == nil && outcomes[0].take == nil)
+            #expect(outcomes.count == 1 && outcomes[0].failure == nil && outcomes[0].movie == nil)
             let steps = try #require(ProjectFiles(project: example.project).readScene(scene, for: example.device.type!, into: ProjectFiles.Report())).steps
             #expect(played.numbers == Array(1...steps.count))
         }

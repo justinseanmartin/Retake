@@ -54,7 +54,7 @@ struct TakeLogTests {
 
     @Test func theLogIsWrittenToTheMillisecondLeavingOutWhatItDoesntHave() throws {
         let log = TakeLog(
-            scene: "create-note", take: 3, set: "returning-user", state: .clean, deviceType: .ipad,
+            scene: "create-note", set: "returning-user", state: .clean, deviceType: .ipad,
             device: .init(model: "iPad13,4", marketingName: nil, os: "26.6.2 (23G90)"),
             app: .init(bundleID: "com.example.notes", version: "1.0", build: nil),
             retake: "0.0.1", buttonHeist: .init(version: "0.7.1"), recordedAt: start, failure: nil,
@@ -94,9 +94,9 @@ struct TakeLogTests {
 }
 
 struct TakeLogReadingTests {
-    static func log(scene: String = "create-note", take: Int = 3, failure: String? = nil) -> TakeLog {
+    static func log(scene: String = "create-note", failure: String? = nil) -> TakeLog {
         TakeLog(
-            scene: scene, take: take, set: "returning-user", state: .cloned, deviceType: .ipad,
+            scene: scene, set: "returning-user", state: .cloned, deviceType: .ipad,
             device: .init(model: "iPad13,4", marketingName: "iPad Pro (11-inch) (3rd generation)", os: "26.6.2 (23G90)"),
             app: .init(bundleID: "com.example.notes", version: "1.0", build: "7"),
             retake: "0.0.1", buttonHeist: .init(version: "0.7.1"), recordedAt: Date(timeIntervalSince1970: 1_800_000_000),
@@ -123,11 +123,11 @@ struct TakeLogReadingTests {
         log.hitches = [.init(at: 1.2, duration: 0.53), .init(at: 4, duration: 0.017)]
         let reader = JSONReader(file: "3.json")
         #expect(TakeLog.read(JSONWriter.write(log.json), with: reader)?.hitches == log.hitches)
-        #expect(log.hitchWarning(over: 0.01) == "create-note take 3: 2 hitches over 10 ms, the longest 530 ms at 1.2 s, during step 1.")
-        #expect(log.hitchWarning(over: 0.05) == "create-note take 3: 1 hitch over 50 ms, the longest 530 ms at 1.2 s, during step 1.")
+        #expect(log.hitchWarning(over: 0.01) == "create-note: 2 hitches over 10 ms, the longest 530 ms at 1.2 s, during step 1.")
+        #expect(log.hitchWarning(over: 0.05) == "create-note: 1 hitch over 50 ms, the longest 530 ms at 1.2 s, during step 1.")
         #expect(log.hitchWarning(over: 0.6) == nil, "none as long as the threshold")
         log.hitches = [.init(at: 0.1, duration: 0.85), .init(at: 4, duration: 0.06)]
-        #expect(log.hitchWarning(over: 0.05) == "create-note take 3: 1 hitch over 50 ms, the longest 60 ms at 4 s, between steps.", "the lead-in's left out")
+        #expect(log.hitchWarning(over: 0.05) == "create-note: 1 hitch over 50 ms, the longest 60 ms at 4 s, between steps.", "the lead-in's left out")
         log.hitches = []
         #expect(log.hitchWarning(over: 0.05) == nil)
         log.hitches = nil

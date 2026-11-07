@@ -21,7 +21,7 @@ extension EditFile {
             return devices
         }
         if root.value("takes") != nil {
-            reader.problem("an edit doesn't name its takes: cut uses each scene's latest successful take, and `retake clean --takes` goes back to an earlier one; delete \"takes\"", at: root.path("takes"))
+            reader.problem("an edit doesn't name its takes: cut uses each scene's take, and `retake takes --restore` puts back the one before it; delete \"takes\"", at: root.path("takes"))
         }
         root.know("$schema", "takes", "music", "tapSound", "takeAudioVolume", "background", "turns", "turnBlur", "touchColor", "clips")
         for type in DeviceType.allCases {

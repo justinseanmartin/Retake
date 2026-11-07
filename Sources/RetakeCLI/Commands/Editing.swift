@@ -6,7 +6,7 @@ struct Cut: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Renders videos.",
         discussion: """
-            Renders each edit, for each device type it names, from the latest successful takes, to a ProRes \
+            Renders each edit, for each device type it names, from each scene's take, to a ProRes \
             master and an .mp4 for App Store Connect in the output directory's cuts/<type>/<edit>/; \
             with --draft, a quick, smaller .mp4 alone.
             """,
@@ -98,14 +98,16 @@ struct Cut: AsyncParsableCommand {
 struct Status: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Summarizes scenes, takes, edits and videos.",
-        discussion: "Reports; never fails on what it finds.",
+        discussion: "Reports; never fails on what it finds, except an earlier Retake's numbered takes, which it refuses.",
     )
 
     @OptionGroup var output: OutputOptions
     @OptionGroup var project: ProjectOptions
 
     func run() async throws {
-        let status = await ProjectStatus.of(try project.locate())
+        let located = try project.locate()
+        try TakeStore.refuseOldLayout(for: DeviceType.allCases, in: located)
+        let status = await ProjectStatus.of(located)
         if output.json {
             print(JSONWriter.write(.array(status.sections.map(StatusOutput.json))), terminator: "")
         } else {
@@ -130,13 +132,17 @@ enum StatusOutput {
                 func name(_ scene: ProjectStatus.Scene) -> String { scene.name.padding(toLength: width, withPad: " ", startingAt: 0) }
                 print("  Scenes")
                 for scene in section.scenes {
-                    guard let take = scene.latest else {
-                        print("    \(name(scene))  no takes")
-                        continue
+                    var parts: [String] = []
+                    if let take = scene.take {
+                        parts.append(take.recorded.map { "take \(date($0.recordedAt))" } ?? "take")
+                        if !take.successful { parts.append(take.recorded?.failure.map { "failed: \($0)" } ?? take.problem ?? "failed") }
+                    } else {
+                        parts.append("no take")
                     }
-                    var parts = ["take \(take.number)"]
-                    if let log = take.recorded { parts.append(date(log.recordedAt)) }
-                    if take.failed { parts.append(take.recorded?.failure.map { "failed: \($0)" } ?? take.problem ?? "failed") }
+                    if let previous = scene.previous { parts.append(previous.recorded.map { "previous \(date($0.recordedAt))" } ?? "previous") }
+                    if let failed = scene.failed {
+                        parts.append((failed.recorded.map { "failed \(date($0.recordedAt))" } ?? "failed") + (failed.recorded?.failure.map { ": \($0)" } ?? ""))
+                    }
                     print("    \(name(scene))  \(parts.joined(separator: ", "))")
                 }
             }
@@ -149,7 +155,7 @@ enum StatusOutput {
                         print("    \(name(edit))  can't be read: \(problem)")
                         continue
                     }
-                    let uses = edit.uses.map { use in use.take.map { "\(use.scene)@\($0)" } ?? "\(use.scene) (no successful take)" }
+                    let uses = edit.uses.map { use in use.recordedAt.map { "\(use.scene) (\(date($0)))" } ?? "\(use.scene) (no successful take)" }
                     print("    \(name(edit))  \(uses.isEmpty ? "uses no scenes" : uses.joined(separator: ", "))")
                 }
             }
@@ -168,23 +174,29 @@ enum StatusOutput {
 
     static func json(_ section: ProjectStatus.Section) -> JSONValue {
         let iso = ISO8601DateFormatter()
+        func take(_ take: TakeStore.Take?) -> JSONValue {
+            take.map { take in
+                TakeLog.object([
+                    ("recordedAt", take.recorded.map { .string(iso.string(from: $0.recordedAt)) }),
+                    ("failed", .bool(take.failed)),
+                    ("failure", take.recorded?.failure.map(JSONValue.string)),
+                    ("problem", take.problem.map(JSONValue.string)),
+                ])
+            } ?? .null
+        }
         let scenes: [JSONValue] = section.scenes.map { scene in
             TakeLog.object([
                 ("name", .string(scene.name)),
-                ("latest", scene.latest.map { take in
-                    TakeLog.object([
-                        ("take", .number(Double(take.number))),
-                        ("recordedAt", take.recorded.map { .string(iso.string(from: $0.recordedAt)) }),
-                        ("failed", .bool(take.failed)),
-                    ])
-                } ?? .null),
+                ("take", take(scene.take)),
+                ("previous", take(scene.previous)),
+                ("failed", take(scene.failed)),
             ])
         }
         let edits: [JSONValue] = section.edits.map { edit in
             TakeLog.object([
                 ("name", .string(edit.name)),
                 ("uses", .array(edit.uses.map { use in
-                    TakeLog.object([("scene", .string(use.scene)), ("take", use.take.map { .number(Double($0)) })])
+                    TakeLog.object([("scene", .string(use.scene)), ("recordedAt", use.recordedAt.map { .string(iso.string(from: $0)) })])
                 })),
                 ("problem", edit.problem.map(JSONValue.string)),
             ])

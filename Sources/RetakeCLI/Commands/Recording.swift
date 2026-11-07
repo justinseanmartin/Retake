@@ -187,7 +187,9 @@ struct Record: AsyncParsableCommand {
         discussion: """
             With no scenes named, records every scene in scenes/<type>/ with no take yet, or every one \
             with --force. With --for, the scenes an edit uses. Scenes named are recorded whether or not \
-            they have takes. A new take never replaces one. With --dry-run, plays the scenes chosen \
+            they have takes. A take that succeeds replaces the scene's take, which is kept as its \
+            previous one, replacing that; one that fails is kept as the scene's latest failure, and \
+            leaves its take alone, as does one interrupted. With --dry-run, plays the scenes chosen \
             the same way, and writes nothing to the project: its console log goes to a temporary \
             folder, as every launch's does.
             """,
@@ -199,7 +201,7 @@ struct Record: AsyncParsableCommand {
     @Option(name: .customLong("for"), help: ArgumentHelp("Record the scenes this edit uses.", valueName: "edit"))
     var edit: String?
 
-    @Flag(help: "Add a new take to scenes that already have one.")
+    @Flag(help: "Record again scenes that already have a take, keeping the take each replaces as its previous one.")
     var force = false
 
     @OptionGroup var device: DeviceOptions
@@ -228,7 +230,7 @@ struct Record: AsyncParsableCommand {
         guard !chosen.isEmpty else {
             print(taken.isEmpty
                 ? "There are no \(type.rawValue) scenes in \(located.displayPath(located.scenes(for: type)))."
-                : "Every scene chosen already has a take: \(taken.joined(separator: ", ")). Give --force to record another.")
+                : "Every scene chosen already has a take: \(taken.joined(separator: ", ")). Give --force to record them again.")
             return
         }
         let capture = dryRun ? nil : try directory.captureDevice(for: target)
@@ -242,12 +244,12 @@ struct Record: AsyncParsableCommand {
         print("")
         for outcome in outcomes {
             if let failure = outcome.failure {
-                let take = outcome.take.map { ", take \($0) kept, marked failed" } ?? ""
+                let take = outcome.movie.map { ", kept as its latest failure, \(located.displayPath($0))" } ?? ""
                 // A step's failure names its scene already; a launch's doesn't.
                 let message = failure.message.hasPrefix("\(outcome.scene): ") ? String(failure.message.dropFirst(outcome.scene.count + 2)) : failure.message
                 print("✖ \(outcome.scene)\(take): \(message)")
-            } else if let take = outcome.take {
-                print("✓ \(outcome.scene): take \(take), \(String(format: "%.1f", outcome.duration ?? 0)) s, in \(located.displayPath(located.takes(for: type).appending(path: "\(outcome.scene)/\(take).mov")))")
+            } else if let movie = outcome.movie {
+                print("✓ \(outcome.scene): \(String(format: "%.1f", outcome.duration ?? 0)) s, in \(located.displayPath(movie))")
             } else {
                 print("✓ \(outcome.scene): played every step")
             }
@@ -262,8 +264,8 @@ struct Record: AsyncParsableCommand {
     /// Each scene as it starts, and each step once it's played, with how long it took.
     @Sendable static func show(_ event: Player.Event, scene: String, device: String, dryRun: Bool) {
         switch event {
-        case .scene(let name, let take):
-            Swift.print(take.map { "Recording \(name), take \($0), on \(device)." } ?? "Playing \(name) on \(device).")
+        case .scene(let name, let recording):
+            Swift.print(recording ? "Recording \(name) on \(device)." : "Playing \(name) on \(device).")
         case .launching(let set, let state):
             Swift.print("  From \(set) (\(state.rawValue)).")
         case .started:
@@ -280,16 +282,21 @@ struct Record: AsyncParsableCommand {
 
 struct Takes: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        abstract: "Lists takes.",
+        abstract: "Lists takes, or puts back a scene's previous take.",
         discussion: """
-            Lists each take's number, when it was recorded, the app's version and build, the device, its \
-            duration, frames dropped, whether it failed, and the edits that pin it. Without --device or \
-            --type, lists takes of both device types.
+            Lists each scene's take, the previous take it replaced, and its latest failure: when each \
+            was recorded, the app's version and build, the device, its duration, frames dropped, why \
+            a failure failed, and the edits cut from the take. Without --device or --type, lists \
+            takes of both device types. With --restore, puts back a scene's previous take, the take \
+            it replaced becoming the previous one, so restoring again undoes it.
             """,
     )
 
     @Argument(help: ArgumentHelp("Only this scene's takes.", valueName: "scene"))
     var scene: String?
+
+    @Option(help: ArgumentHelp("Put back this scene's previous take, swapping it with its take.", valueName: "scene"))
+    var restore: String?
 
     @OptionGroup var device: DeviceOptions
 
@@ -303,6 +310,9 @@ struct Takes: AsyncParsableCommand {
         if device.device != nil, type != nil {
             throw ValidationError("Give --device or --type, not both.")
         }
+        if restore != nil, scene != nil || output.json {
+            throw ValidationError("--restore names its scene itself, and lists nothing; give it no scene and no --json.")
+        }
     }
 
     func run() async throws {
@@ -314,6 +324,21 @@ struct Takes: AsyncParsableCommand {
                 throw RetakeError(.environment, "Retake can't tell whether \(target.name) is an iPhone or an iPad.")
             }
             types = [deviceType]
+        }
+        try TakeStore.refuseOldLayout(for: types, in: located)
+        if let restore {
+            let withPrevious = types.filter { type in TakeStore.takes(of: restore, for: [type], in: located).contains { $0.kind == .previous } }
+            guard let restoring = withPrevious.first else {
+                throw RetakeError(.usage, "There's no previous take of \(restore)\(types.count == 1 ? " for \(types[0].rawValue)" : "") to put back.")
+            }
+            guard withPrevious.count == 1 else {
+                throw RetakeError(.usage, "\(restore) has a previous take for both \(withPrevious.map(\.rawValue).joined(separator: " and ")); give --type to say which to put back.")
+            }
+            try TakeStore.restore(restore, for: restoring, in: located)
+            let take = TakeStore.take(of: restore, for: restoring, in: located)
+            let when = take?.recorded.map { ", recorded \(StatusOutput.date($0.recordedAt))," } ?? ""
+            print("Put back \(restore)'s previous \(restoring.rawValue) take\(when) in place of the one that replaced it, which is its previous take now.")
+            return
         }
         let takes = TakeStore.takes(of: scene, for: types, in: located)
         if let scene, takes.isEmpty {
@@ -344,20 +369,20 @@ enum TakesOutput {
                 print("\(take.scene) (\(take.type.rawValue)):")
                 heading = (take.type, take.scene)
             }
+            let kind = take.kind.rawValue.padding(toLength: 8, withPad: " ", startingAt: 0)
             guard let log = take.recorded else {
-                print("  \(take.number)  can't be read: \(take.problem ?? "")")
+                print("  \(kind)  can't be read: \(take.problem ?? "")")
                 continue
             }
-            let recorded = log.recordedAt.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits).hour().minute())
             let app = [log.app.version, log.app.build.map { "(\($0))" }].compactMap(\.self).joined(separator: " ")
             var parts = [
-                recorded, app.isEmpty ? nil : app, "\(log.device.marketingName ?? log.device.model), iOS \(log.device.os)",
+                StatusOutput.date(log.recordedAt), app.isEmpty ? nil : app, "\(log.device.marketingName ?? log.device.model), iOS \(log.device.os)",
                 String(format: "%.1f s", log.duration), "\(log.dropped) dropped",
             ].compactMap(\.self)
             if let failure = log.failure { parts.append("failed: \(failure)") }
             if let problem = take.problem { parts.append(problem) }
             if !take.usedBy.isEmpty { parts.append("used by \(take.usedBy.joined(separator: ", "))") }
-            print("  \(take.number)  \(parts.joined(separator: "  "))")
+            print("  \(kind)  \(parts.joined(separator: "  "))")
         }
     }
 
@@ -365,7 +390,7 @@ enum TakesOutput {
         var fields: [JSONObject.Entry] = [
             .init(key: "type", value: .string(take.type.rawValue)),
             .init(key: "scene", value: .string(take.scene)),
-            .init(key: "take", value: .number(Double(take.number))),
+            .init(key: "kind", value: .string(take.kind.rawValue)),
         ]
         if let log = take.recorded {
             fields += [
@@ -394,10 +419,11 @@ struct Clean: AsyncParsableCommand {
         abstract: "Deletes takes and cuts, or take data left on the device.",
         discussion: """
             With neither --takes nor --cuts, deletes every take and every cut, of both device types \
-            unless --type names one. --takes alone deletes every take, and given scenes, or a scene's \
-            take as <scene>@<take>, only those; --cuts alone every cut, and given edits, only theirs. \
-            --unused deletes old takes and scene definitions no edit needs, keeping each needed \
-            scene's latest successful take. \
+            unless --type names one. --takes alone deletes every take, and given scenes, only theirs: \
+            each one's take, previous take and latest failure, and any numbered takes an earlier \
+            Retake left; --cuts alone every cut, and given edits, only theirs. --unused deletes every \
+            previous take and failure, and the takes and scene definitions no edit needs, keeping \
+            each needed scene's take. \
             Lists what it will delete, naming takes an edit is cut from, and asks first unless --yes. With \
             --on-device, deletes instead what Retake leaves in the app's container on the device \
             (takes' copies of its data, and staged set files), which record does at the end of a run.
@@ -405,7 +431,7 @@ struct Clean: AsyncParsableCommand {
     )
 
     // Each may be given bare, `--takes`, meaning all; `Retake.run` passes that on as `*`.
-    @Option(help: ArgumentHelp("Delete takes: every one, or the scenes and takes given, as create-note,share-note@2.", valueName: "takes"))
+    @Option(help: ArgumentHelp("Delete takes: every one, or the given scenes', as create-note,share-note.", valueName: "scenes"))
     var takes: String?
 
     @Option(help: ArgumentHelp("Delete cuts: every one, or the edits' given, as video1,video2.", valueName: "edits"))
@@ -414,7 +440,7 @@ struct Clean: AsyncParsableCommand {
     @Option(help: ArgumentHelp("Only this device type's.", valueName: "type"))
     var type: DeviceType?
 
-    @Flag(help: "Delete old takes and scene definitions no edit needs, keeping each needed scene's latest successful take.")
+    @Flag(help: "Delete previous takes, failures, and the takes and scene definitions no edit needs, keeping each needed scene's take.")
     var unused = false
 
     @Flag(help: "Don't ask first.")
@@ -456,16 +482,15 @@ struct Clean: AsyncParsableCommand {
             if unused {
                 cleaning = try TakeStore.unused(for: types, in: located)
             } else {
-                let choices = try Self.list(takes).map { names throws(RetakeError) in try names.map { name throws(RetakeError) in try TakeStore.TakeChoice.parse(name) } }
-                cleaning = try TakeStore.cleaning(takes: choices, cuts: Self.list(cuts), for: types, in: located)
+                cleaning = try TakeStore.cleaning(takes: Self.list(takes), cuts: Self.list(cuts), for: types, in: located)
             }
-            guard !cleaning.takes.isEmpty || !cleaning.cuts.isEmpty || !cleaning.scenes.isEmpty else { return print("Nothing to delete.") }
+            guard !cleaning.isEmpty else { return print("Nothing to delete.") }
             Self.describe(cleaning, in: located)
             if !yes {
                 guard Prompt.isInteractive else {
                     throw RetakeError(.usage, "Give --yes to delete without being asked; there's no terminal to ask at.")
                 }
-                let count = cleaning.takes.count + cleaning.cuts.count + cleaning.scenes.count
+                let count = cleaning.count
                 FileHandle.standardError.write(Data("Delete \(count == 1 ? "it" : "them")? [y/N] ".utf8))
                 guard ["y", "yes"].contains(readLine()?.trimmingCharacters(in: .whitespaces).lowercased() ?? "") else {
                     return print("Nothing deleted.")
@@ -488,10 +513,14 @@ struct Clean: AsyncParsableCommand {
             for type in DeviceType.allCases {
                 let ofType = cleaning.takes.filter { $0.type == type }
                 for scene in ofType.map(\.scene).reduce(into: [String](), { if !$0.contains($1) { $0.append($1) } }) {
-                    let numbers = ofType.filter { $0.scene == scene }.map { String($0.number) }
-                    print("  \(scene) (\(type.rawValue)): \(numbers.joined(separator: ", "))")
+                    let kinds = ofType.filter { $0.scene == scene }.map(\.kind.rawValue)
+                    print("  \(scene) (\(type.rawValue)): \(kinds.joined(separator: ", "))")
                 }
             }
+        }
+        if !cleaning.oldTakes.isEmpty {
+            print("Numbered takes from an earlier Retake:")
+            for folder in cleaning.oldTakes { print("  \(project.displayPath(folder))/") }
         }
         if !cleaning.cuts.isEmpty {
             print("Cuts:")
@@ -502,7 +531,7 @@ struct Clean: AsyncParsableCommand {
             for scene in cleaning.scenes { print("  \(project.displayPath(scene))") }
         }
         for take in cleaning.used {
-            Console.warn("\(take.name) (\(take.type.rawValue)) was used by \(take.usedBy.joined(separator: ", ")); its next cut will use the latest successful take left.")
+            Console.warn("\(take.scene)'s \(take.type.rawValue) take is used by \(take.usedBy.joined(separator: ", ")); record it again before the next cut.")
         }
     }
 }

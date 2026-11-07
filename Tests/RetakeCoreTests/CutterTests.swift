@@ -23,19 +23,21 @@ struct CutterTests {
         try Data(text.utf8).write(to: url)
     }
 
-    /// A take of `scene` as `TakeTimelineTests` lays it out, 6 s long.
+    /// A take of `scene` as `TakeTimelineTests` lays it out, 6 s long, recorded at `recordedAt`;
+    /// one with a `failure` is kept as the scene's failure.
     func record(
-        _ scene: String, _ number: Int, for type: DeviceType = .ipad,
-        failure: String? = nil, screen: CGSize = CGSize(width: 834, height: 1194),
+        _ scene: String, for type: DeviceType = .ipad, failure: String? = nil,
+        screen: CGSize = CGSize(width: 834, height: 1194), recordedAt: Date? = nil,
     ) throws {
         var log = TakeTimelineTests.timeline().log
         log.scene = scene
-        log.take = number
         log.failure = failure
         log.screen = screen
+        if let recordedAt { log.recordedAt = recordedAt }
         log.steps = Array(log.steps.prefix(2))
-        try write("output/takes/\(type.rawValue)/\(scene)/\(number).json", JSONWriter.write(log.json))
-        try write("output/takes/\(type.rawValue)/\(scene)/\(number).mov", "")
+        let name = "output/takes/\(type.rawValue)/\(scene)\(failure == nil ? "" : ".failed")"
+        try write("\(name).json", JSONWriter.write(log.json))
+        try write("\(name).mov", "")
     }
 
     func edit(clips: String = #"{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}}"#) throws {
@@ -55,21 +57,21 @@ struct CutterTests {
         defer { try? FileManager.default.removeItem(at: root) }
         try edit()
         #expect(await failure() == "There's no successful ipad take of walk for video to be cut from; record it.")
-        try record("walk", 1, failure: "step 2 didn't run")
+        try record("walk", failure: "step 2 didn't run")
         #expect(await failure() == "There's no successful ipad take of walk for video to be cut from; record it.")
     }
 
     @Test func aTakeANewerRetakeRecordedIsntCutAndSaysSo() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try edit()
-        try write("output/takes/ipad/walk/1.json", TakeLogReadingTests.text { $0.insert(.init(key: "format", value: 2), at: 0) })
-        try write("output/takes/ipad/walk/1.mov", "")
-        #expect(await failure() == "There's no successful ipad take of walk for video to be cut from: output/takes/ipad/walk/1.json: was recorded by a newer Retake, in step log format 2, which this Retake (\(RetakeVersion.current.version)) can't read; update Retake to use this take.")
+        try write("output/takes/ipad/walk.json", TakeLogReadingTests.text { $0.insert(.init(key: "format", value: 2), at: 0) })
+        try write("output/takes/ipad/walk.mov", "")
+        #expect(await failure() == "There's no successful ipad take of walk for video to be cut from: output/takes/ipad/walk.json: was recorded by a newer Retake, in step log format 2, which this Retake (\(RetakeVersion.current.version)) can't read; update Retake to use this take.")
     }
 
     @Test func cuttingLeavesAnEditWhoseTimesAreAnchorsAsItIs() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        try record("walk", 1)
+        try record("walk")
         try edit()
         let before = try String(contentsOf: root.appending(path: "edits/video.json"), encoding: .utf8)
         #expect(await failure() == "video's ipad video is 5 s long; App Store Connect takes 15 to 30 s.")
@@ -80,8 +82,8 @@ struct CutterTests {
         defer { try? FileManager.default.removeItem(at: root) }
         let scene = #"{"set": "base", "steps": [{"tap": {"label": "a"}, "id": "a"}, {"waitFor": {"label": "b"}, "id": "b"}]}"#
         try write("scenes/iphone/walk.json", scene)
-        try record("walk", 1, for: .iphone)
-        try record("walk", 1, for: .ipad)
+        try record("walk", for: .iphone)
+        try record("walk", for: .ipad)
         try write("edits/video.json", #"{"devices": ["iphone", "ipad"], "clips": [{"take": "walk", "from": 1.25, "to": {"step": "end"}}]}"#)
 
         try Cutter.prepare("video", for: .iphone, in: project)
@@ -96,15 +98,15 @@ struct CutterTests {
 
     @Test func takesFromDifferentScreensArentCutTogether() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        try record("walk", 1)
-        try record("other", 1, screen: CGSize(width: 820, height: 1180))
+        try record("walk")
+        try record("other", screen: CGSize(width: 820, height: 1180))
         try edit(clips: #"{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}}, {"take": "other", "from": {"step": "a"}, "to": {"step": "end"}}"#)
-        #expect(await failure() == "video's ipad takes come from devices with different screens: 820×1180 points: other take 1; 834×1194 points: walk take 1.")
+        #expect(await failure() == "video's ipad takes come from devices with different screens: 820×1180 points: other; 834×1194 points: walk.")
     }
 
     @Test func aVideoOutsideAppStoreConnectsLengthsIsntCutButADraftIs() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        try record("walk", 1)
+        try record("walk")
         try edit()
         #expect(await failure() == "video's ipad video is 5 s long; App Store Connect takes 15 to 30 s.")
         // A draft only warns, and goes on to compose, which fails here on the take's empty movie.

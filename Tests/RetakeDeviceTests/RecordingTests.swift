@@ -13,7 +13,7 @@ extension OnDevice {
             let example = try ExampleOnDevice()
             let capture = try #require(ScreenCaptureDevices().captureDevices(waitingFor: example.device.name, timeout: 10).first { $0.name == example.device.name })
             let (scene, set) = try AppSession.scene(name, in: example.project, for: example.device.type!)
-            let target = TakeRecording.Target(scene: name, take: 1, movie: example.project.output.appending(path: "tests/\(name).mov"))
+            let target = TakeRecording.Target(scene: name, folder: example.project.output.appending(path: "tests", directoryHint: .isDirectory))
             let log = try await TakeRecording.record(target, scene: scene, set: set, in: example.project, on: example.device, capture: capture, player: Player())
 
             #expect(log.failure == nil)
@@ -29,10 +29,10 @@ extension OnDevice {
                 // The lead-in starts once the app is reachable, so its first screen settles first.
                 #expect(launch.connected + scene.leadIn - 0.1 < log.steps[0].start, "\(launch.connected) + \(scene.leadIn), then \(log.steps[0].start)")
             }
-            let written = try JSONParser.parse(String(contentsOf: target.log, encoding: .utf8))
+            let written = try JSONParser.parse(String(contentsOf: target.kept(.take).log, encoding: .utf8))
             #expect(written == log.json)
-            let metadata = try await MovieMetadata.read(target.movie)
-            #expect(metadata["retake.scene"] == name && metadata["retake.take"] == "1" && metadata["retake.state"] == "clean")
+            let metadata = try await MovieMetadata.read(target.kept(.take).movie)
+            #expect(metadata["retake.scene"] == name && metadata["retake.take"] == nil && metadata["retake.state"] == "clean")
             #expect(metadata["retake.app.version"] != nil && metadata["retake.device.model"] == example.device.model)
             #expect(!metadata.values.contains { $0.contains(example.device.name) || $0.contains(example.device.udid) }, "nothing personal")
         }

@@ -1,8 +1,7 @@
 import AVFoundation
 import Foundation
 
-/// What `retake cut` does for one edit and one device type: reads each scene's latest successful
-/// take, checks them,
+/// What `retake cut` does for one edit and one device type: reads each scene's take, checks them,
 /// plans the cut, composes it with its overlays and sound, and exports it. See Documentation/cli.md,
 /// "retake cut".
 public enum Cutter {
@@ -22,7 +21,7 @@ public enum Cutter {
         project.cuts(for: type).appending(path: edit, directoryHint: .isDirectory)
     }
 
-    /// Turns any time in plain seconds into an anchor in the latest takes, writing the edit when
+    /// Turns any time in plain seconds into an anchor in the scenes' takes, writing the edit when
     /// that changes it. Commands cutting several types do this for every type before rendering any
     /// of them, so a later type's rewrite doesn't make an earlier render look out of date.
     public static func prepare(
@@ -54,20 +53,17 @@ public enum Cutter {
             throw RetakeError(.usage, "\(name) isn't cut for \(type.rawValue): its devices are \(edit.devices.map(\.rawValue).joined(separator: ", ")).")
         }
 
-        // The latest successful take of every scene the video plays or takes a still from.
+        // The take of every scene the video plays or takes a still from.
+        try TakeStore.refuseOldLayout(for: [type], in: project)
         let scenes = video.scenes
         var logs: [String: TakeLog] = [:], movies: [String: URL] = [:]
-        // A later take whose log can't be read, such as one a newer Retake recorded, is passed over,
-        // saying why.
-        var unreadable: [String] = []
         for scene in scenes {
-            let takes = TakeStore.takes(of: scene, for: [type], in: project)
-            let later = takes.reversed().prefix { !$0.successful }.filter { $0.recorded == nil }.compactMap(\.problem)
-            guard let take = takes.last(where: \.successful), let log = take.recorded else {
-                let why = later.first.map { ": \($0)." } ?? "; record it."
+            let take = TakeStore.take(of: scene, for: type, in: project)
+            guard let take, take.successful, let log = take.recorded else {
+                // One whose log can't be read, such as one a newer Retake recorded, says why.
+                let why = take?.problem.map { ": \($0)." } ?? "; record it."
                 throw RetakeError(.failed, "There's no successful \(type.rawValue) take of \(scene) for \(name) to be cut from\(why)")
             }
-            unreadable += later.reversed().map { "\($0); cutting \(take.name) instead." }
             logs[scene] = log
             movies[scene] = take.movie
         }
@@ -78,7 +74,7 @@ public enum Cutter {
         }
         if screens.count > 1 {
             let list = screens.sorted { $0.key < $1.key }.map { screen, names in
-                "\(screen): \(names.map { "\($0) take \(logs[$0]!.take)" }.joined(separator: ", "))"
+                "\(screen): \(names.joined(separator: ", "))"
             }
             throw RetakeError(.failed, "\(name)'s \(type.rawValue) takes come from devices with different screens: \(list.joined(separator: "; ")).")
         }
@@ -87,9 +83,9 @@ public enum Cutter {
         let plan = try CutPlan.make(video, timelines: timelines)
         let spec = PreviewSpec.of(type)
         let record = MovieMetadata.Video(edit: name, type: type, bundleID: logs[scenes[0]]?.app.bundleID ?? "", takes: scenes.compactMap { logs[$0] })
-        var warnings = unreadable
+        var warnings: [String] = []
         if !record.mixed.isEmpty {
-            let takes = scenes.compactMap { scene in logs[scene].map { "\(scene) take \($0.take) (\($0.app.version ?? "?") (\($0.app.build ?? "?")), \($0.device.marketingName ?? $0.device.model), iOS \($0.device.os))" } }
+            let takes = scenes.compactMap { scene in logs[scene].map { "\(scene) (\($0.app.version ?? "?") (\($0.app.build ?? "?")), \($0.device.marketingName ?? $0.device.model), iOS \($0.device.os))" } }
             warnings.append("\(name)'s \(type.rawValue) takes span more than one of: \(record.mixed.joined(separator: ", ")): \(takes.joined(separator: "; ")).")
         }
         for (index, (clip, placement)) in zip(video.clips, plan.placements).enumerated() {
@@ -98,7 +94,7 @@ public enum Cutter {
                 $0.duration >= project.settings.hitchThreshold && $0.at < placement.to && $0.at + $0.duration > placement.from
             }
             if !frozen.isEmpty {
-                warnings.append("\(name)'s \(type.rawValue) clips[\(index)] plays \(clip.take) take \(log.take) across \(TakeLog.describe(frozen, over: project.settings.hitchThreshold)).")
+                warnings.append("\(name)'s \(type.rawValue) clips[\(index)] plays \(clip.take)'s take across \(TakeLog.describe(frozen, over: project.settings.hitchThreshold)).")
             }
         }
         if !length.contains(plan.duration) {

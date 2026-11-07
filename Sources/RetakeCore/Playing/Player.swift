@@ -23,9 +23,8 @@ public struct Player: Sendable {
     public enum Event: Sendable {
         case started(Played)
         case finished(Played, Timing)
-        /// A scene starting, in a run of several: its name, and the take it'll be, unless it's
-        /// only played.
-        case scene(String, take: Int?)
+        /// A scene starting, in a run of several: its name, and whether it's recorded or only played.
+        case scene(String, recording: Bool)
         /// The app being launched on a set, in its state, once the scene is known to be playable.
         case launching(set: String, state: SetFile.State)
         /// Something said in passing, such as a launch tried again.

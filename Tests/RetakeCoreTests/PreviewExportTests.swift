@@ -14,11 +14,11 @@ struct PreviewExportTests {
     }
 
     @Test func aVideosRecordListsEachDistinctBuildAndDeviceInTheOrderItsClipsPlay() {
-        var first = TakeLogReadingTests.log(scene: "a", take: 1)
+        var first = TakeLogReadingTests.log(scene: "a")
         first.app.build = "412"
-        var second = TakeLogReadingTests.log(scene: "b", take: 2)
+        var second = TakeLogReadingTests.log(scene: "b")
         second.app.build = "415"
-        var third = TakeLogReadingTests.log(scene: "c", take: 3)
+        var third = TakeLogReadingTests.log(scene: "c")
         third.app.build = "412"
         let video = MovieMetadata.Video(edit: "video1", type: .ipad, bundleID: "com.example.notes", takes: [first, second, third])
         #expect(video.appVersions == [

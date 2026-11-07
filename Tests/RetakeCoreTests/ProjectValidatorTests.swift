@@ -192,17 +192,16 @@ struct ProjectValidatorTests {
         return (report.problems.map(\.description), report.warnings.map(\.description))
     }
 
-    /// Take 1 of `walk` for iPad, as `TakeTimelineTests` lays it out: `a` at 1–1.5 s, `b` at 2–3 s,
+    /// The take of `walk` for iPad, as `TakeTimelineTests` lays it out: `a` at 1–1.5 s, `b` at 2–3 s,
     /// 6 s long, its screen read after `b`.
     func recordWalk(failure: String? = nil) throws {
         var log = TakeTimelineTests.timeline().log
         log.scene = "walk"
-        log.take = 1
         log.failure = failure
         log.steps = log.steps.prefix(2).map { var step = $0; step.id = step.id == "a" ? "open" : "done"; return step }
-        try FileManager.default.createDirectory(at: root.appending(path: "output/takes/ipad/walk"), withIntermediateDirectories: true)
-        try write("output/takes/ipad/walk/1.json", JSONWriter.write(log.json))
-        try write("output/takes/ipad/walk/1.mov", "")
+        try FileManager.default.createDirectory(at: root.appending(path: "output/takes/ipad"), withIntermediateDirectories: true)
+        try write("output/takes/ipad/walk.json", JSONWriter.write(log.json))
+        try write("output/takes/ipad/walk.mov", "")
     }
 
     @Test func anchorsAndElementsAreCheckedInTheLatestSuccessfulTake() throws {

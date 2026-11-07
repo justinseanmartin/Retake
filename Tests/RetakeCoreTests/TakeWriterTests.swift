@@ -111,7 +111,7 @@ struct TakeWriterTests {
     @Test func theMovieSaysHowItWasMade() async throws {
         defer { try? FileManager.default.removeItem(at: movie) }
         let log = TakeLog(
-            scene: "create-note", take: 3, set: "returning-user", state: .cloned, deviceType: .ipad,
+            scene: "create-note", set: "returning-user", state: .cloned, deviceType: .ipad,
             device: .init(model: "iPad13,4", marketingName: "iPad Pro (11-inch) (3rd generation)", os: "26.6.2 (23G90)"),
             app: .init(bundleID: "com.example.notes", version: "1.9.0", build: "412"),
             retake: "0.0.1", buttonHeist: .init(version: "0.7.1-d53fb59edbf3", commit: "5d05a318-dirty"),
@@ -130,7 +130,6 @@ struct TakeWriterTests {
             "com.apple.quicktime.creationdate": "2027-01-15T08:00:00Z",
             "retake.version": "0.0.1",
             "retake.scene": "create-note",
-            "retake.take": "3",
             "retake.set": "returning-user",
             "retake.state": "cloned",
             "retake.app.bundle-id": "com.example.notes",

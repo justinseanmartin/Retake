@@ -1,8 +1,8 @@
 import Foundation
-import RetakeCore
+@testable import RetakeCore
 import Testing
 
-/// Takes on disk, as `takes` lists them and `clean` deletes them.
+/// Takes on disk, as `record` keeps them, `takes` lists them and `clean` deletes them.
 struct TakeStoreTests {
     let root: URL
     let project: Project
@@ -13,12 +13,13 @@ struct TakeStoreTests {
             .resolvingSymlinksInPath()
         project = Project(configuration: root.appending(path: "retake.json"))
         try FileManager.default.createDirectory(at: project.edits, withIntermediateDirectories: true)
-        // Two takes of a, the second, the latest, cut from by video1; one of b, failed; c's 1 has lost its movie.
-        try record("a", 1)
-        try record("a", 2)
-        try record("b", 1, failure: "step 2 didn't run")
-        try record("c", 1, movie: false)
-        try record("a", 1, type: .iphone)
+        // a has a take, cut from by video1, and a previous one; b only a failure; c's take has lost
+        // its movie; and the iPhone has a take of a.
+        try record("a", at: 2)
+        try record("a", .previous, at: 1)
+        try record("b", .failed, at: 1, failure: "step 2 didn't run")
+        try record("c", at: 1, movie: false)
+        try record("a", at: 1, type: .iphone)
         for scene in ["a", "b", "c", "d"] { try write("scenes/ipad/\(scene).json", "{}") }
         try write("scenes/iphone/a.json", "{}")
         try write("edits/video1.json", #"{ "devices": ["ipad"], "clips": [{ "take": "a", "from": { "step": "start" }, "to": { "step": "end" }, "stills": [{ "take": "c", "at": 0 }] }] }"#)
@@ -32,96 +33,128 @@ struct TakeStoreTests {
         try Data(text.utf8).write(to: url)
     }
 
-    func record(_ scene: String, _ take: Int, type: DeviceType = .ipad, failure: String? = nil, movie: Bool = true) throws {
-        let log = TakeLogReadingTests.log(scene: scene, take: take, failure: failure)
-        try write("output/takes/\(type.rawValue)/\(scene)/\(take).json", JSONWriter.write(log.json))
-        if movie { try write("output/takes/\(type.rawValue)/\(scene)/\(take).mov", "") }
+    /// A take of `scene` as `kind`, or as a recording in progress, recorded `minute` minutes in.
+    func record(
+        _ scene: String, _ kind: TakeStore.Kind = .take, recording: Bool = false, at minute: Int, type: DeviceType = .ipad,
+        failure: String? = nil, movie: Bool = true,
+    ) throws {
+        var log = TakeLogReadingTests.log(scene: scene, failure: failure)
+        log.recordedAt = Date(timeIntervalSince1970: 1_800_000_000 + Double(minute * 60))
+        let suffix = recording ? ".recording" : kind.suffix
+        try write("output/takes/\(type.rawValue)/\(scene)\(suffix).json", JSONWriter.write(log.json))
+        if movie { try write("output/takes/\(type.rawValue)/\(scene)\(suffix).mov", "") }
     }
 
     func names(_ takes: [TakeStore.Take]) -> [String] { takes.map { "\($0.type.rawValue) \($0.name)" } }
 
-    @Test func takesAreListedByTypeSceneAndNumberWithTheEditsCutFromThem() {
+    /// Each of a scene's takes on disk, by kind, as the minute it was recorded in.
+    func minutes(_ scene: String) -> [String: Int] {
+        Dictionary(uniqueKeysWithValues: TakeStore.takes(of: scene, for: [.ipad], in: project).map { take in
+            (take.kind.rawValue, Int(take.recorded!.recordedAt.timeIntervalSince1970 - 1_800_000_000) / 60)
+        })
+    }
+
+    func keep(_ scene: String, at minute: Int, failure: String? = nil) throws {
+        try record(scene, recording: true, at: minute, failure: failure)
+        try TakeStore.keepRecording(of: scene, in: project.takes(for: .ipad), failed: failure != nil)
+    }
+
+    @Test func eachScenesTakePreviousAndFailureAreListedWithTheEditsCutFromTheTake() throws {
         defer { try? FileManager.default.removeItem(at: root) }
+        try record("a", recording: true, at: 3)
         let takes = TakeStore.takes(for: DeviceType.allCases, in: project)
-        #expect(names(takes) == ["iphone a@1", "ipad a@1", "ipad a@2", "ipad b@1", "ipad c@1"])
-        #expect(takes.map(\.usedBy) == [[], [], ["video1"], [], []])
+        #expect(names(takes) == ["iphone a", "ipad a", "ipad a (previous)", "ipad b (failed)", "ipad c"], "a recording in progress isn't a take yet")
+        #expect(takes.map(\.usedBy) == [[], ["video1"], [], [], []], "only the take is cut from, and c's can't be")
         #expect(takes.map(\.failed) == [false, false, false, true, false])
-        #expect(takes[2].recorded?.dropped == 2)
-        #expect(takes[4].problem == "output/takes/ipad/c/1.mov is missing")
-        #expect(names(TakeStore.takes(of: "a", for: [.ipad], in: project)) == ["ipad a@1", "ipad a@2"])
+        #expect(takes[4].problem == "output/takes/ipad/c.mov is missing")
+        #expect(TakeStore.take(of: "b", for: .ipad, in: project) == nil, "a failure isn't the take")
     }
 
-    @Test func aTakeANewerRetakeRecordedIsListedAsThatAndFailed() throws {
+    @Test func aSuccessReplacesTheTakeKeepingItAsPreviousAndDroppingTheOlderPreviousAndTheFailure() throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        let text = TakeLogReadingTests.text { $0.insert(.init(key: "format", value: 2), at: 0) }
-        try write("output/takes/ipad/a/3.json", text)
-        try write("output/takes/ipad/a/3.mov", "")
-        let takes = TakeStore.takes(of: "a", for: [.ipad], in: project)
-        #expect(takes.map(\.number) == [1, 2, 3])
-        #expect(takes[2].failed && takes[2].problem == "output/takes/ipad/a/3.json: was recorded by a newer Retake, in step log format 2, which this Retake (\(RetakeVersion.current.version)) can't read; update Retake to use this take")
-        #expect(takes[1].usedBy == ["video1"], "the latest take this Retake can read is still the one cut")
+        try record("a", .failed, at: 3, failure: "step 1 didn't run")
+        try keep("a", at: 4)
+        #expect(minutes("a") == ["take": 4, "previous": 2], "the failure is no longer the latest news")
+
+        try keep("b", at: 2)
+        #expect(minutes("b") == ["take": 2], "a first success has nothing to keep as previous")
+        let leftovers = try FileManager.default.contentsOfDirectory(atPath: project.takes(for: .ipad).path).filter { $0.contains(".recording") }
+        #expect(leftovers.isEmpty)
     }
 
-    @Test func cleaningChoosesEverythingOrWhatsNamed() throws {
+    @Test func aFailureKeepsTheTakeAndReplacesTheLastFailure() throws {
         defer { try? FileManager.default.removeItem(at: root) }
+        try keep("a", at: 3, failure: "step 1 didn't run")
+        #expect(minutes("a") == ["take": 2, "previous": 1, "failed": 3])
+        try keep("a", at: 4, failure: "step 2 didn't run")
+        #expect(minutes("a") == ["take": 2, "previous": 1, "failed": 4])
+        #expect(TakeStore.takes(of: "a", for: [.ipad], in: project).last?.recorded?.failure == "step 2 didn't run")
+    }
+
+    @Test func anInterruptedRecordingLeavesTheTakesAlone() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try record("a", recording: true, at: 3, movie: true)
+        let before = minutes("a")
+        TakeStore.discardRecording(of: "a", in: project.takes(for: .ipad))
+        #expect(minutes("a") == before && before == ["take": 2, "previous": 1])
+        #expect(!FileManager.default.fileExists(atPath: project.takes(for: .ipad).appending(path: "a.recording.mov").path))
+    }
+
+    @Test func restoringSwapsTheTakeAndThePreviousOne() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try TakeStore.restore("a", for: .ipad, in: project)
+        #expect(minutes("a") == ["take": 1, "previous": 2])
+        try TakeStore.restore("a", for: .ipad, in: project)
+        #expect(minutes("a") == ["take": 2, "previous": 1], "restoring again undoes it")
+        #expect(throws: RetakeError.self) { try TakeStore.restore("c", for: .ipad, in: project) }
+        #expect(minutes("c") == ["take": 1], "c, with no previous, is left as it was")
+    }
+
+    @Test func cleaningAScenesTakesDeletesItsTakePreviousAndFailure() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try record("a", .failed, at: 3, failure: "step 1 didn't run")
         let everything = try TakeStore.cleaning(takes: nil, cuts: nil, for: DeviceType.allCases, in: project)
-        #expect(everything.takes.count == 5 && everything.cuts.map(\.lastPathComponent) == ["video1", "video2"])
+        #expect(everything.takes.count == 6 && everything.cuts.map(\.lastPathComponent) == ["video1", "video2"])
 
-        let allTakes = try TakeStore.cleaning(takes: [], cuts: nil, for: [.ipad], in: project)
-        #expect(names(allTakes.takes) == ["ipad a@1", "ipad a@2", "ipad b@1", "ipad c@1"] && allTakes.cuts.isEmpty)
+        let some = try TakeStore.cleaning(takes: ["a"], cuts: ["video1"], for: [.ipad], in: project)
+        #expect(names(some.takes) == ["ipad a", "ipad a (previous)", "ipad a (failed)"])
+        #expect(names(some.used) == ["ipad a"])
+        try TakeStore.delete(some, in: project)
+        #expect(names(TakeStore.takes(for: DeviceType.allCases, in: project)) == ["iphone a", "ipad b (failed)", "ipad c"])
+        #expect(!FileManager.default.fileExists(atPath: project.cuts(for: .ipad).appending(path: "video1").path))
+        #expect(FileManager.default.fileExists(atPath: project.cuts(for: .ipad).appending(path: "video2").path))
 
-        let some = try TakeStore.cleaning(takes: [.take("a", 2), .scene("b")], cuts: ["video2"], for: DeviceType.allCases, in: project)
-        #expect(names(some.takes) == ["ipad a@2", "ipad b@1"] && some.cuts.map(\.lastPathComponent) == ["video2"])
-        #expect(names(some.used) == ["ipad a@2"])
-
-        for (takes, cuts) in [([TakeStore.TakeChoice.take("a", 9)], nil), ([.scene("nowhere")], nil), (nil, ["video9"])] {
+        for (takes, cuts) in [(["nowhere"], nil), (nil, ["video9"])] {
             #expect(throws: RetakeError.self) { try TakeStore.cleaning(takes: takes, cuts: cuts, for: DeviceType.allCases, in: project) }
         }
     }
 
-    @Test func aTakeIsChosenAsASceneOrASceneAndNumber() throws {
-        #expect(try TakeStore.TakeChoice.parse("create-note") == .scene("create-note"))
-        #expect(try TakeStore.TakeChoice.parse("create-note@3") == .take("create-note", 3))
-        for wrong in ["create-note@0", "create-note@x", "@3", "a@1@2"] {
-            #expect(throws: RetakeError.self, "\(wrong)") { try TakeStore.TakeChoice.parse(wrong) }
-        }
-    }
-
-    @Test func deletingTakesDeletesBothFilesButKeepsTheirNumbersUsed() throws {
-        defer { try? FileManager.default.removeItem(at: root) }
-        let cleaning = try TakeStore.cleaning(takes: [.scene("b"), .take("a", 2)], cuts: ["video1"], for: [.ipad], in: project)
-        try TakeStore.delete(cleaning, in: project)
-        #expect(names(TakeStore.takes(for: DeviceType.allCases, in: project)) == ["iphone a@1", "ipad a@1", "ipad c@1"])
-        #expect(RecordRun.nextTake(of: "a", for: .ipad, in: project) == 3, "the deleted highest take's number isn't used again")
-        #expect(RecordRun.nextTake(of: "b", for: .ipad, in: project) == 2, "nor a scene's whose every take is deleted")
-        #expect(RecordRun.nextTake(of: "a", for: .iphone, in: project) == 2, "each device type is numbered apart")
-
-        // Deleting again, with the marker there, keeps it.
-        try TakeStore.delete(TakeStore.cleaning(takes: [.scene("a")], cuts: nil, for: [.ipad], in: project), in: project)
-        #expect(RecordRun.nextTake(of: "a", for: .ipad, in: project) == 3)
-        #expect(!FileManager.default.fileExists(atPath: project.cuts(for: .ipad).appending(path: "video1").path))
-        #expect(FileManager.default.fileExists(atPath: project.cuts(for: .ipad).appending(path: "video2").path))
-    }
-
-    @Test func unusedKeepsNeededScenesAndTheirLatestSuccessfulTakes() throws {
+    @Test func unusedKeepsOnlyTheTakesOfNeededScenes() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let cleaning = try TakeStore.unused(for: [.ipad], in: project)
-        #expect(names(cleaning.takes) == ["ipad a@1", "ipad b@1", "ipad c@1"])
+        #expect(names(cleaning.takes) == ["ipad a (previous)", "ipad b (failed)"])
         #expect(cleaning.scenes.map(\.lastPathComponent) == ["b.json", "d.json"])
-        #expect(cleaning.cuts.isEmpty)
-
         try TakeStore.delete(cleaning, in: project)
+        #expect(names(TakeStore.takes(for: DeviceType.allCases, in: project)) == ["iphone a", "ipad a", "ipad c"], "--type leaves the other type alone")
 
-        #expect(names(TakeStore.takes(for: [.ipad], in: project)) == ["ipad a@2"])
-        let files = ProjectFiles(project: project)
-        #expect(files.names(in: project.scenes(for: .ipad)) == ["a", "c"])
-        #expect(files.names(in: project.scenes(for: .iphone)) == ["a"], "--type leaves the other type alone")
+        try write("edits/broken.json", #"{"clips": "not clips"}"#)
+        #expect(throws: RetakeError.self, "an edit that can't be read isn't guessed at") { try TakeStore.unused(for: DeviceType.allCases, in: project) }
     }
 
-    @Test func unusedRefusesToGuessWhenAnEditCannotBeRead() throws {
+    @Test func anEarlierRetakesNumberedTakesAreRefusedNamingTheWayOutWhichCleanTakes() throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        try write("edits/broken.json", #"{"clips": "not clips"}"#)
-        #expect(throws: RetakeError.self) { try TakeStore.unused(for: DeviceType.allCases, in: project) }
-        #expect(names(TakeStore.takes(for: DeviceType.allCases, in: project)).count == 5)
+        try write("output/takes/ipad/walk/1.json", "{}")
+        try write("output/takes/ipad/walk/1.mov", "")
+        try write("output/takes/ipad/walk/.last-take", "1\n")
+        try TakeStore.refuseOldLayout(for: [.iphone], in: project)
+        let error = #expect(throws: RetakeError.self) { try TakeStore.refuseOldLayout(for: [.ipad], in: project) }
+        #expect(error?.message == "output/takes/ipad/walk/ holds numbered takes from an earlier Retake, which this one doesn't read. Delete it with `retake clean --takes walk`, or remove the folder, and record the scene again.")
+        #expect(throws: RetakeError.self) { try RecordRun.scenes(named: [], edit: nil, force: false, for: .ipad, in: project) }
+        #expect(throws: RetakeError.self) { try TakeStore.unused(for: [.ipad], in: project) }
+
+        let cleaning = try TakeStore.cleaning(takes: ["walk"], cuts: nil, for: DeviceType.allCases, in: project)
+        #expect(cleaning.takes.isEmpty && cleaning.oldTakes.map(\.lastPathComponent) == ["walk"])
+        try TakeStore.delete(cleaning, in: project)
+        try TakeStore.refuseOldLayout(for: [.ipad], in: project)
     }
 }

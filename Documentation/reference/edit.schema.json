@@ -169,7 +169,7 @@
           "type": "string"
         },
         "take": {
-          "description": "The scene whose latest successful take the clip is cut from.",
+          "description": "The scene whose take the clip is cut from.",
           "type": "string",
           "minLength": 1
         },
@@ -598,7 +598,7 @@
       "type": "object",
       "properties": {
         "take": {
-          "description": "The scene whose latest successful take it's from.",
+          "description": "The scene whose take it's from.",
           "type": "string",
           "minLength": 1
         },
@@ -1088,7 +1088,7 @@
           "type": "string"
         },
         "take": {
-          "description": "The scene whose latest successful take the clip is cut from.",
+          "description": "The scene whose take the clip is cut from.",
           "type": "string",
           "minLength": 1
         },
@@ -1414,7 +1414,7 @@
       "type": "object",
       "properties": {
         "take": {
-          "description": "The scene whose latest successful take it's from.",
+          "description": "The scene whose take it's from.",
           "type": "string",
           "minLength": 1
         },

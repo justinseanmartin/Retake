@@ -2,7 +2,7 @@ import Foundation
 
 /// What `retake validate` checks: every file read strictly, then what a schema can't say, across
 /// the files, and unless `offline`, what only the takes can: that each edit's anchors resolve in
-/// each scene's latest successful take, and the elements it names are on screen there. See Documentation/cli.md, "retake
+/// each scene's take, and the elements it names are on screen there. See Documentation/cli.md, "retake
 /// validate".
 public struct ProjectValidator {
     public let files: ProjectFiles
@@ -55,6 +55,15 @@ public struct ProjectValidator {
         }
 
         checkFolders(targets, report)
+        // Takes an earlier Retake numbered, which aren't read, so aren't checked against.
+        if !offline, !edits.isEmpty {
+            for folder in TakeStore.oldFolders(for: DeviceType.allCases, in: project) {
+                report.problem(FileProblem(
+                    file: "\(project.displayPath(folder))/", path: .root,
+                    message: "holds numbered takes from an earlier Retake, which this one doesn't read; delete them with `retake clean --takes \(folder.lastPathComponent)`, or remove the folder, and record the scene again",
+                ))
+            }
+        }
         if all || targets?.contains(.configuration) == true { checkConfiguration(report) }
         for name in sets { checkSet(name, report) }
         for (name, type) in scenes { checkScene(name, type, report) }
@@ -235,7 +244,7 @@ public struct ProjectValidator {
 
     // MARK: - Against the takes
 
-    /// What `cut` will check of `video`, in the latest successful takes recorded here: each clip's
+    /// What `cut` will check of `video`, in the scenes' takes recorded here: each clip's
     /// anchors resolving inside its take, in order; its captions', sounds', spotlight's and blurs'
     /// within the stretch the clip plays; and the elements a spotlight or blur names on screen as it
     /// starts. Takes aren't in a repository, so a scene without a successful take only warns that
@@ -247,9 +256,9 @@ public struct ProjectValidator {
         var timelines: [String: TakeTimeline?] = [:]
         func latest(_ scene: String, at path: JSONPath) -> TakeTimeline? {
             if let known = timelines[scene] { return known }
-            let take = TakeStore.takes(of: scene, for: [type], in: project).last(where: { $0.successful })
+            let take = TakeStore.take(of: scene, for: type, in: project)
             let found: TakeTimeline?
-            if let log = take?.recorded {
+            if let take, take.successful, let log = take.recorded {
                 found = TakeTimeline(log)
             } else {
                 found = nil
