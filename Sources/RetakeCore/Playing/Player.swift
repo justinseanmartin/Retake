@@ -140,7 +140,10 @@ public struct Player: Sendable {
                 break
             }
         } catch {
-            if let ambiguous = Self.ambiguity(error.message) {
+            if Self.ambiguity(error.message) != nil {
+                // Read now, for the matches to be listed as Retake names them.
+                let elements = try? await driver.elements()
+                let ambiguous = Self.ambiguity(error.message, naming: Self.heistTarget(of: played.step.action), on: elements) ?? error.message
                 throw RetakeError(.failed, "\(scene): \(played.name), \(played.step.summary), didn't run: \(ambiguous)")
             }
             // A wait that ran out says so; The Button Heist's account of it is its predicate's.
@@ -246,16 +249,40 @@ public struct Player: Sendable {
     }
 
     /// The Button Heist's failure for an element that matches several, said in a scene's terms, or
-    /// nil for any other failure. It counts its ordinal from 0, where a step's `occurrence` counts
-    /// from 1, so its own advice would be off by one; its list of the matches is kept.
-    static func ambiguity(_ message: String) -> String? {
-        guard let match = message.firstMatch(of: /(\d+)(\+?) elements match: .*— use ordinal/) else { return nil }
-        let count = String(match.1) + String(match.2)
+    /// nil for any other failure. Given the step's `target` and the `screen` read after it failed,
+    /// each element that matches is listed as `compose` shows it, traits and hint too, with the
+    /// shortest name that picks it out, `occurrence` only where nothing else does. Where the screen
+    /// couldn't be read, or Retake's matches don't come to The Button Heist's count, its own list
+    /// of the matches is kept, without its advice, which counts from 0 where `occurrence` counts
+    /// from 1.
+    static func ambiguity(_ message: String, naming target: ElementTarget? = nil, on screen: [ScreenElement]? = nil) -> String? {
+        guard let match = message.firstMatch(of: /(\d+)(\+?) elements match: .*— use ordinal/), let counted = Int(match.1) else { return nil }
+        func lead(_ count: String, _ range: String) -> String {
+            "\(count) elements match it, so which is meant isn't clear. Name it more closely, by its traits, "
+                + "identifier, value or hint as well, or as a last resort give \"occurrence\" (\(range), in the order VoiceOver reads the screen):"
+        }
+        if var target, let screen {
+            target.occurrence = nil
+            let matches = screen.indices.filter { target.matches(screen[$0]) }
+            if matches.count > 1, match.2.isEmpty ? matches.count == counted : matches.count >= counted {
+                let lines = matches.map { index in
+                    "  \(screen[index].line)  ·  " + (ElementTarget.naming(index, in: screen).map { JSONWriter.compact($0.json) } ?? "(nothing to name it by)")
+                }
+                return lead("\(matches.count)", "1 to \(matches.count)") + "\n" + lines.joined(separator: "\n")
+            }
+        }
         let candidates = message.split(separator: "\n").dropFirst().joined(separator: "\n")
-        let range = match.2.isEmpty ? "1 to \(match.1)" : "from 1"
-        return "\(count) elements match it, so which is meant isn't clear. Name it more closely, by its traits, "
-            + "identifier, value or hint as well, or as a last resort give \"occurrence\" (\(range), in the order VoiceOver reads the screen):"
+        return lead(String(match.1) + String(match.2), match.2.isEmpty ? "1 to \(match.1)" : "from 1")
             + (candidates.isEmpty ? "" : "\n" + candidates)
+    }
+
+    /// The element a step has The Button Heist find, which it may find several of.
+    static func heistTarget(of action: Step.Action?) -> ElementTarget? {
+        switch action {
+        case .tapElement(let target)?, .activate(let target)?, .waitFor(let target, _, _)?, .type(_, let target?)?: target
+        case .drag(.element(let target), _, _)?: target
+        default: nil
+        }
     }
 
     /// Turns the device and waits for the app to turn with it: for what's on screen to have moved

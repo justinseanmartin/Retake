@@ -363,11 +363,11 @@ placeholder or what's typed in it, as the field has no label of its own), its `i
 as `retake compose` prints them, such as `["header"]` or `["button", "selected"]`, every one of
 which it must have; any of them together. Traits tell apart elements that share a label, such as a
 screen's title and a button named the same. When several elements match, the step fails, listing
-them, and saying to name the one meant more closely, by its traits, identifier, value or hint as
-well. Do that wherever you can: `retake compose` suggests the shortest name that picks an element
-out. `occurrence` picks one of several that match, counted from 1 in the order VoiceOver reads the
-screen. It's a last resort, for elements nothing else tells apart, since it breaks when the layout
-changes.
+them, each with its traits and hint and the shortest name that picks it out, and saying to name the
+one meant more closely, by its traits, identifier, value or hint as well. Do that wherever you can:
+`retake compose` suggests the same names. `occurrence` picks one of several that match, counted from
+1 in the order VoiceOver reads the screen. It's a last resort, for elements nothing else tells
+apart, since it breaks when the layout changes.
 
 **Name elements rather than points wherever you can.** A step that names an element finds it
 wherever the layout puts it, on every device, and after the app's layout changes, where a point

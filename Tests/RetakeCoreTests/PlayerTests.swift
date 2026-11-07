@@ -11,6 +11,10 @@ final class FakeDriver: AppDriver {
     var done: [String] = []
     /// Fails the plan run at this index among runs, counted from 0.
     var failingRun: Int?
+    /// What the failing run fails with.
+    var failure = "No match for: label=\"Send\""
+    /// Whether `elements()` fails.
+    var unreadable = false
     var runs = 0
     /// What `elements()` returns, one after another; the last stays.
     var screens: [[ScreenElement]] = [[]]
@@ -23,7 +27,7 @@ final class FakeDriver: AppDriver {
         defer { runs += 1 }
         done.append("run")
         if let answering { answering.time.now += answering.seconds }
-        if runs == failingRun { throw RetakeError(.failed, "No match for: label=\"Send\"") }
+        if runs == failingRun { throw RetakeError(.failed, failure) }
         var evidence = StepEvidence()
         evidence.elements = ending
         return evidence
@@ -36,6 +40,7 @@ final class FakeDriver: AppDriver {
 
     func elements() async throws(RetakeError) -> [ScreenElement] {
         done.append("look")
+        if unreadable { throw RetakeError(.failed, "the app went away") }
         return screens.count > 1 ? screens.removeFirst() : screens[0]
     }
 
@@ -218,6 +223,57 @@ struct PlayerTests {
             """)
         #expect(Player.ambiguity("element inflation failed [notFound]: No match for: label=\"Nope\"") == nil)
         #expect(Player.ambiguity("10+ elements match: label=\"Row\" (scope: interface) — use ordinal 0, 1, 2, ... to select one")?.contains("(from 1,") == true)
+    }
+
+    @Test func anAmbiguousStepListsTheMatchesWithTheirTraitsAndANameForEachOrFallsBack() async {
+        let driver = FakeDriver()
+        driver.failingRun = 0
+        driver.failure = """
+            element inflation failed [ambiguous]: 3 elements match: label="Delete" (scope: interface) — use ordinal 0–2 to select one
+              label="Delete" (visible)
+              label="Delete" (visible)
+              label="Delete" (visible)
+            """
+        let frame = ScreenElement.Rect(x: 20, y: 96, width: 160, height: 44)
+        driver.screens = [[
+            ScreenElement(label: "Notes", traits: ["header"]),
+            ScreenElement(label: "Delete", hint: "Deletes the note", traits: ["button"], frame: frame),
+            ScreenElement(label: "Delete", traits: ["button"], frame: frame),
+            ScreenElement(label: "Delete", traits: ["header"], frame: frame),
+        ]]
+        let scene = SceneFile(steps: [Step(.tapElement(ElementTarget(label: "Delete")))])
+        func failure() async -> String? {
+            do {
+                try await FakeTime().player().play(scene, named: "edit-note", on: driver)
+                return nil
+            } catch {
+                return error.message
+            }
+        }
+        let message = await failure()
+        #expect(message == """
+            edit-note: step 1 of 1, tap "Delete", didn't run: 3 elements match it, so which is meant isn't clear. Name it more closely, by its traits, identifier, value or hint as well, or as a last resort give "occurrence" (1 to 3, in the order VoiceOver reads the screen):
+              "Delete"  hint "Deletes the note"  button  frame (20, 96, 160×44)  ·  { "hint": "Deletes the note" }
+              "Delete"  button  frame (20, 96, 160×44)  ·  { "label": "Delete", "traits": ["button"], "occurrence": 2 }
+              "Delete"  header  frame (20, 96, 160×44)  ·  { "label": "Delete", "traits": ["header"] }
+            """)
+        #expect(message?.contains("ordinal") == false)
+
+        driver.unreadable = true
+        driver.runs = 0
+        let unread = await failure()
+        #expect(unread?.hasSuffix("""
+            (1 to 3, in the order VoiceOver reads the screen):
+              label="Delete" (visible)
+              label="Delete" (visible)
+              label="Delete" (visible)
+            """) == true, "The Button Heist's own list, when the screen can't be read")
+        #expect(unread?.contains("ordinal") == false)
+
+        driver.unreadable = false
+        driver.screens = [[ScreenElement(label: "Delete", traits: ["button"]), ScreenElement(label: "Delete", traits: ["header"])]]
+        driver.runs = 0
+        #expect(await failure() == unread, "and when Retake's matches don't come to The Button Heist's count")
     }
 
     @Test func aWaitThatRunsOutSaysWhatItWaitedFor() async {
