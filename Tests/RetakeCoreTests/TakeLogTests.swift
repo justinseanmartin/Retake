@@ -112,7 +112,8 @@ struct TakeLogReadingTests {
     }
 
     @Test func whatsWrittenReadsBackTheSame() {
-        let log = Self.log(failure: "step 2 didn't run")
+        var log = Self.log(failure: "step 2 didn't run")
+        log.beforeSteps = TakeLog.Reading(at: 0.912, elements: [ScreenElement(label: "Notes", traits: ["header"], frame: .init(x: 20, y: 60, width: 200, height: 41))])
         let reader = JSONReader(file: "3.json")
         #expect(TakeLog.read(JSONWriter.write(log.json), with: reader) == log)
         #expect(reader.problems.isEmpty)

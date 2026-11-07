@@ -68,6 +68,10 @@ public struct Player: Sendable {
     /// The device's screen in points, held upright: what a step's share of the screen is of, turned
     /// as the device faces. Nil when it isn't known, and a step that gives a share fails.
     public var screen: CGSize? = nil
+    /// Told what's on screen once `beforeSteps` is done, just before the first step, and when it
+    /// was read: for a take's step log, which edits find elements in before the first step has
+    /// ended. Nil reads nothing, as composing needs nothing; a screen that can't be read is skipped.
+    public var readBeforeSteps: (@Sendable (_ elements: [ScreenElement], _ at: Date) -> Void)? = nil
 
     /// How long an `orientation` step waits for the app to turn.
     public static let turnTimeout = 5.0
@@ -99,6 +103,7 @@ public struct Player: Sendable {
             try await play(played, in: name, orientation: &orientation, holding: true, on: driver)
         }
         try await beforeSteps()
+        if let readBeforeSteps, let elements = try? await driver.elements() { readBeforeSteps(elements, Date()) }
         for (index, step) in scene.steps.enumerated() {
             // A step that gives no hold of its own holds for the scene's `defaultHold`.
             var step = step

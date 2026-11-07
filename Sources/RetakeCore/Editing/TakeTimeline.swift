@@ -88,16 +88,20 @@ public struct TakeTimeline: Sendable {
     }
 
     /// The element `target` names, as the screen was read at the latest step to end at or before
-    /// `time`, matched as a step's target is: the one that matches, or with `occurrence`, the one
-    /// it picks.
+    /// `time`, or before any step has, as it was read just before the first step; matched as a
+    /// step's target is: the one that matches, or with `occurrence`, the one it picks.
     public func element(_ target: ElementTarget, at time: Double) throws(Unresolved) -> ScreenElement {
         // A step's end is logged to the millisecond, and so is the moment it's asked about.
-        guard let reading = steps.filter({ $0.elements != nil && $0.end <= time + 0.0005 }).max(by: { $0.end < $1.end }),
-              let elements = reading.elements else {
+        let elements: [ScreenElement], when: String
+        if let reading = steps.filter({ $0.elements != nil && $0.end <= time + 0.0005 }).max(by: { $0.end < $1.end }),
+           let read = reading.elements {
+            (elements, when) = (read, "on screen after step \(reading.number), at \(Self.seconds(reading.end))")
+        } else if let reading = log.beforeSteps {
+            (elements, when) = (reading.elements, "on screen before the first step, at \(Self.seconds(reading.at))")
+        } else {
             throw Unresolved("the take has no reading of the screen at or before \(Self.seconds(time))")
         }
         let matches = elements.filter(target.matches)
-        let when = "on screen after step \(reading.number), at \(Self.seconds(reading.end))"
         let found: ScreenElement
         if let occurrence = target.occurrence {
             guard matches.indices.contains(occurrence - 1) else {

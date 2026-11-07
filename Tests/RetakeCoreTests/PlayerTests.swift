@@ -53,6 +53,11 @@ extension Step.Action {
     static func tapPosition(x: Length, y: Length) -> Step.Action { .tapPoint(Position(x: x, y: y)) }
 }
 
+/// The screens a player was told of.
+final class Readings: @unchecked Sendable {
+    var elements: [[ScreenElement]] = []
+}
+
 /// A clock that moves only when the player pauses, recording each pause.
 final class FakeTime: @unchecked Sendable {
     var now = 0.0
@@ -81,6 +86,21 @@ struct PlayerTests {
         try await time.player().play(scene, named: "create-note", on: driver)
         #expect(driver.done == ["run", "run", "run", "run"])
         #expect(time.pauses == [0.5, 1, 2, 3])
+    }
+
+    @Test func theScreenIsReadOnceAfterTheSetupAndLeadInJustBeforeTheFirstStepOnlyWhenAsked() async throws {
+        let driver = FakeDriver()
+        driver.screens = [[ScreenElement(label: "Notes")]]
+        let scene = SceneFile(setup: [Step(.activate(ElementTarget(label: "Library")))], steps: [tap, tap])
+        let read = Readings()
+        var player = FakeTime().player()
+        player.readBeforeSteps = { elements, _ in read.elements.append(elements) }
+        try await player.play(scene, named: "create-note", on: driver) { driver.done.append("lead-in") }
+        #expect(driver.done == ["run", "lead-in", "look", "run", "run"])
+        #expect(read.elements == [[ScreenElement(label: "Notes")]])
+        driver.done = []
+        try await FakeTime().player().play(scene, named: "create-note", on: driver)
+        #expect(driver.done == ["run", "run", "run"], "composing reads nothing")
     }
 
     @Test func typingThatChangesNothingOnScreenFailsButAnyChangeVoiceOverSeesPasses() async throws {

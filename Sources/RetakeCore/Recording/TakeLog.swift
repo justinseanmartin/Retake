@@ -40,6 +40,10 @@ public struct TakeLog: Equatable, Sendable {
     public var launch: Launch?
     /// How steps were placed on the movie's clock.
     public var clock: Clock
+    /// What was on screen once the lead-in was over, just before the first step: what an edit
+    /// finds an element in before the first step has ended. Nil for a take recorded before Retake
+    /// read it, or when the screen couldn't be read.
+    public var beforeSteps: Reading? = nil
     public var steps: [Entry]
     /// The movie's first shape, and each change after it, with how the frames were turned.
     public var shapes: [TakeWriter.ShapeChange]
@@ -87,6 +91,17 @@ public struct TakeLog: Equatable, Sendable {
         /// `CFBundleShortVersionString` and `CFBundleVersion`.
         public var version: String?
         public var build: String?
+    }
+
+    /// A reading of the screen between steps: when, and what was on it.
+    public struct Reading: Equatable, Sendable {
+        public var at: Double
+        public var elements: [ScreenElement]
+
+        public init(at: Double, elements: [ScreenElement]) {
+            self.at = at
+            self.elements = elements
+        }
     }
 
     public struct Launch: Equatable, Sendable {
@@ -215,6 +230,11 @@ extension TakeLog {
             ])))
         }
         object.append(.init(key: "clock", value: Self.object([("deviceAhead", clock.deviceAhead.map { Self.number($0) })])))
+        if let beforeSteps {
+            object.append(.init(key: "beforeSteps", value: Self.object([
+                ("at", Self.number(beforeSteps.at)), ("elements", .array(beforeSteps.elements.map(\.json))),
+            ])))
+        }
         object.append(.init(key: "steps", value: .array(steps.map(\.json))))
         object.append(.init(key: "shapes", value: .array(shapes.map { shape in
             Self.object([
@@ -402,6 +422,16 @@ extension TakeLog {
             return Launch(launched: launched, reported: reported, connected: connected)
         }
         let clock = object("clock") { object in Clock(deviceAhead: object.optional("deviceAhead") { reader.number($0, at: $1) }) }
+        let beforeSteps = root.optional("beforeSteps") { value, path -> Reading? in
+            guard var object = reader.object(value, at: path) else { return nil }
+            defer { object.finish() }
+            let at = object.required("at") { reader.number($0, at: $1) }
+            let elements = object.required("elements") { value, path in
+                reader.array(value, at: path) { value, path in ScreenElement.read(value, at: path, with: reader) }
+            }
+            guard let at, let elements else { return nil }
+            return Reading(at: at, elements: elements)
+        }
         let steps = root.required("steps") { value, path in
             reader.array(value, at: path) { value, path -> Entry? in
                 guard var object = reader.object(value, at: path) else { return nil }
@@ -457,7 +487,8 @@ extension TakeLog {
         return TakeLog(
             scene: scene, set: set, state: state, deviceType: deviceType, device: device, app: app, retake: retake,
             buttonHeist: buttonHeist, recordedAt: recordedAt, failure: failure, duration: duration, width: dimensions.0,
-            height: dimensions.1, frames: frames, dropped: dropped, previewAspect: previewAspect, screen: screen, launch: launch, clock: clock, steps: steps, shapes: shapes,
+            height: dimensions.1, frames: frames, dropped: dropped, previewAspect: previewAspect, screen: screen, launch: launch, clock: clock, beforeSteps: beforeSteps, steps: steps,
+            shapes: shapes,
             hitches: hitches,
         )
     }

@@ -121,6 +121,11 @@ struct SchemaTests {
         ("take", take(set("shapes", #"[{"at": 0, "size": [1200, 1718]}]"#)), false),
         ("take", take(set("hitches", #"[{"at": 1, "duration": -1}]"#)), false),
         ("take", take(set("pins", "true")), false),
+        ("take", take(set("beforeSteps", #"{"at": 0.9, "elements": [{"label": "Notes", "traits": ["header"], "frame": [20, 60, 200, 41]}]}"#)), true),
+        ("take", take(set("beforeSteps", #"{"at": 0.9, "elements": []}"#)), true),
+        ("take", take(set("beforeSteps", #"{"at": 0.9}"#)), false),
+        ("take", take(set("beforeSteps", #"{"elements": []}"#)), false),
+        ("take", take(set("beforeSteps", #"{"at": 0.9, "elements": [], "number": 1}"#)), false),
     ] + shapeAndDateCorpus
 
     /// Shapes and dates at the edge of what's taken: a shape is two positive decimals with digits

@@ -587,8 +587,9 @@ and a 6.9-inch iPhone, naming the takes on each.
 - **Show the device turning**, when a scene turns it; see [turns](#turns).
 
 Spotlights and blurs name an element the way steps do, by its accessibility label, and Retake finds
-its frame in the take's step log, which records what was on screen after each step. So the same
-spotlight lands on the same button on every device, with no rectangles to measure:
+its frame in the take's step log, which records what was on screen just before the first step, and
+after each step. So the same spotlight lands on the same button on every device, with no rectangles
+to measure:
 
 <!-- schema: edit clip -->
 ```json
@@ -598,12 +599,13 @@ spotlight lands on the same button on every device, with no rectangles to measur
 
 An element is matched as a step's target is, so where several share a label, its traits, identifier,
 value or hint pick one out, as they do for a step; `occurrence`, counted from 1, is the last resort
-there too. The frame used is the element's in the latest snapshot at or before the moment. Where
-only part of an element matters, its `part` names it, in points from the element's top-left corner
-or percentages of its frame, the whole frame on any side not given: `"part": { "x": "62%", "width":
-"31%" }` is the word "Alex" in a "Send to Alex" button. Something moving between snapshots, such as
-a keyboard sliding up, is better covered by a `rect`, in screen points or percentages of the screen
-as the device faced, given per device type where layouts differ.
+there too. The frame used is the element's in the latest snapshot at or before the moment, or before
+the first step has ended, in the one taken just before it. Where only part of an element matters,
+its `part` names it, in points from the element's top-left corner or percentages of its frame, the
+whole frame on any side not given: `"part": { "x": "62%", "width": "31%" }` is the word "Alex" in a
+"Send to Alex" button. Something moving between snapshots, such as a keyboard sliding up, is better
+covered by a `rect`, in screen points or percentages of the screen as the device faced, given per
+device type where layouts differ.
 
 ### Captions
 

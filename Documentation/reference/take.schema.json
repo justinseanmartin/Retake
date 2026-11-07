@@ -197,6 +197,25 @@
       },
       "additionalProperties": false
     },
+    "beforeSteps": {
+      "description": "What was on screen once the lead-in was over, read just before the first step: what an edit's spotlights and blurs find their elements in until the first step has ended. Absent for a take recorded before Retake read it, or when the screen couldn't be read.",
+      "type": "object",
+      "properties": {
+        "at": {
+          "description": "When the screen was read, in seconds into the movie, to the millisecond.",
+          "type": "number"
+        },
+        "elements": {
+          "description": "What was on screen, in the order VoiceOver reads it.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/screen-element"
+          }
+        }
+      },
+      "required": ["at", "elements"],
+      "additionalProperties": false
+    },
     "steps": {
       "description": "The steps played while recording, in order. Setup steps, played before recording starts, aren't logged.",
       "type": "array",

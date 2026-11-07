@@ -423,6 +423,10 @@ extension TakeLog {
                 .init("clock", .object("How the steps were placed on the movie's clock.", [
                     .init("deviceAhead", .number("Seconds the device's clock was ahead of the Mac's, measured once at the start of the take, through which the device's own times for each step are placed. Absent when it couldn't be measured, and every step is timed by the Mac.")),
                 ])),
+                .init("beforeSteps", .object("What was on screen once the lead-in was over, read just before the first step: what an edit's spotlights and blurs find their elements in until the first step has ended. Absent for a take recorded before Retake read it, or when the screen couldn't be read.", [
+                    .init("at", .number("When the screen was read, in \(seconds).")),
+                    .init("elements", .array("What was on screen, in the order VoiceOver reads it.", of: .ref("screen-element"))),
+                ], required: ["at", "elements"])),
                 .init("steps", .array("The steps played while recording, in order. Setup steps, played before recording starts, aren't logged.", of: .ref("step"))),
                 .init("shapes", .array("The movie's first shape, and each change after it, as the device turned.", of: .object(nil, [
                     .init("at", .number("When the frames took this shape, in \(seconds).", atLeast: 0)),

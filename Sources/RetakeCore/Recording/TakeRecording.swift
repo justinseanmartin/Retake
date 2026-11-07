@@ -89,6 +89,7 @@ public enum TakeRecording {
             report(event)
         }
         player.turning = { recorder.turning(to: TakeWriter.Facing($0)) }
+        player.readBeforeSteps = { elements, at in collected.beforeSteps = (elements, at) }
 
         var failure: RetakeError?
         do throws(RetakeError) {
@@ -152,6 +153,7 @@ public enum TakeRecording {
         log.launch = collected.launch
         log.clock = TakeLog.Clock(deviceAhead: collected.clock?.deviceAhead)
         if let clock = collected.clock {
+            log.beforeSteps = collected.beforeSteps.map { TakeLog.Reading(at: clock.seconds($0.at), elements: $0.elements) }
             log.steps = collected.steps.map { TakeLog.entry($0.played, $0.timing, on: clock) }
             log.hitches = hitches.map { hitches in
                 hitches.map { TakeLog.Hitch(at: clock.seconds($0.at.addingTimeInterval(-(clock.deviceAhead ?? 0))), duration: $0.duration) }
@@ -182,6 +184,8 @@ public enum TakeRecording {
         var startedAt: Date?
         var clock: MovieClock?
         var launch: TakeLog.Launch?
+        /// What was on screen just before the first step, and when, on the Mac's clock.
+        var beforeSteps: (elements: [ScreenElement], at: Date)?
         var summary: TakeWriter.Summary?
 
         func add(_ played: Player.Played, _ timing: Player.Timing) {

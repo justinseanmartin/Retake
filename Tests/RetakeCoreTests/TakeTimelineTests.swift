@@ -110,6 +110,25 @@ struct TakeTimelineTests {
         }
     }
 
+    @Test func anElementAtTheFirstStepsStartIsFoundInTheReadingBeforeTheStepsAndALogWithoutOneFailsAsBefore() throws {
+        let compose = ScreenElement(label: "Compose", frame: .init(x: 90, y: 20, width: 44, height: 44))
+        let start = try Self.timeline().time(of: .step(.init(step: .number(1), offset: nil, fraction: nil, edge: nil)))
+        #expect(throws: TakeTimeline.Unresolved("the take has no reading of the screen at or before 1 s")) {
+            try Self.timeline().element(ElementTarget(label: "Compose"), at: start)
+        }
+        var log = Self.timeline().log
+        log.beforeSteps = TakeLog.Reading(at: 0.8, elements: [compose])
+        let timeline = TakeTimeline(try #require(TakeLog.read(JSONWriter.write(log.json), with: JSONReader(file: "a.json"))))
+        #expect(try timeline.element(ElementTarget(label: "Compose"), at: start) == compose)
+        #expect(try timeline.element(ElementTarget(label: "Compose"), at: 0) == compose, "the lead-in shows the screen read at its end")
+        #expect(throws: TakeTimeline.Unresolved(#""Share" isn't on screen before the first step, at 0.8 s"#)) {
+            try timeline.element(ElementTarget(label: "Share"), at: 2.9)
+        }
+        #expect(throws: TakeTimeline.Unresolved(#""Compose" isn't on screen after step 2, at 3 s"#), "a step's reading takes over once it has ended") {
+            try timeline.element(ElementTarget(label: "Compose"), at: 3)
+        }
+    }
+
     @Test func severalMatchingAreNamedByOccurrenceAndOneOffScreenIsntFound() throws {
         let second = ScreenElement(label: "Share", frame: .init(x: 10, y: 90, width: 44, height: 44))
         let hidden = ScreenElement(label: "Hidden")

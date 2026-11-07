@@ -547,7 +547,8 @@ For each scene, in order:
    reports an [incompatible](#compatibility-with-an-embedded-app) contract or Button Heist version, the scene fails (3) before its first
    step, saying to `retake embed` or `retake install` the app again.
 3. Plays the setup steps, then records the lead-in, the steps with their holds, and the tail. After
-   each step, and when each `waitFor` is satisfied, records the elements on screen in the step log.
+   each step, and when each `waitFor` is satisfied, records the elements on screen in the step log,
+   and once before the first step, when the lead-in is over.
 4. Writes the movie and its step log as `output/takes/<type>/<scene>.recording.mov` and `.json`,
    then, when every step ran, renames them into place as the scene's take, `<scene>.mov` and
    `<scene>.json`. The take it replaces becomes `<scene>.previous.*`, deleting the previous one

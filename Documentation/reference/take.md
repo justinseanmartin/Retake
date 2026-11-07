@@ -31,6 +31,7 @@ Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.
 | `dropped` | integer ≥ 0 | required | Frames the encoder wasn't ready for, which a hitch in the take shows. |
 | `launch` | [object](#launch) |  | For a take recorded from before the app launched, as its scene's recordsLaunch asks: when it launched, for an edit to cut in on, each in seconds into the movie, to the millisecond. |
 | `clock` | [object](#clock) | required | How the steps were placed on the movie's clock. |
+| `beforeSteps` | [object](#beforesteps) |  | What was on screen once the lead-in was over, read just before the first step: what an edit's spotlights and blurs find their elements in until the first step has ended. Absent for a take recorded before Retake read it, or when the screen couldn't be read. |
 | `steps` | list of [step](#step) | required | The steps played while recording, in order. Setup steps, played before recording starts, aren't logged. |
 | `shapes` | list of [object](#shapes) | required | The movie's first shape, and each change after it, as the device turned. |
 | `hitches` | list of [object](#hitches) |  | Each time the app's main thread missed a frame while it was recorded. Absent when Retake's support library didn't watch. |
@@ -81,6 +82,15 @@ How the steps were placed on the movie's clock.
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `deviceAhead` | number |  | Seconds the device's clock was ahead of the Mac's, measured once at the start of the take, through which the device's own times for each step are placed. Absent when it couldn't be measured, and every step is timed by the Mac. |
+
+### `beforeSteps`
+
+What was on screen once the lead-in was over, read just before the first step: what an edit's spotlights and blurs find their elements in until the first step has ended. Absent for a take recorded before Retake read it, or when the screen couldn't be read.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `at` | number | required | When the screen was read, in seconds into the movie, to the millisecond. |
+| `elements` | list of [screen-element](#screen-element) | required | What was on screen, in the order VoiceOver reads it. |
 
 ### `shapes`
 
