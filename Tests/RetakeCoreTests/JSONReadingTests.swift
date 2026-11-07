@@ -206,3 +206,8 @@ struct SchemaReferenceTests {
         #expect(SchemaReference(url: "https://justinseanmartin.github.io/Retake/schemas/0.0.1/") == nil)
     }
 }
+
+/// An object's keys, in order; none for anything else.
+func keys(_ value: JSONValue?) -> [String] {
+    if case .object(let object)? = value { object.entries.map(\.key) } else { [] }
+}

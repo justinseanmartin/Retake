@@ -352,14 +352,14 @@ struct Takes: AsyncParsableCommand {
             }
         }
         if output.json {
-            print(JSONWriter.write(.array(takes.map(TakesOutput.json))), terminator: "")
+            print(JSONWriter.write(.array(takes.map(\.json))), terminator: "")
         } else {
             TakesOutput.text(takes)
         }
     }
 }
 
-/// What `takes` prints: for people, or as JSON.
+/// What `takes` prints for people; `TakeStore.Take.json` is what it prints as JSON.
 enum TakesOutput {
     static func text(_ takes: [TakeStore.Take]) {
         guard !takes.isEmpty else { return print("No takes.") }
@@ -384,33 +384,6 @@ enum TakesOutput {
             if !take.usedBy.isEmpty { parts.append("used by \(take.usedBy.joined(separator: ", "))") }
             print("  \(kind)  \(parts.joined(separator: "  "))")
         }
-    }
-
-    static func json(_ take: TakeStore.Take) -> JSONValue {
-        var fields: [JSONObject.Entry] = [
-            .init(key: "type", value: .string(take.type.rawValue)),
-            .init(key: "scene", value: .string(take.scene)),
-            .init(key: "kind", value: .string(take.kind.rawValue)),
-        ]
-        if let log = take.recorded {
-            fields += [
-                .init(key: "recordedAt", value: .string(ISO8601DateFormatter().string(from: log.recordedAt))),
-                .init(key: "app", value: TakeLog.object([("version", log.app.version.map(JSONValue.string)), ("build", log.app.build.map(JSONValue.string))])),
-                .init(key: "device", value: TakeLog.object([
-                    ("model", .string(log.device.model)), ("marketingName", log.device.marketingName.map(JSONValue.string)), ("os", .string(log.device.os)),
-                ])),
-                .init(key: "duration", value: .number(log.duration)),
-            ]
-            fields += [
-                .init(key: "frames", value: .number(Double(log.frames))),
-                .init(key: "dropped", value: .number(Double(log.dropped))),
-            ]
-        }
-        fields.append(.init(key: "failed", value: .bool(take.failed)))
-        if let failure = take.recorded?.failure { fields.append(.init(key: "failure", value: .string(failure))) }
-        if let problem = take.problem { fields.append(.init(key: "problem", value: .string(problem))) }
-        fields.append(.init(key: "usedBy", value: .array(take.usedBy.map(JSONValue.string))))
-        return .object(JSONObject(fields))
     }
 }
 

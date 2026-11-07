@@ -588,13 +588,39 @@ retake takes --restore <scene> [--device <device> | --type <type>]
 
 Lists takes, of one scene or all: each scene's take, its previous take and its latest failure, each
 with when it was recorded, the app's version and build, the device and its model, duration, frames
-dropped, why a failure failed, and the edits cut from the take. With `--json`, each has a `kind`:
-`take`, `previous` or `failed`. A
-take whose [step log](reference/take.md) can't be read is listed as failed, saying why: one recorded
-by an earlier Retake that didn't log its screen, frames and dropped frames is to be recorded again,
-and one recorded by a newer Retake, in a later step log `format`, needs Retake updated.
+dropped, why a failure failed, and the edits cut from the take. A take whose [step
+log](reference/take.md) can't be read is listed as failed, saying why: one recorded by an earlier
+Retake that didn't log its screen, frames and dropped frames is to be recorded again, and one
+recorded by a newer Retake, in a later step log `format`, needs Retake updated.
 
 Without `--device` or `--type`, lists takes of both device types.
+
+With `--json`, prints a list of takes, by device type, then scene, then kind. Each gives its
+`deviceType`, `scene` and `kind` (`take`, `previous` or `failed`); where its step log can be read,
+`recordedAt`, `app` (`version` and `build`), `device` (`model`, `marketingName` and `os`),
+`duration` in seconds, `frames` and `dropped`, named as the step log names them; then `successful`,
+whether an edit can be cut from it, `failure`, why it failed, for one that did, `problem`, why its
+movie or step log can't be used, for one that can't, and `usedBy`, the edits cut from it, which
+only a scene's take has:
+
+<!-- schema: none -->
+```json
+[
+  {
+    "deviceType": "ipad", "scene": "create-note", "kind": "take", "recordedAt": "2026-11-06T09:30:00Z",
+    "app": { "version": "1.9.0", "build": "412" },
+    "device": { "model": "iPad13,4", "marketingName": "iPad Pro (11-inch) (3rd generation)", "os": "26.6.2 (23G90)" },
+    "duration": 12.346, "frames": 740, "dropped": 0, "successful": true, "usedBy": ["video1"]
+  },
+  {
+    "deviceType": "ipad", "scene": "create-note", "kind": "failed", "recordedAt": "2026-11-06T09:41:12Z",
+    "app": { "version": "1.9.0", "build": "412" },
+    "device": { "model": "iPad13,4", "marketingName": "iPad Pro (11-inch) (3rd generation)", "os": "26.6.2 (23G90)" },
+    "duration": 4.211, "frames": 252, "dropped": 0, "successful": false,
+    "failure": "create-note: step 2 of 3, tap \"Send\", didn't run: \"Send\" isn't on screen", "usedBy": []
+  }
+]
+```
 
 **`--restore <scene>`** puts back the scene's previous take, in place of the take that replaced it,
 which becomes the previous take in turn, so restoring again undoes it. The next cut uses the take
@@ -702,8 +728,44 @@ Summarizes the project, per device type:
   has been recorded again or its previous take put back. A video cut by an earlier Retake, whose
   record names takes by number, is out of date, since its takes can't be told.
 
-With `--json`, a scene's `take`, `previous` and `failed` are each null when it has none, and an
-edit's `uses` give each scene's take's `recordedAt`.
+With `--json`, prints a list of device types, each with its `deviceType`, `scenes`, `edits` and
+`videos`:
+
+- A scene gives its `scene`, and its `take`, `previous` and `failed`, each null when it has none, or
+  its `recordedAt`, `successful`, whether an edit can be cut from it, and as `takes --json` gives
+  them, `failure` and `problem`.
+- An edit gives its `edit` and `uses`, each scene it's cut from as its `scene` and the `recordedAt`
+  of its take, left out when the scene has no successful take, and `problem` when the edit can't be
+  read, which is listed for each device type, since it can't say which it's for.
+- A video gives its `edit`, its `file`'s name, whether it's a `draft`, when it was `renderedAt`,
+  whether it's `upToDate`, the `changes` that make it out of date, and `mixed`, what its takes span
+  more than one of, as `cut` warns.
+
+<!-- schema: none -->
+```json
+[
+  {
+    "deviceType": "ipad",
+    "scenes": [
+      {
+        "scene": "create-note",
+        "take": { "recordedAt": "2026-11-06T09:30:00Z", "successful": true },
+        "previous": null,
+        "failed": { "recordedAt": "2026-11-06T09:41:12Z", "successful": false, "failure": "create-note: step 2 of 3, tap \"Send\", didn't run: \"Send\" isn't on screen" }
+      }
+    ],
+    "edits": [
+      { "edit": "video1", "uses": [{ "scene": "create-note", "recordedAt": "2026-11-06T09:30:00Z" }, { "scene": "share-note" }] }
+    ],
+    "videos": [
+      {
+        "edit": "video1", "file": "video1-ipad.mp4", "draft": false, "renderedAt": "2026-11-06T10:02:45Z",
+        "upToDate": false, "changes": ["share-note has no successful take now"], "mixed": []
+      }
+    ]
+  }
+]
+```
 
 Reports; never fails on what it finds, except an [earlier Retake's](#takes-from-an-earlier-retake)
 numbered takes, which it refuses.
@@ -715,10 +777,34 @@ retake info <movie>... [--json]
 ```
 
 Prints the [metadata](#movie-metadata) Retake wrote into each movie: a take, a master, or an `.mp4`.
-A video lists each take it was cut from by its scene and when it was recorded; with `--json`, its
-`takes` give each one's `scene`, `deviceType` and `recordedAt`. Works on any of
-them wherever they've been moved to, outside a project as well as in one. Fails (1) for a movie
-Retake didn't write.
+A video lists each take it was cut from by its scene and when it was recorded. Works on any of them
+wherever they've been moved to, outside a project as well as in one. Fails (1) for a movie Retake
+didn't write.
+
+With `--json`, prints a list with an object for each movie that could be read, giving its `movie`,
+as it was named, and its `take` or its `video`. A take gives [its fields](#a-takes-fields) named
+as its step log names them: `scene`, `set`, `state`, `deviceType`, `device` (`model`,
+`marketingName` and `os`), `app` (`bundleID`, `version` and `build`), `retake`, `buttonHeist`
+(`version`, and `commit` for a Retake built from a local clone) and `recordedAt`. A video gives
+its record as the `.mp4`'s description holds it, whose `takes` give each one's `scene`,
+`deviceType` and `recordedAt`:
+
+<!-- schema: none -->
+```json
+[
+  {
+    "movie": "output/takes/ipad/create-note.mov",
+    "take": {
+      "scene": "create-note", "set": "returning-user", "state": "cloned", "deviceType": "ipad",
+      "device": { "model": "iPad13,4", "marketingName": "iPad Pro (11-inch) (3rd generation)", "os": "26.6.2 (23G90)" },
+      "app": { "bundleID": "com.example.notes", "version": "1.9.0", "build": "412" },
+      "retake": "0.1.0", "buttonHeist": { "version": "0.7.1" }, "recordedAt": "2026-11-06T09:30:00Z"
+    }
+  }
+]
+```
+
+A video's `video` is the record shown under [a video's fields](#a-videos-fields).
 
 ### `retake check`
 

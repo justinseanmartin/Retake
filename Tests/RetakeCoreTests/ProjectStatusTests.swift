@@ -38,6 +38,39 @@ struct ProjectStatusTests {
         #expect(uses.map(\.recordedAt) == [recorded, nil], "a failure isn't cut from")
     }
 
+    @Test func statusJSONNamesScenesEditsAndVideosAsLogsAndRecordsDo() async throws {
+        defer { try? FileManager.default.removeItem(at: tests.root) }
+        let recorded = Date(timeIntervalSince1970: 1_800_000_000)
+        try tests.record("walk", recordedAt: recorded)
+        try tests.record("walk", failure: "step 2 didn't run")
+        try tests.edit(clips: #"{"take": "walk", "from": {"step": "a"}, "to": {"step": "end"}}, {"take": "other", "from": {"step": "a"}, "to": {"step": "end"}}"#)
+        try tests.write("edits/broken.json", "{")
+        try tests.write("output/cuts/ipad/video/video-ipad.mp4", "")
+        guard case .array(let sections) = await status(cutFrom: [("walk", recorded)]).json, sections.count == 2 else {
+            Issue.record("not both device types, as an edit that can't be read may be for either")
+            return
+        }
+        #expect(sections.map { $0[path: "deviceType"] } == [.string("iphone"), .string("ipad")])
+        let ipad = sections[1]
+        #expect(keys(ipad) == ["deviceType", "scenes", "edits", "videos"])
+        guard case .array(let scenes)? = ipad[path: "scenes"], case .array(let edits)? = ipad[path: "edits"],
+              case .array(let videos)? = ipad[path: "videos"], scenes.count == 2, edits.count == 2, videos.count == 1 else {
+            Issue.record("scenes, edits or videos missing")
+            return
+        }
+        let walk = scenes[1]
+        #expect(keys(walk) == ["scene", "take", "previous", "failed"] && walk[path: "scene"] == .string("walk"))
+        #expect(keys(walk[path: "take"]) == ["recordedAt", "successful"] && walk[path: "take", "recordedAt"] == .string("2027-01-15T08:00:00Z"))
+        #expect(walk[path: "previous"] == .null && scenes[0][path: "take"] == .null)
+        #expect(keys(walk[path: "failed"]) == ["recordedAt", "successful", "failure"] && walk[path: "failed", "successful"] == .bool(false))
+        #expect(keys(edits[0]) == ["edit", "uses", "problem"] && edits[0][path: "edit"] == .string("broken"))
+        #expect(keys(edits[1]) == ["edit", "uses"])
+        guard case .array(let uses)? = edits[1][path: "uses"] else { Issue.record("no uses"); return }
+        #expect(uses.map(keys) == [["scene", "recordedAt"], ["scene"]], "no recordedAt for a scene with no successful take")
+        #expect(keys(videos[0]) == ["edit", "file", "draft", "renderedAt", "upToDate", "changes", "mixed"])
+        #expect(videos[0][path: "file"] == .string("video-ipad.mp4") && videos[0][path: "upToDate"] == .bool(true))
+    }
+
     @Test func aVideoIsOutOfDateWhenItsEditChangesOrItsTakeIsntTheOneItWasCutFrom() async throws {
         defer { try? FileManager.default.removeItem(at: tests.root) }
         let first = Date(timeIntervalSince1970: 1_800_000_000), second = first.addingTimeInterval(60)

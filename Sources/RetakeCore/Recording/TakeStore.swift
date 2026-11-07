@@ -326,3 +326,32 @@ public enum TakeStore {
         }
     }
 }
+
+extension TakeStore.Take {
+    /// As `takes --json` prints it, named as its step log names what it gives. See
+    /// Documentation/cli.md, "retake takes".
+    public var json: JSONValue {
+        var fields: [JSONObject.Entry] = [
+            .init(key: "deviceType", value: .string(type.rawValue)),
+            .init(key: "scene", value: .string(scene)),
+            .init(key: "kind", value: .string(kind.rawValue)),
+        ]
+        if let log = recorded {
+            fields += [
+                .init(key: "recordedAt", value: .string(ISO8601DateFormatter().string(from: log.recordedAt))),
+                .init(key: "app", value: TakeLog.object([("version", log.app.version.map(JSONValue.string)), ("build", log.app.build.map(JSONValue.string))])),
+                .init(key: "device", value: TakeLog.object([
+                    ("model", .string(log.device.model)), ("marketingName", log.device.marketingName.map(JSONValue.string)), ("os", .string(log.device.os)),
+                ])),
+                .init(key: "duration", value: .number(log.duration)),
+                .init(key: "frames", value: .number(Double(log.frames))),
+                .init(key: "dropped", value: .number(Double(log.dropped))),
+            ]
+        }
+        fields.append(.init(key: "successful", value: .bool(successful)))
+        if let failure = recorded?.failure { fields.append(.init(key: "failure", value: .string(failure))) }
+        if let problem { fields.append(.init(key: "problem", value: .string(problem))) }
+        fields.append(.init(key: "usedBy", value: .array(usedBy.map(JSONValue.string))))
+        return .object(JSONObject(fields))
+    }
+}

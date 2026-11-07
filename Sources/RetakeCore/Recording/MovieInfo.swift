@@ -19,6 +19,12 @@ public enum MovieInfo: Equatable, Sendable {
         }
     }
 
+    /// As `info --json` lists it: the movie as it was named, and its take's fields or its video's
+    /// record. See Documentation/cli.md, "retake info".
+    public func json(movie: String) -> JSONValue {
+        .object(JSONObject([.init(key: "movie", value: .string(movie)), .init(key: isTake ? "take" : "video", value: json)]))
+    }
+
     /// What Retake wrote into `movie`. Fails (1) for a movie that can't be read, or that Retake
     /// didn't write.
     public static func read(_ movie: URL) async throws(RetakeError) -> MovieInfo {
@@ -55,22 +61,23 @@ public enum MovieInfo: Equatable, Sendable {
         return nil
     }
 
-    /// A take's fields as one object, its keys as a take's step log names them.
+    /// A take's fields as one object, its keys as a take's step log names them, in its order.
     static func take(_ fields: [String: String]) -> JSONValue {
         func string(_ key: String) -> JSONValue? { fields[key].map(JSONValue.string) }
         return TakeLog.object([
-            ("retake", TakeLog.object([("version", string("retake.version"))])),
             ("scene", string("retake.scene")),
-            ("deviceType", string("retake.device.type")),
             ("set", string("retake.set")),
             ("state", string("retake.state")),
-            ("recordedAt", string("com.apple.quicktime.creationdate")),
-            ("bundleID", string("retake.app.bundle-id")),
-            ("app", TakeLog.object([("version", string("retake.app.version")), ("build", string("retake.app.build"))])),
+            ("deviceType", string("retake.device.type")),
             ("device", TakeLog.object([
                 ("model", string("retake.device.model")), ("marketingName", string("com.apple.quicktime.model")), ("os", string("retake.device.os")),
             ])),
+            ("app", TakeLog.object([
+                ("bundleID", string("retake.app.bundle-id")), ("version", string("retake.app.version")), ("build", string("retake.app.build")),
+            ])),
+            ("retake", string("retake.version")),
             ("buttonHeist", TakeLog.object([("version", string("retake.buttonheist.version")), ("commit", string("retake.buttonheist.commit"))])),
+            ("recordedAt", string("com.apple.quicktime.creationdate")),
         ])
     }
 
@@ -130,10 +137,10 @@ public enum MovieInfo: Equatable, Sendable {
             var lines = ["Take of \(string("scene") ?? "?"), for \(string("deviceType") ?? "?")"]
             if let recorded = string("recordedAt") { lines.append(row("Recorded", recorded)) }
             lines.append(row("Set", "\(string("set") ?? "?") (\(string("state") ?? "?"))"))
-            lines.append(row("App", [string("bundleID"), app(record[path: "app"])].compactMap(\.self).filter { !$0.isEmpty }.joined(separator: " ")))
+            lines.append(row("App", [string("app", "bundleID"), app(record[path: "app"])].compactMap(\.self).filter { !$0.isEmpty }.joined(separator: " ")))
             lines.append(row("Device", device(record[path: "device"])))
             lines.append(row("Button Heist", buttonHeist(record[path: "buttonHeist"])))
-            lines.append(row("Retake", string("retake", "version") ?? "?"))
+            lines.append(row("Retake", string("retake") ?? "?"))
             return lines
         case .video:
             var lines = ["\(string("edit") ?? "?"), for \(string("deviceType") ?? "?")"]

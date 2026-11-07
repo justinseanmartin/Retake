@@ -23,7 +23,7 @@ struct MovieInfoTests {
         #expect(info.isTake)
         #expect(info.json[path: "scene"] == .string("create-note") && info.json[path: "take"] == nil)
         #expect(info.json[path: "device", "marketingName"] == .string("iPad Pro (11-inch) (3rd generation)"))
-        #expect(info.json[path: "bundleID"] == .string("com.example.notes"))
+        #expect(info.json[path: "app", "bundleID"] == .string("com.example.notes"))
         #expect(info.lines == [
             "Take of create-note, for ipad",
             "  Recorded     2027-01-15T08:00:00Z",
@@ -33,6 +33,24 @@ struct MovieInfoTests {
             "  Button Heist 0.7.1",
             "  Retake       0.0.1",
         ])
+    }
+
+    @Test func infoJSONGivesATakeAsItsStepLogDoesAndAVideoAsItsRecord() throws {
+        var log = TakeLogReadingTests.log()
+        log.buttonHeist.commit = "d53fb59"
+        let take = try #require(MovieInfo.info(fields: fields(MovieMetadata.take(log)), description: nil)).json(movie: "takes/ipad/create-note.mov")
+        #expect(keys(take) == ["movie", "take"] && take[path: "movie"] == .string("takes/ipad/create-note.mov"))
+        #expect(keys(take[path: "take"]) == ["scene", "set", "state", "deviceType", "device", "app", "retake", "buttonHeist", "recordedAt"])
+        for key in ["device", "app", "buttonHeist"] {
+            #expect(keys(take[path: "take", key]) == keys(log.json[path: key]), "\(key) as the step log gives it")
+        }
+        #expect(take[path: "take", "retake"] == log.json[path: "retake"])
+
+        let video = MovieInfo.video(video(builds: ["7", "8"]).json).json(movie: "video1-ipad.mp4")
+        #expect(keys(video) == ["movie", "video"])
+        #expect(keys(video[path: "video"]) == ["retake", "edit", "deviceType", "bundleID", "appVersions", "devices", "buttonHeistVersions", "takes"])
+        guard case .array(let takes)? = video[path: "video", "takes"] else { Issue.record("no takes"); return }
+        #expect(keys(takes[0]) == ["scene", "deviceType", "recordedAt", "retake", "app", "device", "buttonHeist"])
     }
 
     @Test func aMastersFieldsReadBackAsTheMP4sDescriptionHoldsThem() throws {

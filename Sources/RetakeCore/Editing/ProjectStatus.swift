@@ -160,3 +160,53 @@ public struct ProjectStatus: Sendable {
         return video
     }
 }
+
+extension ProjectStatus {
+    /// As `status --json` prints it: a list of device types, each with its scenes, edits and videos,
+    /// named as step logs and video records name them. See Documentation/cli.md, "retake status".
+    public var json: JSONValue {
+        let iso = ISO8601DateFormatter()
+        func date(_ date: Date?) -> JSONValue? { date.map { .string(iso.string(from: $0)) } }
+        func take(_ take: TakeStore.Take?) -> JSONValue {
+            take.map { take in
+                TakeLog.object([
+                    ("recordedAt", date(take.recorded?.recordedAt)),
+                    ("successful", .bool(take.successful)),
+                    ("failure", take.recorded?.failure.map(JSONValue.string)),
+                    ("problem", take.problem.map(JSONValue.string)),
+                ])
+            } ?? .null
+        }
+        return .array(sections.map { section in
+            let scenes: [JSONValue] = section.scenes.map { scene in
+                TakeLog.object([
+                    ("scene", .string(scene.name)),
+                    ("take", take(scene.take)),
+                    ("previous", take(scene.previous)),
+                    ("failed", take(scene.failed)),
+                ])
+            }
+            let edits: [JSONValue] = section.edits.map { edit in
+                TakeLog.object([
+                    ("edit", .string(edit.name)),
+                    ("uses", .array(edit.uses.map { use in TakeLog.object([("scene", .string(use.scene)), ("recordedAt", date(use.recordedAt))]) })),
+                    ("problem", edit.problem.map(JSONValue.string)),
+                ])
+            }
+            let videos: [JSONValue] = section.videos.map { video in
+                TakeLog.object([
+                    ("edit", .string(video.edit)),
+                    ("file", .string(video.file.lastPathComponent)),
+                    ("draft", .bool(video.draft)),
+                    ("renderedAt", date(video.renderedAt)),
+                    ("upToDate", .bool(video.changes.isEmpty)),
+                    ("changes", .array(video.changes.map(JSONValue.string))),
+                    ("mixed", .array(video.mixed.map(JSONValue.string))),
+                ])
+            }
+            return TakeLog.object([
+                ("deviceType", .string(section.type.rawValue)), ("scenes", .array(scenes)), ("edits", .array(edits)), ("videos", .array(videos)),
+            ])
+        })
+    }
+}

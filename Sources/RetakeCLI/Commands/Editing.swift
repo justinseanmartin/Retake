@@ -109,14 +109,14 @@ struct Status: AsyncParsableCommand {
         try TakeStore.refuseOldLayout(for: DeviceType.allCases, in: located)
         let status = await ProjectStatus.of(located)
         if output.json {
-            print(JSONWriter.write(.array(status.sections.map(StatusOutput.json))), terminator: "")
+            print(JSONWriter.write(status.json), terminator: "")
         } else {
             StatusOutput.text(status)
         }
     }
 }
 
-/// What `status` prints: for people, or as JSON.
+/// What `status` prints for people; `ProjectStatus.json` is what it prints as JSON.
 enum StatusOutput {
     static func date(_ date: Date) -> String {
         date.formatted(.dateTime.year().month(.twoDigits).day(.twoDigits).hour().minute())
@@ -171,49 +171,6 @@ enum StatusOutput {
             }
         }
     }
-
-    static func json(_ section: ProjectStatus.Section) -> JSONValue {
-        let iso = ISO8601DateFormatter()
-        func take(_ take: TakeStore.Take?) -> JSONValue {
-            take.map { take in
-                TakeLog.object([
-                    ("recordedAt", take.recorded.map { .string(iso.string(from: $0.recordedAt)) }),
-                    ("failed", .bool(take.failed)),
-                    ("failure", take.recorded?.failure.map(JSONValue.string)),
-                    ("problem", take.problem.map(JSONValue.string)),
-                ])
-            } ?? .null
-        }
-        let scenes: [JSONValue] = section.scenes.map { scene in
-            TakeLog.object([
-                ("name", .string(scene.name)),
-                ("take", take(scene.take)),
-                ("previous", take(scene.previous)),
-                ("failed", take(scene.failed)),
-            ])
-        }
-        let edits: [JSONValue] = section.edits.map { edit in
-            TakeLog.object([
-                ("name", .string(edit.name)),
-                ("uses", .array(edit.uses.map { use in
-                    TakeLog.object([("scene", .string(use.scene)), ("recordedAt", use.recordedAt.map { .string(iso.string(from: $0)) })])
-                })),
-                ("problem", edit.problem.map(JSONValue.string)),
-            ])
-        }
-        let videos: [JSONValue] = section.videos.map { video in
-            TakeLog.object([
-                ("edit", .string(video.edit)),
-                ("file", .string(video.file.lastPathComponent)),
-                ("draft", .bool(video.draft)),
-                ("renderedAt", video.renderedAt.map { .string(iso.string(from: $0)) }),
-                ("upToDate", .bool(video.changes.isEmpty)),
-                ("changes", .array(video.changes.map(JSONValue.string))),
-                ("mixed", .array(video.mixed.map(JSONValue.string))),
-            ])
-        }
-        return TakeLog.object([("type", .string(section.type.rawValue)), ("scenes", .array(scenes)), ("edits", .array(edits)), ("videos", .array(videos))])
-    }
 }
 
 struct Info: AsyncParsableCommand {
@@ -247,10 +204,7 @@ struct Info: AsyncParsableCommand {
             do {
                 let info = try await MovieInfo.read(movie)
                 if output.json {
-                    records.append(.object(JSONObject([
-                        .init(key: "movie", value: .string(path)),
-                        .init(key: info.isTake ? "take" : "video", value: info.json),
-                    ])))
+                    records.append(info.json(movie: path))
                 } else {
                     if index > 0 { print() }
                     print("\(path): " + info.lines.joined(separator: "\n"))

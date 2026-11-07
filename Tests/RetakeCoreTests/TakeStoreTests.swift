@@ -59,6 +59,20 @@ struct TakeStoreTests {
         try TakeStore.keepRecording(of: scene, in: project.takes(for: .ipad), failed: failure != nil)
     }
 
+    @Test func takesJSONNamesEachTakeAsItsStepLogDoes() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let takes = Dictionary(uniqueKeysWithValues: TakeStore.takes(for: [.ipad], in: project).map { ($0.name, $0.json) })
+        let recorded = ["deviceType", "scene", "kind", "recordedAt", "app", "device", "duration", "frames", "dropped"]
+        #expect(keys(takes["a"]) == recorded + ["successful", "usedBy"])
+        #expect(takes["a"]?[path: "usedBy"] == .array([.string("video1")]) && takes["a"]?[path: "successful"] == .bool(true))
+        #expect(keys(takes["a"]?[path: "app"]) == ["version", "build"] && keys(takes["a"]?[path: "device"]) == ["model", "marketingName", "os"])
+        #expect(keys(takes["a (previous)"]) == recorded + ["successful", "usedBy"] && takes["a (previous)"]?[path: "kind"] == .string("previous"))
+        #expect(keys(takes["b (failed)"]) == recorded + ["successful", "failure", "usedBy"])
+        #expect(takes["b (failed)"]?[path: "successful"] == .bool(false) && takes["b (failed)"]?[path: "failure"] == .string("step 2 didn't run"))
+        #expect(keys(takes["c"]) == recorded + ["successful", "problem", "usedBy"], "a take that lost its movie")
+        #expect(takes["c"]?[path: "successful"] == .bool(false))
+    }
+
     @Test func eachScenesTakePreviousAndFailureAreListedWithTheEditsCutFromTheTake() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try record("a", recording: true, at: 3)
