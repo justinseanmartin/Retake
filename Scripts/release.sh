@@ -8,9 +8,33 @@
 # Heist. With RETAKE_RELEASE_IDENTITY naming a Developer ID Application identity, it signs retake
 # with the hardened runtime; with RETAKE_NOTARY_PROFILE naming a `notarytool store-credentials`
 # profile as well, it has it notarized. Without them, the build is for trying the layout locally.
+#
+# Settings that are a person's own, such as their notary profile's name, go in
+# Scripts/release.local.env, which git ignores (see Scripts/release.local.env.example); a variable
+# already set in the environment wins over the file. With no RETAKE_RELEASE_IDENTITY, the keychain's
+# one Developer ID Application identity is used, if it has exactly one.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if [[ -f "$ROOT/Scripts/release.local.env" ]]; then
+    GIVEN_IDENTITY="${RETAKE_RELEASE_IDENTITY:-}"
+    GIVEN_PROFILE="${RETAKE_NOTARY_PROFILE:-}"
+    GIVEN_SCRATCH="${RETAKE_RELEASE_SCRATCH:-}"
+    # shellcheck source=/dev/null
+    source "$ROOT/Scripts/release.local.env"
+    RETAKE_RELEASE_IDENTITY="${GIVEN_IDENTITY:-${RETAKE_RELEASE_IDENTITY:-}}"
+    RETAKE_NOTARY_PROFILE="${GIVEN_PROFILE:-${RETAKE_NOTARY_PROFILE:-}}"
+    RETAKE_RELEASE_SCRATCH="${GIVEN_SCRATCH:-${RETAKE_RELEASE_SCRATCH:-}}"
+fi
+if [[ -z "${RETAKE_RELEASE_IDENTITY:-}" ]]; then
+    IDENTITIES="$(security find-identity -v -p codesigning | sed -n 's/^ *[0-9]*) \([0-9A-F]\{40\}\) "\(Developer ID Application: .*\)"$/\1 \2/p')"
+    case "$(printf '%s' "$IDENTITIES" | grep -c . || true)" in
+        0) ;;
+        1) RETAKE_RELEASE_IDENTITY="${IDENTITIES%% *}"; echo "Using ${IDENTITIES#* }" ;;
+        *) echo "error: the keychain has several Developer ID Application identities; name one in RETAKE_RELEASE_IDENTITY:" >&2
+           printf '%s\n' "$IDENTITIES" >&2; exit 2 ;;
+    esac
+fi
 [[ $# -eq 1 ]] || { echo "usage: Scripts/release.sh <output-dir>" >&2; exit 2; }
 OUTPUT="$(mkdir -p "$1" && cd "$1" && pwd)"
 SCRATCH="${RETAKE_RELEASE_SCRATCH:-$OUTPUT/.build}"
