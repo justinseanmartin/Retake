@@ -848,6 +848,13 @@ A pre-commit hook refuses a commit whose staged schemas differ from what the typ
 on once per clone with `git config core.hooksPath Scripts/git-hooks`. It builds `retake` into
 `RETAKE_SCRATCH_PATH`, or `.build` unless that's set.
 
+Editors fetch the schemas from GitHub Pages, at the URL each one's `$id` names. Once they've changed
+on `main`, publish them there with `Scripts/publish-schemas.sh`: it copies them into
+`schemas/<version>/` on the `gh-pages` branch, checked out in `.pages/` (ignored by Git), pushes,
+and turns Pages on the first time. It publishes only `main` with nothing uncommitted, and won't
+replace a version's schemas once they're published, since files name them by their URL; `--force`
+does all three.
+
 ### Working on Retake and The Button Heist together
 
 For changes that span both, point Retake at a local clone of The Button Heist:

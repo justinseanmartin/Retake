@@ -8,3 +8,5 @@ InsideJob/Package.resolved
 InsideJob/.build/
 # Scripts/release.sh settings that are a person's own.
 Scripts/release.local.env
+# Scripts/publish-schemas.sh checks out gh-pages here.
+.pages/
