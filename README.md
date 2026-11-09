@@ -89,6 +89,9 @@ in turn, to find which.
 - Xcode, for `devicectl` and `codesign`. Its version doesn't matter to Retake.
 - A physical iPhone or iPad on iOS 17 or later, connected **by USB**. Devices over Wi-Fi can't be
   recorded, and a simulator recording stutters where a preview needs to be smooth.
+- Camera and microphone access for the terminal you run `retake` in, which macOS asks for, in the
+  terminal's name, the first time `record` runs from it: a device's screen and sound come to the Mac
+  as a camera does.
 
 > [!NOTE]
 > **The iPhone Duo isn't supported yet.** Its folding screen gives it two sizes of screen, which
