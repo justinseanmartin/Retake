@@ -44,9 +44,10 @@ if [[ -n "${RETAKE_BUTTONHEIST_PATH:-}" ]]; then
     exit 1
 fi
 WANTED="$(tr -d '[:space:]' < "$ROOT/.xcode-version")"
-XCODE="$(xcodebuild -version | sed -n 's/^Xcode //p')"
+# The command line tools alone have no xcodebuild to ask, which is no Xcode at all.
+XCODE="$(xcodebuild -version 2>/dev/null | sed -n 's/^Xcode //p' || true)"
 if [[ "$XCODE" != "$WANTED" ]]; then
-    echo "error: a release is built with Xcode $WANTED, as .xcode-version says, but this is Xcode $XCODE; select it with xcode-select or DEVELOPER_DIR" >&2
+    echo "error: a release is built with Xcode $WANTED, as .xcode-version says, but this is ${XCODE:+Xcode }${XCODE:-no Xcode}; select it with xcode-select or DEVELOPER_DIR" >&2
     exit 1
 fi
 
