@@ -19,14 +19,13 @@ recorded on an iPhone and an iPad, and cut for each from the one
 [`showcase`](Examples/Notes/Retake/edits/showcase.json) edit, which turns the iPad and puts a card
 in the iPhone's place.
 
-> **Status:** before its first release. Retake is an experiment in making a general tool of
-> something built twice before, for two apps' App Store previews on iPhone and iPad. It works as
-> this README describes when [built from source](#building-from-source); the release the
-> [Install](#install) section describes isn't published yet.
+> **Status:** an early release, 0.0.1. Retake is an experiment in making a general tool of
+> something built twice before, for two apps' App Store previews on iPhone and iPad, and it makes
+> both of theirs.
 >
 > **Stability:** until 1.0, nothing is guaranteed to stay the same between versions: not the
 > command line, not the JSON of its files, schemas or output. If you depend on it, pin an exact
-> version, such as `mise use github:justinseanmartin/Retake@0.1.0`. What is promised is that every
+> version, such as `mise use github:justinseanmartin/Retake@0.0.1`. What is promised is that every
 > breaking change is spelled out in the release notes and comes with a new minor version, from 0.1
 > to 0.2. Compatibility guarantees start at 1.0.
 

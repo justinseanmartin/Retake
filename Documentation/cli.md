@@ -4,7 +4,8 @@ This is the contract for Retake's command line: each command, what it reads and 
 fails. How the files fit together is in the [README](../README.md), and every field of every file is in the
 [reference](reference/), generated from Retake's schemas.
 
-Retake hasn't had its first release yet; this describes the command as it's built.
+This describes the command as this version of Retake has it; until 1.0, any of it may change between
+versions, each change spelled out in the release notes.
 
 ## Conventions
 
