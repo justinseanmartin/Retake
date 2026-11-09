@@ -84,10 +84,10 @@
     },
     {
       "id": "per-device",
-      "intent": "In the iPhone's video only, where the iPad's turns: a bright card saying each device's cut is its own, its caption up as long as the iPad's Turns caption, 2.66 s. Its picture never shows, so it's any stretch of the take before the turn.",
+      "intent": "In the iPhone's video only, where the iPad's turns: a bright card saying each device's cut is its own, up as long as the iPad's turned clip, so the iPhone's video ends with the iPad's, both 27 s. Its picture never shows, so it's any stretch of the take before the turn, and its start is moved to fit.",
       "devices": ["iphone"],
       "take": "reorder",
-      "from": { "step": "reorder", "offset": -0.73 },
+      "from": { "step": "reorder", "offset": -1.2 },
       "to": { "step": "turn", "offset": -0.1 },
       "crossfade": 0.4,
       "touches": false,
