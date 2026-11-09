@@ -50,6 +50,9 @@ public struct Project: Sendable, Equatable {
         output.appending(path: "cuts/\(type.rawValue)", directoryHint: .isDirectory)
     }
 
+    /// Where `share` writes its videos.
+    public var shares: URL { output.appending(path: "share", directoryHint: .isDirectory) }
+
     /// The configuration file a command finds unnamed: `retake.json` in the current directory, else
     /// `Retake/retake.json`, whichever exists first; nil when neither does.
     public static func unnamedConfiguration(in currentDirectory: URL, fileManager: FileManager = .default) -> URL? {

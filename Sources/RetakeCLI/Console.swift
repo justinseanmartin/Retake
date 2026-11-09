@@ -31,6 +31,23 @@ enum Prompt {
         return choices.first { $0 == answer }
     }
 
+    /// One of `choices`' numbers, from 1, picked by number, `suggestion` when it's left empty; asked
+    /// again until it's one of them, and nil when no one can be asked or input ends.
+    static func number(_ question: String, from choices: [String], suggesting suggestion: Int) -> Int? {
+        guard isInteractive else { return nil }
+        FileHandle.standardError.write(Data("\(question)\n".utf8))
+        for (index, choice) in choices.enumerated() {
+            FileHandle.standardError.write(Data("  \(index + 1). \(choice)\n".utf8))
+        }
+        while true {
+            FileHandle.standardError.write(Data("[\(suggestion)] > ".utf8))
+            guard let answer = readLine()?.trimmingCharacters(in: .whitespaces) else { return nil }
+            if answer.isEmpty { return suggestion }
+            if let number = Int(answer), choices.indices.contains(number - 1) { return number }
+            FileHandle.standardError.write(Data("Give a number from 1 to \(choices.count).\n".utf8))
+        }
+    }
+
     /// Whether the answer to a yes-or-no `question` is yes; no when it's left empty, or no one can
     /// be asked.
     static func confirm(_ question: String) -> Bool {

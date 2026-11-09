@@ -193,6 +193,7 @@ and exits with the worst status among them.
 | [`takes`](#retake-takes) | Lists takes. |
 | [`clean`](#retake-clean) | Deletes takes and cuts, or take data left on the device. |
 | [`cut`](#retake-cut) | Renders videos. |
+| [`share`](#retake-share) | Makes small videos to share, of cuts or takes side by side. |
 | [`status`](#retake-status) | Summarizes scenes, takes, edits and videos. |
 | [`info`](#retake-info) | Prints how a take or video was made. |
 | [`check`](#retake-check) | Checks an archive for TheInsideJob. |
@@ -730,7 +731,8 @@ its fields' order, and a `"$schema"` naming one of Retake's schemas is updated t
 cut from the take a scene's take replaced, put it back with [`takes --restore`](#retake-takes)
 before cutting.
 
-`--open` opens the `.mp4`.
+`--open` opens the `.mp4`. For a smaller copy to share, such as in a post on social media, or the
+iPhone's and the iPad's side by side, see [`share`](#retake-share).
 
 Warns, and carries on, when the edit's takes were recorded on more than one build of the app, device
 or iOS version, or Button Heist, naming the takes on each; the video's [metadata](#a-videos-fields) lists all of them.
@@ -739,6 +741,59 @@ Fails (1) if a scene has no successful take, saying why when its take can't be r
 or blur names isn't in the take's step log at that moment, one device type's takes come from devices
 with different screens (naming the takes on each), or the result is outside App Store Connect's
 limits for a preview, such as its length.
+
+### `retake share`
+
+```
+retake share <clips>... [--type <type>] [--audio <n>] [--background <color>] [--open]
+```
+
+Makes a small video of each `<clips>` given, for sharing where App Store Connect's full size isn't
+needed, such as a post on social media: one clip, or several side by side, such as an edit's iPhone
+and iPad cuts. Clips are joined with `+`, and play left to right in the order given; a space starts
+another video:
+
+```sh
+retake share showcase/iphone+showcase/ipad                  # the iPhone's cut beside the iPad's
+retake share showcase/ipad+showcase/iphone tour/ipad+tour/iphone
+retake share --type iphone showcase+tour                    # two edits' iPhone cuts side by side
+retake share --type ipad create-note                        # a scene's take, alone
+```
+
+A clip is an edit, for its cut, or a scene, for its take, and its device type after a `/`: either
+every clip names its own, or none does and `--type` names theirs. An edit's clip is made from its
+cut's ProRes master, so it shows all the edit does, and is encoded once more rather than twice; cut
+the edit first. A scene's clip is its [take](../README.md#takes-footage-and-a-step-log), as recorded, with no
+edit's overlays. Both are read from the [output directory](#the-output-directory), as `cut` finds
+them; `--output-dir` given to `share` alone moves where it looks, not just where it writes, so
+give it to every command or to none. Since a name is either an edit's or a scene's, no edit may be
+named as a scene is, and no name may have `+` in it; [`validate`](#retake-validate) checks both.
+
+Each video goes in the output directory's `share/`, named for its clips as they're joined, such as
+`share/showcase-iphone+showcase-ipad.mp4`, replacing one made before. It's H.264 at 30 frames a
+second, with AAC stereo sound, at about 1.2 Mbps for two clips:
+
+- One clip alone is 720 pixels wide.
+- Clips side by side are each 960 pixels tall, with 24-pixel gutters around and between them in
+  `--background`'s colour, `#RRGGBB`, black unless given; all of it shrunk to fit 1920 pixels wide.
+  At most 4 clips are joined, past which each is too small to make out on a phone.
+
+A video plays as long as its longest clip, and a clip that ends sooner holds its last frame. Its
+sound is one clip's, `--audio`'s, counting from 1, or the first's. When another clip runs more than
+a second longer than the first, the first's sound would end that much before the video does, so with
+no `--audio`, `share` warns and asks whose sound it has, at a terminal, offering the first, and
+without one, fails (2), saying to give `--audio`; `--audio 1` keeps the first's without asking. A clip
+with no sound leaves the video silent.
+
+Warns when an edit's cut is out of date, as [`status`](#retake-status) says, naming what changed,
+and shares it anyway. `--open` opens the results.
+
+Fails (1) when an edit has no cut for the type, a scene has no successful take, or a name is both an
+edit's and a scene's; misuse (2) for a clip that can't be read, a name that's neither an edit's nor
+a scene's, a type given both ways or neither, more than 4 clips, an `--audio` past a video's clips,
+or none when it's needed and there's no terminal to ask at. Every video named is read from the
+command line before any is made, so a mistake in how one's written fails before any is written; once
+making them, one that fails, such as for a missing cut, doesn't stop the rest.
 
 ### `retake status`
 
@@ -863,7 +918,7 @@ Checks the project's files, or the files named, against the schemas, then what a
 - that step ids are unique in a scene, aren't numbers, and aren't `start` or `end`;
 - that every step id an edit references exists in that scene for each device type;
 - that no scene or edit has `+` in its name, and no edit is named as a scene is, since
-  `retake share` joins clips with `+` and reads a name as either a cut or a take;
+  [`share`](#retake-share) joins clips with `+` and reads a name as either a cut or a take;
 - with takes recorded, that every anchor resolves in each scene's take, and every
   element a spotlight or blur names is in the step log at that moment, as `cut` will check. A scene
   with no successful take here, as in a fresh clone or on CI, is warned about rather than failed,
@@ -943,6 +998,7 @@ What's worth keeping, and nothing that's rewritten wholesale:
 | `takes/<type>/<scene>.failed.mov`, `.json` | The scene's latest failure, kept to show what went wrong. A new failure replaces it, and a new take that succeeds deletes it. |
 | `takes/<type>/<scene>.recording.mov`, `.json` | A take while it's recorded, renamed into place once it's done. One left by a recording killed outright is deleted by the next. |
 | `cuts/<type>/<edit>/` | Rendered videos, from `cut`. |
+| `share/` | Small videos to share, from [`share`](#retake-share). |
 | `installed.json` | The bundle ID of the app `install` last embedded, for [finding the app](#finding-the-app). |
 
 **On the device**, in the app's container:

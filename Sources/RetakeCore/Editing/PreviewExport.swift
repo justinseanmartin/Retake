@@ -226,7 +226,7 @@ extension PreviewExport {
 /// Copies one track's samples to the writer on its own queue, the only place either is touched
 /// once copying starts: from the reader, the picture's through the painter, or from silence made
 /// up front.
-private final class Copier: @unchecked Sendable {
+final class Copier: @unchecked Sendable {
     let output: AVAssetReaderTrackOutput?
     var silence: [CMSampleBuffer]
     let input: AVAssetWriterInput
@@ -270,7 +270,7 @@ private final class Copier: @unchecked Sendable {
 }
 
 /// Draws each frame at the preview's size, with the blurs in force at its time, and appends it.
-private final class FramePainter: @unchecked Sendable {
+final class FramePainter: @unchecked Sendable {
     let blurs: [PreviewExport.BlurRegion]
     let canvasHeight: Double
     let adaptor: AVAssetWriterInputPixelBufferAdaptor

@@ -91,6 +91,115 @@ struct Cut: AsyncParsableCommand {
     }
 }
 
+struct Share: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        abstract: "Makes small videos to share, of cuts or takes side by side.",
+        discussion: """
+            Writes each video named, its clips joined by +, side by side in the order given, as a \
+            small H.264 for sharing, such as on social media, in the output directory's share/. A clip \
+            is an edit, for its cut's master, or a scene, for its take, with its device type after a /, \
+            or every clip's from --type.
+            """,
+    )
+
+    @Argument(
+        help: ArgumentHelp(
+            "Each video to make: clips joined by +, each an edit or a scene and its device type, as showcase/iphone+showcase/ipad.",
+            valueName: "clips",
+        ),
+    )
+    var shares: [String] = []
+
+    @Option(help: ArgumentHelp("Every clip's device type, for clips that don't give their own.", valueName: "type"))
+    var type: DeviceType?
+
+    @Option(help: ArgumentHelp(
+        "Which clip's sound each video has, counting from 1 (default: the first; asked, or required, when its clips' lengths differ).",
+        valueName: "n",
+    ))
+    var audio: Int?
+
+    @Option(help: ArgumentHelp("The colour around and between clips side by side, as #RRGGBB (default: black).", valueName: "color"))
+    var background: String?
+
+    @Flag(help: "Open the results.")
+    var open = false
+
+    @OptionGroup var project: ProjectOptions
+
+    func validate() throws {
+        if shares.isEmpty {
+            throw ValidationError("Name what to share, as showcase/iphone\(ProjectFiles.shareJoin)showcase/ipad.")
+        }
+        if let audio, audio < 1 {
+            throw ValidationError("--audio counts a video's clips from 1.")
+        }
+        if let background, Color(hex: background).map({ $0.alpha < 1 }) ?? true {
+            throw ValidationError("--background is a colour as #RRGGBB, not \"\(background)\".")
+        }
+    }
+
+    func run() async throws {
+        let located = try project.locate()
+        // Every video is read before any is made, so a mistake in the last fails before the first is written.
+        let requests = try shares.map { text throws(RetakeError) in try ShareRequest.parse(text, type: type) }
+        if let audio, let (text, request) = zip(shares, requests).first(where: { $0.1.clips.count < audio }) {
+            throw RetakeError(.usage, "--audio \(audio) names a clip \(text) doesn't have; it joins \(request.clips.count).")
+        }
+        let color = background.flatMap(Color.init(hex:)) ?? .black
+
+        var worst = ExitStatus.done
+        var written: [URL] = []
+        var status: ProjectStatus?
+        for (text, request) in zip(shares, requests) {
+            do {
+                var sources: [Sharer.Source] = []
+                for clip in request.clips { sources.append(try await Sharer.source(clip, in: located)) }
+                for source in sources where !source.isTake {
+                    if status == nil { status = await ProjectStatus.of(located) }
+                    let preview = Cutter.folder(source.clip.name, for: source.clip.type, in: located)
+                        .appending(path: "\(source.clip.name)-\(source.clip.type.rawValue).mp4").standardizedFileURL
+                    let video = status?.sections.first { $0.type == source.clip.type }?.videos.first { $0.file.standardizedFileURL == preview }
+                    if let video, !video.changes.isEmpty {
+                        Console.warn("\(source.clip)'s cut is out of date: \(video.changes.joined(separator: "; ")); cut it again to share what its edit says now.")
+                    }
+                }
+                let sound = try soundClip(of: text, sources)
+                let file = located.shares.appending(path: "\(request.fileName).mp4")
+                let shared = try await Sharer.share(sources, audio: sound - 1, background: color, to: file)
+                let size = (try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? Int) ?? 0
+                Swift.print("✓ \(text): \(TakeTimeline.seconds(shared.duration)), \(Int(shared.size.width))×\(Int(shared.size.height)), \(String(format: "%.1f", Double(size) / 1_000_000)) MB, in \(located.displayPath(file))")
+                written.append(file)
+            } catch let error as RetakeError {
+                Swift.print("✖ \(error.message)")
+                worst = max(worst, error.status)
+            }
+        }
+        if open, !written.isEmpty {
+            _ = try? Subprocess.run("/usr/bin/open", written.map(\.path))
+        }
+        if worst != .done { throw ExitCode(worst.rawValue) }
+    }
+
+    /// Which of `sources`, from 1, the video's sound is from: `--audio`'s, else the first's, unless
+    /// another runs more than a second longer, so the first's sound would end well before the
+    /// video does; then it's asked, or with no one to ask, required.
+    func soundClip(of text: String, _ sources: [Sharer.Source]) throws(RetakeError) -> Int {
+        if let audio { return audio }
+        let longer = Sharer.outrunning(sources)
+        guard !longer.isEmpty, let first = sources.first else { return 1 }
+        let clips = sources.map { "\($0.clip), \(TakeTimeline.seconds($0.duration))\($0.hasSound ? "" : ", silent")" }
+        let runs = longer.map { "\($0.clip) runs \(TakeTimeline.seconds($0.duration - first.duration)) longer" }.joined(separator: ", ")
+        let why = "\(text): \(runs) than \(first.clip), so the first's sound, which it has unless --audio says, would end that much before the video does"
+        if Prompt.isInteractive { Console.warn("\(why); give --audio to choose it.") }
+        guard let chosen = Prompt.number("Which clip's sound should \(text) have?", from: clips, suggesting: 1) else {
+            let asked = Prompt.isInteractive ? "and none was chosen" : "and there's no terminal to ask which"
+            throw RetakeError(.usage, "\(why), \(asked): give --audio, from 1 to \(sources.count), or --audio 1 for the first's.")
+        }
+        return chosen
+    }
+}
+
 struct Status: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Summarizes scenes, takes, edits and videos.",

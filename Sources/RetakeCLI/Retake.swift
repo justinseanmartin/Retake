@@ -19,6 +19,7 @@ public struct Retake: AsyncParsableCommand {
             Takes.self,
             Clean.self,
             Cut.self,
+            Share.self,
             Status.self,
             Info.self,
             Check.self,

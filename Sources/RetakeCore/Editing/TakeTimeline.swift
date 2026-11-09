@@ -119,7 +119,7 @@ public struct TakeTimeline: Sendable {
         return found
     }
 
-    static func seconds(_ value: Double) -> String {
+    public static func seconds(_ value: Double) -> String {
         "\(Point.number((value * 1000).rounded() / 1000)) s"
     }
 }

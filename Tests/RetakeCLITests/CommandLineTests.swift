@@ -36,6 +36,8 @@ struct CommandLineTests {
         ["clean", "--on-device", "--device", "ipad"],
         ["cut", "video1", "video2", "--type", "iphone", "--open"],
         ["cut", "--all"],
+        ["share", "showcase/iphone+showcase/ipad", "--audio", "2", "--background", "#3A3A3C", "--open"],
+        ["share", "--type", "ipad", "showcase+create-note", "tour"],
         ["status", "--json"],
         ["info", "a.mov", "b.mp4", "--json"],
         ["check", "MyApp.xcarchive"],
@@ -70,6 +72,10 @@ struct CommandLineTests {
         ["cut"],
         ["cut", "video1", "--all"],
         ["cut", "--all", "--open"],
+        ["share"],
+        ["share", "showcase/ipad", "--audio", "0"],
+        ["share", "showcase/ipad", "--background", "navy"],
+        ["share", "showcase/ipad", "--background", "#1B2A4E80"],
         ["takes", "--type", "android"],
         ["info"],
         ["schema"],
@@ -121,5 +127,20 @@ struct CommandLineTests {
         let outcome = Retake.outcome(of: RetakeError(.environment, "No device is connected by USB."))
         #expect(outcome.status == 3)
         #expect(outcome.error == "✖ No device is connected by USB.")
+    }
+
+    @Test func aSharesSoundIsTheFirstClipsUnlessAnotherRunsASecondLongerWhenItsChosen() throws {
+        func source(_ duration: Double) -> Sharer.Source {
+            Sharer.Source(clip: .init(name: "showcase", type: .ipad), movie: URL(filePath: "/a.mov"), isTake: false, duration: duration, hasSound: true)
+        }
+        let share = try #require(try Retake.parseAsRoot(["share", "showcase/iphone+showcase/ipad"]) as? Share)
+        #expect(try share.soundClip(of: "x", [source(26.5), source(27.5)]) == 1, "a second longer at most")
+        #expect(try share.soundClip(of: "x", [source(30), source(20)]) == 1, "the first the longest")
+        // The tests' standard input isn't a terminal, so there's no one to ask.
+        #expect(throws: RetakeError.self) { try share.soundClip(of: "x", [source(26), source(27.5)]) }
+        let first = try #require(try Retake.parseAsRoot(["share", "showcase/iphone+showcase/ipad", "--audio", "1"]) as? Share)
+        #expect(try first.soundClip(of: "x", [source(26), source(27.5)]) == 1, "asked for, so not asked")
+        let second = try #require(try Retake.parseAsRoot(["share", "showcase/iphone+showcase/ipad", "--audio", "2"]) as? Share)
+        #expect(try second.soundClip(of: "x", [source(26.5), source(27)]) == 2)
     }
 }

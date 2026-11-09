@@ -146,8 +146,9 @@ struct EditCompositionTests {
         return Dictionary(uniqueKeysWithValues: names.map { ($0, log) })
     }
 
-    /// A one-colour movie, 2 s at 30 frames a second, 64×96, a size every encoder takes.
-    func movie(_ name: String, red: UInt8, green: UInt8, blue: UInt8) async throws -> URL {
+    /// A one-colour movie, `frames` long at 30 frames a second, 2 s unless told, 64×96, a size every
+    /// encoder takes.
+    func movie(_ name: String, red: UInt8, green: UInt8, blue: UInt8, frames: Int = 60) async throws -> URL {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let url = folder.appending(path: "\(name).mov")
         // Picture only: a writer with a sound input too would wait for sound before taking more.
@@ -156,7 +157,7 @@ struct EditCompositionTests {
         writer.add(input)
         writer.startWriting()
         writer.startSession(atSourceTime: .zero)
-        for index in 0..<60 {
+        for index in 0..<frames {
             while !input.isReadyForMoreMediaData { try await Task.sleep(for: .milliseconds(1)) }
             input.append(try Self.frame(red: red, green: green, blue: blue, at: index))
         }
