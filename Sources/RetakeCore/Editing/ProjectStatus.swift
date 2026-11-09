@@ -36,7 +36,6 @@ public struct ProjectStatus: Sendable {
     public struct Video: Sendable {
         public var edit: String
         public var file: URL
-        public var draft: Bool
         public var renderedAt: Date?
         /// What has changed since it was rendered; empty when it's up to date.
         public var changes: [String]
@@ -116,7 +115,7 @@ public struct ProjectStatus: Sendable {
         takes: [String: [TakeStore.Take]], files: ProjectFiles, read: (URL) async throws(RetakeError) -> MovieInfo,
     ) async -> Video {
         let rendered = modified(file)
-        var video = Video(edit: name, file: file, draft: file.lastPathComponent.hasSuffix("-draft.mp4"), renderedAt: rendered, changes: [], mixed: [])
+        var video = Video(edit: name, file: file, renderedAt: rendered, changes: [], mixed: [])
         let info: MovieInfo
         do {
             info = try await read(file)
@@ -197,7 +196,6 @@ extension ProjectStatus {
                 TakeLog.object([
                     ("edit", .string(video.edit)),
                     ("file", .string(video.file.lastPathComponent)),
-                    ("draft", .bool(video.draft)),
                     ("renderedAt", date(video.renderedAt)),
                     ("upToDate", .bool(video.changes.isEmpty)),
                     ("changes", .array(video.changes.map(JSONValue.string))),

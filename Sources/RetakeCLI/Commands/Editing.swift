@@ -7,8 +7,7 @@ struct Cut: AsyncParsableCommand {
         abstract: "Renders videos.",
         discussion: """
             Renders each edit, for each device type it names, from each scene's take, to a ProRes \
-            master and an .mp4 for App Store Connect in the output directory's cuts/<type>/<edit>/; \
-            with --draft, a quick, smaller .mp4 alone.
+            master and an .mp4 for App Store Connect in the output directory's cuts/<type>/<edit>/.
             """,
     )
 
@@ -20,9 +19,6 @@ struct Cut: AsyncParsableCommand {
 
     @Option(help: ArgumentHelp("Only this device type's video.", valueName: "type"))
     var type: DeviceType?
-
-    @Flag(help: "Render a quick, smaller H.264 alone: for checking timing, or for sharing where the full size isn't needed.")
-    var draft = false
 
     @Flag(help: "Open the result.")
     var open = false
@@ -77,7 +73,7 @@ struct Cut: AsyncParsableCommand {
             }
             for deviceType in prepared {
                 do {
-                    let result = try await Cutter.cut(name, for: deviceType, in: located, draft: draft) { Swift.print($0) }
+                    let result = try await Cutter.cut(name, for: deviceType, in: located) { Swift.print($0) }
                     for warning in result.warnings { Console.warn(warning) }
                     let shown = result.files.map(located.displayPath).joined(separator: " and ")
                     Swift.print("✓ \(name) (\(deviceType.rawValue)): \(String(format: "%.1f", result.duration)) s, in \(shown)")

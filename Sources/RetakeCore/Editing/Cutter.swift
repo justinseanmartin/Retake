@@ -6,7 +6,7 @@ import Foundation
 /// "retake cut".
 public enum Cutter {
     public struct Result: Sendable {
-        /// What was written: the master and the preview, or a draft's preview.
+        /// What was written: the master and the preview.
         public var files: [URL]
         /// How long the video plays.
         public var duration: Double
@@ -40,10 +40,10 @@ public enum Cutter {
 
     /// Cuts `name`'s video for `type`. Fails (1) for an edit that can't be read, a scene with no
     /// successful take, takes from devices with different screens, an anchor or element that
-    /// doesn't resolve, or, unless a draft, a video outside App Store Connect's limits; misuse (2)
+    /// doesn't resolve, or a video outside App Store Connect's limits; misuse (2)
     /// for an edit that doesn't name `type`.
     public static func cut(
-        _ name: String, for type: DeviceType, in project: Project, draft: Bool = false, report: (String) -> Void = { _ in },
+        _ name: String, for type: DeviceType, in project: Project, report: (String) -> Void = { _ in },
     ) async throws(RetakeError) -> Result {
         let files = ProjectFiles(project: project)
         try prepare(name, for: type, in: project, report: report)
@@ -98,9 +98,7 @@ public enum Cutter {
             }
         }
         if !length.contains(plan.duration) {
-            let message = "\(name)'s \(type.rawValue) video is \(TakeTimeline.seconds(plan.duration)) long; App Store Connect takes 15 to 30 s."
-            guard draft else { throw RetakeError(.failed, message) }
-            warnings.append(message)
+            throw RetakeError(.failed, "\(name)'s \(type.rawValue) video is \(TakeTimeline.seconds(plan.duration)) long; App Store Connect takes 15 to 30 s.")
         }
 
         report("Composing \(name) for \(type.rawValue), \(TakeTimeline.seconds(plan.duration))...")
@@ -114,15 +112,6 @@ public enum Cutter {
 
         let folder = folder(name, for: type, in: project)
         let base = "\(name)-\(type.rawValue)"
-        if draft {
-            let first = FileManager.default.temporaryDirectory.appending(path: "retake-draft-\(UUID().uuidString).mov")
-            defer { try? FileManager.default.removeItem(at: first) }
-            let preview = folder.appending(path: "\(base)-draft.mp4")
-            report("Rendering a draft...")
-            try await PreviewExport.master(composition, audioMix: audioMix, layers: layers, metadata: [], to: first, draft: true)
-            try await PreviewExport.preview(from: first, to: preview, spec: spec, blurs: blurs, metadata: MovieMetadata.preview(record), scale: 0.5, bitRate: 3_000_000)
-            return Result(files: [preview], duration: plan.duration, warnings: warnings)
-        }
         let master = folder.appending(path: "\(base)-master.mov")
         let preview = folder.appending(path: "\(base).mp4")
         report("Rendering the master...")

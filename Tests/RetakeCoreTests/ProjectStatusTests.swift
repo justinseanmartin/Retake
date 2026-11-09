@@ -67,7 +67,7 @@ struct ProjectStatusTests {
         #expect(keys(edits[1]) == ["edit", "uses"])
         guard case .array(let uses)? = edits[1][path: "uses"] else { Issue.record("no uses"); return }
         #expect(uses.map(keys) == [["scene", "recordedAt"], ["scene"]], "no recordedAt for a scene with no successful take")
-        #expect(keys(videos[0]) == ["edit", "file", "draft", "renderedAt", "upToDate", "changes", "mixed"])
+        #expect(keys(videos[0]) == ["edit", "file", "renderedAt", "upToDate", "changes", "mixed"])
         #expect(videos[0][path: "file"] == .string("video-ipad.mp4") && videos[0][path: "upToDate"] == .bool(true))
     }
 
@@ -89,7 +89,7 @@ struct ProjectStatusTests {
         #expect(try await changes(cutFrom: second.addingTimeInterval(60)) == ["walk's take isn't the one it was cut from"], "such as a previous one put back")
 
         let video = try #require(await status(cutFrom: [("walk", second)]).sections.first?.videos.first)
-        #expect(video.changes == [] && video.edit == "video" && !video.draft)
+        #expect(video.changes == [] && video.edit == "video")
 
         try FileManager.default.removeItem(at: tests.root.appending(path: "output/takes/ipad/walk.json"))
         #expect(try await changes(cutFrom: second) == ["walk has no successful take now"])

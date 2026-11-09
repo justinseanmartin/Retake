@@ -6,8 +6,7 @@ import CoreImage
 /// writes a master, ProRes, with the overlays and the sound, and copies it again drawing the blurs
 /// on each frame, when there are any, so the master hides what the video does. The second pass
 /// re-encodes the master to App Store Connect's specification for app previews, H.264 High Profile
-/// 4.0 at about 11 Mbps with 256 kbps stereo AAC at 48 kHz. A draft keeps no master, so its second
-/// pass draws the blurs instead, and is faster and smaller.
+/// 4.0 at about 11 Mbps with 256 kbps stereo AAC at 48 kHz.
 public enum PreviewExport {
     /// A rectangle of the canvas, top-down, blurred from `start` to `end` in the video.
     public struct BlurRegion: Equatable, Sendable {
@@ -46,20 +45,19 @@ public enum PreviewExport {
     }
 
     /// The first pass: `composition` with `layers` drawn over it, `blurs` over those, and
-    /// `audioMix`'s sound, to `url`, as ProRes, or for a draft, H.264.
+    /// `audioMix`'s sound, to `url`, as ProRes.
     public static func master(
         _ composition: EditComposition, audioMix: AVAudioMix?, layers: OverlayLayers?, blurs: [BlurRegion] = [], metadata: [AVMetadataItem], to url: URL,
-        draft: Bool = false,
     ) async throws(RetakeError) {
         guard !blurs.isEmpty else {
-            return try await export(composition, audioMix: audioMix, layers: layers, metadata: metadata, to: url, draft: draft)
+            return try await export(composition, audioMix: audioMix, layers: layers, metadata: metadata, to: url)
         }
         // Beside the master rather than in the temporary directory, since it's as big.
         let unblurred = url.deletingLastPathComponent().appending(path: ".\(url.deletingPathExtension().lastPathComponent)-unblurred.mov")
         defer { try? FileManager.default.removeItem(at: unblurred) }
-        try await export(composition, audioMix: audioMix, layers: layers, metadata: [], to: unblurred, draft: draft)
+        try await export(composition, audioMix: audioMix, layers: layers, metadata: [], to: unblurred)
         do {
-            try await encode(from: unblurred, to: url, as: .master(draft: draft), blurs: blurs, metadata: metadata)
+            try await encode(from: unblurred, to: url, as: .master, blurs: blurs, metadata: metadata)
         } catch let error as RetakeError {
             throw error
         } catch {
@@ -68,15 +66,14 @@ public enum PreviewExport {
     }
 
     static func export(
-        _ composition: EditComposition, audioMix: AVAudioMix?, layers: OverlayLayers?, metadata: [AVMetadataItem], to url: URL, draft: Bool,
+        _ composition: EditComposition, audioMix: AVAudioMix?, layers: OverlayLayers?, metadata: [AVMetadataItem], to url: URL,
     ) async throws(RetakeError) {
         let videoComposition = composition.videoComposition.mutableCopy() as! AVMutableVideoComposition
         if let layers {
             videoComposition.animationTool = AVVideoCompositionCoreAnimationTool(postProcessingAsVideoLayer: layers.video, in: layers.parent)
         }
-        let preset = draft ? AVAssetExportPresetHighestQuality : AVAssetExportPresetAppleProRes422LPCM
-        guard let session = AVAssetExportSession(asset: composition.composition, presetName: preset) else {
-            throw RetakeError(.failed, "There's no export for \(draft ? "H.264" : "ProRes") here.")
+        guard let session = AVAssetExportSession(asset: composition.composition, presetName: AVAssetExportPresetAppleProRes422LPCM) else {
+            throw RetakeError(.failed, "There's no export for ProRes here.")
         }
         session.videoComposition = videoComposition
         session.audioMix = audioMix
@@ -92,13 +89,13 @@ public enum PreviewExport {
         }
     }
 
-    /// The second pass: the master re-encoded for App Store Connect, at `scale` of its size, with
-    /// `blurs` drawn, to `url`: none, for a master that has them already.
+    /// The second pass: the master re-encoded for App Store Connect, with `blurs` drawn, to `url`:
+    /// none, for a master that has them already.
     public static func preview(
-        from master: URL, to url: URL, spec: PreviewSpec, blurs: [BlurRegion], metadata: [AVMetadataItem], scale: Double = 1, bitRate: Int = 11_000_000,
+        from master: URL, to url: URL, spec: PreviewSpec, blurs: [BlurRegion], metadata: [AVMetadataItem],
     ) async throws(RetakeError) {
         do {
-            try await encode(from: master, to: url, as: .preview(spec, scale: scale, bitRate: bitRate), blurs: blurs, metadata: metadata)
+            try await encode(from: master, to: url, as: .preview(spec), blurs: blurs, metadata: metadata)
         } catch let error as RetakeError {
             throw error
         } catch {
@@ -109,8 +106,8 @@ public enum PreviewExport {
     /// What `encode` writes: App Store Connect's H.264, or a master as the first pass makes it, its
     /// sound copied as it is.
     enum Encoding {
-        case preview(PreviewSpec, scale: Double, bitRate: Int)
-        case master(draft: Bool)
+        case preview(PreviewSpec)
+        case master
     }
 
     static func encode(from source: URL, to url: URL, as encoding: Encoding, blurs: [BlurRegion], metadata: [AVMetadataItem]) async throws {
@@ -118,9 +115,7 @@ public enum PreviewExport {
         guard let video = try await asset.loadTracks(withMediaType: .video).first else { throw RetakeError(.failed, "The master has no picture.") }
         let audio = try await asset.loadTracks(withMediaType: .audio).first
         let size = try await video.load(.naturalSize)
-        var scale = 1.0
-        if case .preview(_, let previewScale, _) = encoding { scale = previewScale }
-        let width = Int((size.width * scale / 2).rounded()) * 2, height = Int((size.height * scale / 2).rounded()) * 2
+        let width = Int(size.width), height = Int(size.height)
 
         let reader = try AVAssetReader(asset: asset)
         let videoOut = AVAssetReaderTrackOutput(track: video, outputSettings: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA])
@@ -132,14 +127,14 @@ public enum PreviewExport {
         let videoIn: AVAssetWriterInput
         let sound: Copier?
         switch encoding {
-        case .preview(let spec, _, let bitRate):
+        case .preview(let spec):
             writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
             videoIn = AVAssetWriterInput(mediaType: .video, outputSettings: [
                 AVVideoCodecKey: AVVideoCodecType.h264,
                 AVVideoWidthKey: width,
                 AVVideoHeightKey: height,
                 AVVideoCompressionPropertiesKey: [
-                    AVVideoAverageBitRateKey: bitRate,
+                    AVVideoAverageBitRateKey: 11_000_000,
                     AVVideoProfileLevelKey: AVVideoProfileLevelH264High40,
                     AVVideoExpectedSourceFrameRateKey: spec.framesPerSecond,
                     AVVideoMaxKeyFrameIntervalKey: spec.framesPerSecond,
@@ -158,10 +153,10 @@ public enum PreviewExport {
             let duration = try await asset.load(.duration).seconds
             sound = try audioOut.map { Copier(output: $0, input: audioIn, label: "audio", painter: nil) }
                 ?? Copier(silence: Self.silence(seconds: duration), input: audioIn)
-        case .master(let draft):
+        case .master:
             writer = try AVAssetWriter(outputURL: url, fileType: .mov)
             videoIn = AVAssetWriterInput(mediaType: .video, outputSettings: [
-                AVVideoCodecKey: draft ? AVVideoCodecType.h264 : AVVideoCodecType.proRes422, AVVideoWidthKey: width, AVVideoHeightKey: height,
+                AVVideoCodecKey: AVVideoCodecType.proRes422, AVVideoWidthKey: width, AVVideoHeightKey: height,
             ])
             if let audio {
                 let audioOut = AVAssetReaderTrackOutput(track: audio, outputSettings: nil)
@@ -184,7 +179,7 @@ public enum PreviewExport {
         guard writer.startWriting() else { throw RetakeError(.failed, "Couldn't write \(url.lastPathComponent): \(String(describing: writer.error))") }
         writer.startSession(atSourceTime: .zero)
 
-        let painter = FramePainter(blurs: blurs, canvasHeight: size.height, scale: scale, adaptor: adaptor)
+        let painter = FramePainter(blurs: blurs, canvasHeight: size.height, adaptor: adaptor)
         let copiers = [Copier(output: videoOut, input: videoIn, label: "video", painter: painter)] + (sound.map { [$0] } ?? [])
         await withTaskGroup(of: Void.self) { group in
             for copier in copiers { group.addTask { await copier.run() } }
@@ -278,14 +273,12 @@ private final class Copier: @unchecked Sendable {
 private final class FramePainter: @unchecked Sendable {
     let blurs: [PreviewExport.BlurRegion]
     let canvasHeight: Double
-    let scale: Double
     let adaptor: AVAssetWriterInputPixelBufferAdaptor
     let context = CIContext()
 
-    init(blurs: [PreviewExport.BlurRegion], canvasHeight: Double, scale: Double, adaptor: AVAssetWriterInputPixelBufferAdaptor) {
+    init(blurs: [PreviewExport.BlurRegion], canvasHeight: Double, adaptor: AVAssetWriterInputPixelBufferAdaptor) {
         self.blurs = blurs
         self.canvasHeight = canvasHeight
-        self.scale = scale
         self.adaptor = adaptor
     }
 
@@ -301,7 +294,6 @@ private final class FramePainter: @unchecked Sendable {
             let rect = CGRect(x: region.rect.minX, y: canvasHeight - region.rect.maxY, width: region.rect.width, height: region.rect.height)
             result = frame.clampedToExtent().applyingGaussianBlur(sigma: sigma).cropped(to: rect).composited(over: result)
         }
-        if scale != 1 { result = result.transformed(by: CGAffineTransform(scaleX: scale, y: scale)) }
         var output: CVPixelBuffer?
         CVPixelBufferPoolCreatePixelBuffer(nil, pool, &output)
         guard let output else { return }

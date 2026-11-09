@@ -44,9 +44,9 @@ struct CutterTests {
         try write("edits/video.json", #"{"devices": ["ipad"], "clips": [\#(clips)]}"#)
     }
 
-    func failure(draft: Bool = false) async -> String? {
+    func failure() async -> String? {
         do {
-            _ = try await Cutter.cut("video", for: .ipad, in: project, draft: draft)
+            _ = try await Cutter.cut("video", for: .ipad, in: project)
             return nil
         } catch {
             return error.message
@@ -104,12 +104,10 @@ struct CutterTests {
         #expect(await failure() == "video's ipad takes come from devices with different screens: 820×1180 points: other; 834×1194 points: walk.")
     }
 
-    @Test func aVideoOutsideAppStoreConnectsLengthsIsntCutButADraftIs() async throws {
+    @Test func aVideoOutsideAppStoreConnectsLengthsIsntCut() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try record("walk")
         try edit()
         #expect(await failure() == "video's ipad video is 5 s long; App Store Connect takes 15 to 30 s.")
-        // A draft only warns, and goes on to compose, which fails here on the take's empty movie.
-        #expect(await failure(draft: true)?.contains("App Store Connect") == false)
     }
 }

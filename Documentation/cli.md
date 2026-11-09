@@ -706,8 +706,8 @@ over.
 ### `retake cut`
 
 ```
-retake cut <edit>... [--type <type>] [--draft] [--open]
-retake cut --all [--type <type>] [--draft]
+retake cut <edit>... [--type <type>] [--open]
+retake cut --all [--type <type>]
 ```
 
 Renders each edit, for each device type it names (or only `--type`'s), from each scene's take, to
@@ -730,9 +730,7 @@ its fields' order, and a `"$schema"` naming one of Retake's schemas is updated t
 cut from the take a scene's take replaced, put it back with [`takes --restore`](#retake-takes)
 before cutting.
 
-`--draft` renders a quick, smaller H.264 alone, `<edit>-<type>-draft.mp4`: for checking timing, and
-for sharing where the full size isn't needed, such as a post on social media. A draft outside App
-Store Connect's limits is warned about rather than failed. `--open` opens the result.
+`--open` opens the `.mp4`.
 
 Warns, and carries on, when the edit's takes were recorded on more than one build of the app, device
 or iOS version, or Button Heist, naming the takes on each; the video's [metadata](#a-videos-fields) lists all of them.
@@ -767,7 +765,7 @@ With `--json`, prints a list of device types, each with its `deviceType`, `scene
 - An edit gives its `edit` and `uses`, each scene it's cut from as its `scene` and the `recordedAt`
   of its take, left out when the scene has no successful take, and `problem` when the edit can't be
   read, which is listed for each device type, since it can't say which it's for.
-- A video gives its `edit`, its `file`'s name, whether it's a `draft`, when it was `renderedAt`,
+- A video gives its `edit`, its `file`'s name, when it was `renderedAt`,
   whether it's `upToDate`, the `changes` that make it out of date, and `mixed`, what its takes span
   more than one of, as `cut` warns.
 
@@ -789,7 +787,7 @@ With `--json`, prints a list of device types, each with its `deviceType`, `scene
     ],
     "videos": [
       {
-        "edit": "video1", "file": "video1-ipad.mp4", "draft": false, "renderedAt": "2026-11-06T10:02:45Z",
+        "edit": "video1", "file": "video1-ipad.mp4", "renderedAt": "2026-11-06T10:02:45Z",
         "upToDate": false, "changes": ["share-note has no successful take now"], "mixed": []
       }
     ]
