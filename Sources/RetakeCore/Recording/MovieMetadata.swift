@@ -127,6 +127,32 @@ public enum MovieMetadata {
     /// A video's fields for an `.mp4`, which keeps only the common identifiers AVFoundation writes
     /// as ISO user data: the software, and the whole record as JSON in the description.
     public static func preview(_ video: Video) -> [AVMetadataItem] {
+        described(video.json, retake: video.retake)
+    }
+
+    /// A share's record, for its `.mp4`, as a cut's is: Retake's version, and each clip, as the
+    /// command line names it, with the record of the cut or take it's from. See
+    /// Documentation/cli.md, "A share's record".
+    public static func share(_ clips: [(clip: String, record: MovieInfo?)], retake: String = RetakeVersion.current.version) -> [AVMetadataItem] {
+        let entries: [JSONValue] = clips.map { clip, record in
+            var fields: [JSONObject.Entry] = [.init(key: "clip", value: .string(clip))]
+            switch record {
+            case .take(let take)?: fields.append(.init(key: "take", value: take))
+            case .video(let video)?: fields.append(.init(key: "video", value: video))
+            case .share?, nil: break
+            }
+            return .object(JSONObject(fields))
+        }
+        let record = JSONValue.object(JSONObject([
+            .init(key: "retake", value: .object(JSONObject([.init(key: "version", value: .string(retake))]))),
+            .init(key: "share", value: .array(entries)),
+        ]))
+        return described(record, retake: retake)
+    }
+
+    /// The common identifiers AVFoundation writes into an `.mp4` as ISO user data: the software,
+    /// and `record` as JSON in the description.
+    static func described(_ record: JSONValue, retake: String) -> [AVMetadataItem] {
         func common(_ identifier: AVMetadataIdentifier, _ value: String) -> AVMetadataItem {
             let item = AVMutableMetadataItem()
             item.identifier = identifier
@@ -135,8 +161,8 @@ public enum MovieMetadata {
             return item
         }
         return [
-            common(.commonIdentifierSoftware, "Retake \(video.retake)"),
-            common(.commonIdentifierDescription, JSONWriter.compact(video.json)),
+            common(.commonIdentifierSoftware, "Retake \(retake)"),
+            common(.commonIdentifierDescription, JSONWriter.compact(record)),
         ]
     }
 

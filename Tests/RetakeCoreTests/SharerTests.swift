@@ -126,5 +126,20 @@ struct SharerTests {
         #expect(near(try pixel(344, 504), (255, 0, 0)), "red, on the left")
         #expect(near(try pixel(1008, 504), (0, 0, 255)), "blue, held, on the right")
         #expect(near(try pixel(10, 10), (0x3A, 0x3A, 0x3C)), "the background in the gutter")
+        #expect(try await MovieInfo.read(url).lines.first == "Share of red/ipad + blue/ipad", "info reads its record")
+    }
+
+    @Test func aSharesRecordNamesEachClipAndWhatItsFrom() throws {
+        let take = MovieInfo.take(.object(JSONObject([.init(key: "scene", value: .string("walk")), .init(key: "recordedAt", value: .string("2026-11-09T21:01:40Z"))])))
+        let items = MovieMetadata.share([("walk/ipad", take), ("other/ipad", nil)], retake: "0.0.1")
+        let description = items.first { $0.commonKey == .commonKeyDescription }?.value as? String
+        let info = try #require(MovieInfo.info(fields: [:], description: description))
+        #expect(info.json(movie: "a.mp4")[path: "share"] != nil, "info --json names it a share")
+        #expect(info.lines == [
+            "Share of walk/ipad + other/ipad",
+            "  Clips        walk/ipad: take of walk, recorded 2026-11-09T21:01:40Z on ?, iOS ?",
+            "               other/ipad: from a movie with no record",
+            "  Retake       0.0.1",
+        ])
     }
 }

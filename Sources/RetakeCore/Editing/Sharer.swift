@@ -111,13 +111,16 @@ public enum Sharer {
         public var isTake: Bool
         public var duration: Double
         public var hasSound: Bool
+        /// What Retake wrote into its movie, for the share's own record; nil when it can't be read.
+        public var record: MovieInfo?
 
-        public init(clip: ShareRequest.Clip, movie: URL, isTake: Bool, duration: Double, hasSound: Bool) {
+        public init(clip: ShareRequest.Clip, movie: URL, isTake: Bool, duration: Double, hasSound: Bool, record: MovieInfo? = nil) {
             self.clip = clip
             self.movie = movie
             self.isTake = isTake
             self.duration = duration
             self.hasSound = hasSound
+            self.record = record
         }
     }
 
@@ -162,7 +165,8 @@ public enum Sharer {
         do {
             let duration = try await asset.load(.duration).seconds
             let hasSound = !(try await asset.loadTracks(withMediaType: .audio)).isEmpty
-            return Source(clip: clip, movie: movie, isTake: !isEdit, duration: duration, hasSound: hasSound)
+            let record = try? await MovieInfo.read(movie)
+            return Source(clip: clip, movie: movie, isTake: !isEdit, duration: duration, hasSound: hasSound, record: record)
         } catch {
             throw RetakeError(.failed, "\(clip): couldn't read \(project.displayPath(movie)): \(error.localizedDescription)")
         }
@@ -223,6 +227,7 @@ public enum Sharer {
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA, kCVPixelBufferWidthKey as String: width, kCVPixelBufferHeightKey as String: height,
         ])
         writer.add(videoIn)
+        writer.metadata = MovieMetadata.share(sources.map { ($0.clip.description, $0.record) })
 
         var sound: Copier?
         if sources[audio].hasSound {

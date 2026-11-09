@@ -1,13 +1,16 @@
 import AVFoundation
 import Foundation
 
-/// What `retake info` reads back out of a movie Retake wrote: a take's fields, or a video's record,
-/// from a master's fields or an `.mp4`'s description. See Documentation/cli.md, "Movie metadata".
+/// What `retake info` reads back out of a movie Retake wrote: a take's fields, a video's record,
+/// from a master's fields or an `.mp4`'s description, or a share's record, from its description.
+/// See Documentation/cli.md, "Movie metadata".
 public enum MovieInfo: Equatable, Sendable {
     /// A take's fields, laid out as `fields(take:)` does.
     case take(JSONValue)
     /// A video's record, laid out as the `.mp4`'s description holds it.
     case video(JSONValue)
+    /// A share's record, as its description holds it.
+    case share(JSONValue)
 
     public var isTake: Bool {
         if case .take = self { true } else { false }
@@ -15,14 +18,23 @@ public enum MovieInfo: Equatable, Sendable {
 
     public var json: JSONValue {
         switch self {
-        case .take(let record), .video(let record): record
+        case .take(let record), .video(let record), .share(let record): record
+        }
+    }
+
+    /// What `info --json` names it: `take`, `video` or `share`.
+    var kind: String {
+        switch self {
+        case .take: "take"
+        case .video: "video"
+        case .share: "share"
         }
     }
 
     /// As `info --json` lists it: the movie as it was named, and its take's fields or its video's
     /// record. See Documentation/cli.md, "retake info".
     public func json(movie: String) -> JSONValue {
-        .object(JSONObject([.init(key: "movie", value: .string(movie)), .init(key: isTake ? "take" : "video", value: json)]))
+        .object(JSONObject([.init(key: "movie", value: .string(movie)), .init(key: kind, value: json)]))
     }
 
     /// What Retake wrote into `movie`. Fails (1) for a movie that can't be read, or that Retake
@@ -54,9 +66,9 @@ public enum MovieInfo: Equatable, Sendable {
     static func info(fields: [String: String], description: String?) -> MovieInfo? {
         if fields["retake.scene"] != nil { return .take(take(fields)) }
         if fields["retake.edit"] != nil { return .video(video(fields)) }
-        if let description, case .object(let record)? = try? JSONParser.parse(description),
-           record["edit"] != nil, record["retake"] != nil {
-            return .video(.object(record))
+        if let description, case .object(let record)? = try? JSONParser.parse(description), record["retake"] != nil {
+            if record["edit"] != nil { return .video(.object(record)) }
+            if record["share"] != nil { return .share(.object(record)) }
         }
         return nil
     }
@@ -133,6 +145,27 @@ public enum MovieInfo: Equatable, Sendable {
         }
 
         switch self {
+        case .share:
+            // Each clip as the command line named it, and what it's from: a cut by its takes, or a
+            // take by when and where it was recorded.
+            var lines = ["Share of \(values("share").compactMap { $0[path: "clip"]?.stringValue }.joined(separator: " + "))"]
+            for (index, clip) in values("share").enumerated() {
+                let name = clip[path: "clip"]?.stringValue ?? "?"
+                let from: String
+                if let video = clip[path: "video"] {
+                    var takes: [JSONValue] = []
+                    if case .array(let listed)? = video[path: "takes"] { takes = listed }
+                    let named = takes.map { take in "\(take[path: "scene"]?.stringValue ?? "?") (\(take[path: "recordedAt"]?.stringValue ?? "?"))" }
+                    from = "cut of \(video[path: "edit"]?.stringValue ?? "?"), from \(named.joined(separator: ", "))"
+                } else if let take = clip[path: "take"] {
+                    from = "take of \(take[path: "scene"]?.stringValue ?? "?"), recorded \(take[path: "recordedAt"]?.stringValue ?? "?") on \(device(take[path: "device"]))"
+                } else {
+                    from = "from a movie with no record"
+                }
+                lines.append(row(index == 0 ? "Clips" : "", "\(name): \(from)"))
+            }
+            lines.append(row("Retake", string("retake", "version") ?? "?"))
+            return lines
         case .take:
             var lines = ["Take of \(string("scene") ?? "?"), for \(string("deviceType") ?? "?")"]
             if let recorded = string("recordedAt") { lines.append(row("Recorded", recorded)) }

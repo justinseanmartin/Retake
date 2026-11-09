@@ -773,7 +773,8 @@ give it to every command or to none. Since a name is either an edit's or a scene
 named as a scene is, and no name may have `+` in it; [`validate`](#retake-validate) checks both.
 
 Each video goes in the output directory's `share/`, named for its clips as they're joined, such as
-`share/showcase-iphone+showcase-ipad.mp4`, replacing one made before. It's H.264 at 30 frames a
+`share/showcase-iphone+showcase-ipad.mp4`, replacing one made before, and carries
+[a record](#a-shares-record) of what it's made from, which [`info`](#retake-info) prints. It's H.264 at 30 frames a
 second, with AAC stereo sound, at about 1.2 Mbps for two clips:
 
 - One clip alone is 720 pixels wide.
@@ -862,13 +863,14 @@ numbered takes, which it refuses.
 retake info <movie>... [--json]
 ```
 
-Prints the [metadata](#movie-metadata) Retake wrote into each movie: a take, a master, or an `.mp4`.
-A video lists each take it was cut from by its scene and when it was recorded. Works on any of them
+Prints the [metadata](#movie-metadata) Retake wrote into each movie: a take, a master, an `.mp4`, or
+a [share](#retake-share). A video lists each take it was cut from by its scene and when it was
+recorded, and a share each clip and the cut or take it's from. Works on any of them
 wherever they've been moved to, outside a project as well as in one. Fails (1) for a movie Retake
 didn't write.
 
 With `--json`, prints a list with an object for each movie that could be read, giving its `movie`,
-as it was named, and its `take` or its `video`. A take gives [its fields](#a-takes-fields) named
+as it was named, and its `take`, its `video` or its `share`. A take gives [its fields](#a-takes-fields) named
 as its step log names them: `scene`, `set`, `state`, `deviceType`, `device` (`model`,
 `marketingName` and `os`), `app` (`bundleID`, `version` and `build`), `retake`, `buttonHeist`
 (`version`, and `commit` for a Retake built from a local clone) and `recordedAt`. A video gives
@@ -890,7 +892,8 @@ its record as the `.mp4`'s description holds it, whose `takes` give each one's `
 ]
 ```
 
-A video's `video` is the record shown under [a video's fields](#a-videos-fields).
+A video's `video` is the record shown under [a video's fields](#a-videos-fields), and a share's
+`share` is [a share's record](#a-shares-record).
 
 ### `retake check`
 
@@ -1123,3 +1126,24 @@ recorded on a later build than the other:
   ]
 }
 ```
+
+### A share's record
+
+A [share](#retake-share)'s `.mp4` carries its record as a cut's does, as JSON in its description:
+the Retake that made it, and in `share`, each clip as the command line named it, with the record of
+what it's from, read from that movie: a cut's master's as `video`, as under
+[a video's fields](#a-videos-fields), or a take's fields as `take`, as `info --json` gives them.
+A clip whose movie has no record Retake can read gives its `clip` alone.
+
+<!-- schema: none -->
+```json
+{
+  "retake": { "version": "0.1.0" },
+  "share": [
+    { "clip": "showcase/iphone", "video": { "edit": "showcase", "deviceType": "iphone", "takes": [] } },
+    { "clip": "create-note/ipad", "take": { "scene": "create-note", "deviceType": "ipad", "recordedAt": "2026-11-09T21:01:40Z" } }
+  ]
+}
+```
+
+`status` doesn't list shares: they're made from cuts it already follows.
