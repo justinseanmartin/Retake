@@ -35,17 +35,17 @@ The music and sounds are made by `Retake/audio/generate.py`, so none of them is 
 ### From a clone, in one go
 
 You need a Mac with Xcode, an Apple account signed in to Xcode (Settings > Accounts; a free one
-works), an iPhone or iPad with Developer Mode on, connected by USB and trusted, and, for the small
-copy at the end, `ffmpeg` (`brew install ffmpeg`). Then, from the repository's root:
+works), and an iPhone or iPad with Developer Mode on, connected by USB and trusted. Then, from the
+repository's root:
 
 ```sh
 Examples/Notes/run.sh
 ```
 
 It does each step below, and finishes with the video's master and App Store files in
-`Notes/Retake/output/cuts/`, and a small copy of it, an MP4 with sound, in
-`Notes/Retake/output/share/`; once an iPhone's and an iPad's are both cut, the two side by side
-too. Run it again to record and cut again. Its options:
+`Notes/Retake/output/cuts/`; once an iPhone's and an iPad's are both cut, it shares the two side by
+side, a small MP4 with sound, in `Notes/Retake/output/share/`. Run it again to record and cut
+again. Its options:
 
 | Option | |
 | --- | --- |
@@ -53,7 +53,7 @@ too. Run it again to record and cut again. Its options:
 | `--device <device>` | The device, by alias, UDID or name, when several are connected. |
 | `--setup` | Only build Retake and sign the example, then say what to run. |
 | `--cut-only` | Cut from the takes already recorded, without a device: after changing an edit. |
-| `--readme` | Write the iPhone's and iPad's side by side to `Documentation/media/`, for the README. |
+| `--readme` | Copy the iPhone's and iPad's side by side to `Documentation/media/showcase.mp4`, the README's video. |
 
 Nothing it writes is checked in, except with `--readme`: the build is in `.build/` (or
 `RETAKE_SCRATCH_PATH`), the team in `Config/Signing.local.xcconfig`, and the rest in
@@ -113,12 +113,15 @@ From the repository's root:
    If something fails and its message doesn't say why, `retake doctor` checks each part in turn:
    Xcode, the device, signing, the installed app, and a launch.
 
-4. Make a copy small enough to share, as `run.sh` does:
+4. Once it's cut on both an iPhone and an iPad, share the two side by side, small enough to post,
+   as `run.sh` does: the iPhone's on the left, with the iPad's sound, on a grey that stands apart
+   from the edit's navy:
 
    ```sh
-   ffmpeg -i Retake/output/cuts/ipad/showcase/showcase-ipad-master.mov -vf scale=720:-2 \
-       -c:v libx264 -crf 25 -pix_fmt yuv420p -c:a aac -b:a 80k showcase.mp4
+   retake share showcase/iphone+showcase/ipad --audio 2 --background "#3A3A3C"
    ```
+
+   It's written to `Retake/output/share/showcase-iphone+showcase-ipad.mp4`.
 
 Its integration test does step 3 from a copy of the project, so a run leaves the
 example's own output alone: `RETAKE_TEST_DEVICE=<device> swift test --filter EndToEnd`.

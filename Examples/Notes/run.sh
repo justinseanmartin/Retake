@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Runs the Notes example from a fresh clone of Retake: builds retake and what it installs, signs
 # Notes with your team, installs it on the connected device, records its scenes, cuts its video,
-# and makes a small copy of the video, to share or check in. See Examples/README.md.
+# and, once both an iPhone's and an iPad's are cut, shares the two side by side, small enough to
+# check in. See Examples/README.md.
 set -euo pipefail
 
 usage() {
@@ -15,12 +16,12 @@ Usage: Examples/Notes/run.sh [--team <id>] [--device <device>] [--setup | --cut-
   --setup            Stop once retake is built and Notes can be signed, and say what to run next.
   --cut-only         Cut from the takes already recorded, with no device: after changing an edit.
                      Give --device or set RETAKE_DEVICE_TYPE (iphone or ipad) to say whose.
-  --readme           Write the iPhone's and iPad's showcases, side by side, to Documentation/media/,
+  --readme           Copy the iPhone's and iPad's showcases, side by side, to Documentation/media/,
                      which the README shows: both devices' cuts are needed.
 
-It cuts edits/showcase.json, every feature in one video, for the device's type. A small copy, an
-MP4 with sound, is written to Retake/output/share/, and once both an iPhone's and an iPad's are
-cut, the two side by side too.
+It cuts edits/showcase.json, every feature in one video, for the device's type. Once both an
+iPhone's and an iPad's are cut, `retake share` writes the two side by side, a small MP4 with
+sound, to Retake/output/share/.
 EOF
 }
 
@@ -152,28 +153,22 @@ fi
 step "Cutting $edit"
 "$retake" cut "$edit" --type "$type"
 
-# Small enough to check in, and still sharp: 720 points wide.
-step "Making a small copy"
-command -v ffmpeg >/dev/null || fail "the small copy needs ffmpeg: brew install ffmpeg, then run this again with --cut-only."
-share="Retake/output/share"
-mkdir -p "$share"
-mp4() { ffmpeg -v error -y "$@" -c:v libx264 -preset veryslow -crf 25 -pix_fmt yuv420p -tune animation -movflags +faststart -c:a aac -b:a 80k -ac 1 -map_metadata -1; }
-master() { echo "Retake/output/cuts/$1/$edit/$edit-$1-master.mov"; }
-mp4 -i "$(master "$type")" -vf "scale=720:-2:flags=lanczos" "$share/$edit-$type.mp4"
-made=("$share/$edit-$type.mp4")
-
-# Both devices' cuts of the one edit side by side, the iPhone's on the left, on the edit's own
-# background, with the iPad's sound.
-if [[ -f "$(master iphone)" && -f "$(master ipad)" ]]; then
-    side() { echo "[0:v]scale=-2:$1:flags=lanczos,pad=iw+$2*2:ih+$2*2:$2:$2:color=0x1B2A4E[a];[1:v]scale=-2:$1:flags=lanczos,pad=iw+$2:ih+$2*2:0:$2:color=0x1B2A4E[b];[a][b]hstack"; }
-    mp4 -i "$(master iphone)" -i "$(master ipad)" -filter_complex "$(side 960 24)[v]" -map "[v]" -map 1:a "$share/$edit-both.mp4"
-    made+=("$share/$edit-both.mp4")
+# Both devices' cuts side by side, the iPhone's on the left, with the iPad's sound, on a grey that
+# stands apart from the edit's own navy, so the montage and the credit don't run into the gutters.
+both="Retake/output/share/$edit-iphone+$edit-ipad.mp4"
+if [[ -f "Retake/output/cuts/iphone/$edit/$edit-iphone-master.mov" && -f "Retake/output/cuts/ipad/$edit/$edit-ipad-master.mov" ]]; then
+    step "Sharing both side by side"
+    "$retake" share "$edit/iphone+$edit/ipad" --audio 2 --background "#3A3A3C"
+    made=("$both")
+else
+    made=()
+    echo "Cut $edit on the other device too, then run this again with --cut-only, to share the two side by side."
 fi
 
 if $readme; then
-    [[ -f "$share/$edit-both.mp4" ]] || fail "--readme shows the iPhone's and the iPad's side by side: record and cut on both, then run this again with --cut-only --readme."
+    [[ -f "$both" ]] || fail "--readme shows the iPhone's and the iPad's side by side: record and cut on both, then run this again with --cut-only --readme."
     mkdir -p "$ROOT/Documentation/media"
-    cp "$share/$edit-both.mp4" "$ROOT/Documentation/media/showcase.mp4"
+    cp "$both" "$ROOT/Documentation/media/showcase.mp4"
     made=("$ROOT/Documentation/media/showcase.mp4")
 fi
-ls -l "${made[@]}"
+if ((${#made[@]})); then ls -l "${made[@]}"; fi
