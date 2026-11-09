@@ -126,6 +126,23 @@ struct ProjectValidatorTests {
         #expect(try validate([.scene("walk", .ipad)]) == [])
     }
 
+    @Test func namesShareCanReadUnambiguously() throws {
+        let scene = #"{"set": "base", "steps": [{"hold": 1}]}"#
+        try write("scenes/ipad/a+b.json", scene)
+        let edit = #"{"devices": ["ipad"], "clips": [{"take": "walk", "from": {"step": "open"}, "to": {"step": "done"}}]}"#
+        try write("edits/c+d.json", edit)
+        try write("edits/walk.json", edit)
+        let joined = "can't have \"+\" in it, since `retake share` joins clips with it; rename the file"
+        let clash = "is named \"walk\" too, so `retake share walk` can't tell a cut from a take; rename one of them"
+        #expect(Set(try validate()) == [
+            "scenes/ipad/a+b.json: a scene's name \(joined)",
+            "edits/c+d.json: an edit's name \(joined)",
+            "edits/walk.json: a scene \(clash)",
+        ])
+        // Checking only the scene, the clash is reported on it.
+        #expect(try validate([.scene("walk", .iphone)]) == ["scenes/iphone/walk.json: an edit \(clash)"])
+    }
+
     @Test func filesAreRecognisedByWhereTheyAre() throws {
         let validator = ProjectValidator(files: ProjectFiles(project: try Project.locate(configuration: nil, currentDirectory: root)))
         #expect(validator.target(for: root.appending(path: "retake.json")) == .configuration)

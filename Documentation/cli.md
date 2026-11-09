@@ -864,6 +864,8 @@ Checks the project's files, or the files named, against the schemas, then what a
   edit's scenes, sounds and music;
 - that step ids are unique in a scene, aren't numbers, and aren't `start` or `end`;
 - that every step id an edit references exists in that scene for each device type;
+- that no scene or edit has `+` in its name, and no edit is named as a scene is, since
+  `retake share` joins clips with `+` and reads a name as either a cut or a take;
 - with takes recorded, that every anchor resolves in each scene's take, and every
   element a spotlight or blur names is in the step log at that moment, as `cut` will check. A scene
   with no successful take here, as in a fresh clone or on CI, is warned about rather than failed,

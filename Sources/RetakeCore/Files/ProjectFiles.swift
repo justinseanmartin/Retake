@@ -84,6 +84,20 @@ public struct ProjectFiles {
         }
     }
 
+    /// What joins clips side by side in `retake share`, so no scene or edit is named with it.
+    public static let shareJoin: Character = "+"
+
+    /// Why a scene or an edit can't be named `name`, or nil when it can.
+    public static func nameProblem(_ name: String, kind: String) -> String? {
+        guard name.contains(shareJoin) else { return nil }
+        return "\(kind == "edit" ? "an" : "a") \(kind)'s name can't have \"\(shareJoin)\" in it, since `retake share` joins clips with it; rename the file"
+    }
+
+    /// Why an edit, or a scene, can't be named `name` as a scene, or an edit, is.
+    public static func sharedName(_ name: String, edit: Bool = true) -> String {
+        "\(edit ? "a scene" : "an edit") is named \"\(name)\" too, so `retake share \(name)` can't tell a cut from a take; rename one of them"
+    }
+
     /// The names of the files of a kind in a folder: `create-note` for `scenes/iphone/create-note.json`.
     public func names(in folder: URL) -> [String] {
         let entries = (try? fileManager.contentsOfDirectory(atPath: folder.path)) ?? []

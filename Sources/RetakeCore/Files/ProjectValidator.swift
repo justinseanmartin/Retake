@@ -65,6 +65,7 @@ public struct ProjectValidator {
             }
         }
         if all || targets?.contains(.configuration) == true { checkConfiguration(report) }
+        checkNames(scenes: scenes, edits: edits, report)
         for name in sets { checkSet(name, report) }
         for (name, type) in scenes { checkScene(name, type, report) }
         for name in edits { checkEdit(name, report) }
@@ -90,6 +91,32 @@ public struct ProjectValidator {
         for folder in folders {
             guard let misnamed = files.misnamedFolder(folder), named.insert(misnamed.found).inserted else { continue }
             report.problem(FileProblem(file: "\(misnamed.found)/", path: .root, message: misnamed.message))
+        }
+    }
+
+    /// Scenes' and edits' names as `share` reads them: none with `+`, which joins clips there, and
+    /// no edit named as a scene is, since a name there is either one's.
+    func checkNames(scenes: [(String, DeviceType)], edits: [String], _ report: ProjectFiles.Report) {
+        // A clash is reported on the edit, or on the scene when only the scene is being checked.
+        let editNames = Set(files.names(in: project.edits)).subtracting(edits)
+        for (name, type) in scenes {
+            let file = project.displayPath(files.sceneURL(name, for: type))
+            if let problem = ProjectFiles.nameProblem(name, kind: "scene") {
+                report.problem(FileProblem(file: file, path: .root, message: problem))
+            }
+            if editNames.contains(name) {
+                report.problem(FileProblem(file: file, path: .root, message: ProjectFiles.sharedName(name, edit: false)))
+            }
+        }
+        let sceneNames = Set(DeviceType.allCases.flatMap { files.names(in: project.scenes(for: $0)) })
+        for name in edits {
+            let file = project.displayPath(files.editURL(name))
+            if let problem = ProjectFiles.nameProblem(name, kind: "edit") {
+                report.problem(FileProblem(file: file, path: .root, message: problem))
+            }
+            if sceneNames.contains(name) {
+                report.problem(FileProblem(file: file, path: .root, message: ProjectFiles.sharedName(name)))
+            }
         }
     }
 
