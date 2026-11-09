@@ -4,10 +4,13 @@ import Foundation
 /// output meant for a pipe or `--json` stays clean.
 enum Console {
     static func note(_ message: String) {
+        // After what's been printed so far, when standard output is a pipe, and so buffered.
+        fflush(stdout)
         FileHandle.standardError.write(Data("note: \(message)\n".utf8))
     }
 
     static func warn(_ message: String) {
+        fflush(stdout)
         FileHandle.standardError.write(Data("warning: \(message)\n".utf8))
     }
 }

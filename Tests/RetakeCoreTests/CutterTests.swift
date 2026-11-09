@@ -111,3 +111,11 @@ struct CutterTests {
         #expect(await failure() == "video's ipad video is 5 s long; App Store Connect takes 15 to 30 s.")
     }
 }
+
+struct CutLengthTests {
+    @Test func devicesVideosOfAnEditDifferingByMoreThanAFrameAreWarnedAbout() {
+        #expect(Cutter.lengthMismatch(of: "showcase", [.iphone: 26.533, .ipad: 27]) == "showcase's videos differ in length: iphone 26.53 s, ipad 27 s, 0.47 s apart, so side by side one ends first; lengthen or shorten a clip on one to match.")
+        #expect(Cutter.lengthMismatch(of: "showcase", [.iphone: 26.99, .ipad: 27]) == nil, "within a frame")
+        #expect(Cutter.lengthMismatch(of: "showcase", [.ipad: 27]) == nil, "only one cut")
+    }
+}

@@ -83,6 +83,10 @@ struct Cut: AsyncParsableCommand {
                     worst = max(worst, error.status)
                 }
             }
+            // Against every device type's video of the edit, those cut before too.
+            if !prepared.isEmpty, let mismatch = Cutter.lengthMismatch(of: name, await Cutter.lengths(of: name, for: edit.devices, in: located)) {
+                Console.warn(mismatch)
+            }
         }
         if open, !written.isEmpty {
             _ = try? Subprocess.run("/usr/bin/open", written.map(\.path))

@@ -126,6 +126,27 @@ public enum Cutter {
         return Result(files: [master, preview], duration: plan.duration, warnings: warnings)
     }
 
+    /// How long each device type's video of `name` plays, for each of `types` it's been cut for.
+    public static func lengths(of name: String, for types: [DeviceType], in project: Project) async -> [DeviceType: Double] {
+        var lengths: [DeviceType: Double] = [:]
+        for type in types {
+            let preview = folder(name, for: type, in: project).appending(path: "\(name)-\(type.rawValue).mp4")
+            guard FileManager.default.fileExists(atPath: preview.path),
+                  let duration = try? await AVURLAsset(url: preview).load(.duration).seconds else { continue }
+            lengths[type] = duration
+        }
+        return lengths
+    }
+
+    /// What to warn when `name`'s device types' videos play for different lengths, by more than a
+    /// frame, so side by side one ends before the other; nil when they match, or there's only one.
+    public static func lengthMismatch(of name: String, _ lengths: [DeviceType: Double]) -> String? {
+        guard lengths.count > 1, let longest = lengths.values.max(), let shortest = lengths.values.min(),
+              longest - shortest > 1.0 / 30 else { return nil }
+        let each = DeviceType.allCases.compactMap { type in lengths[type].map { "\(type.rawValue) \(TakeTimeline.seconds($0))" } }
+        return "\(name)'s videos differ in length: \(each.joined(separator: ", ")), \(TakeTimeline.seconds(longest - shortest)) apart, so side by side one ends first; lengthen or shorten a clip on one to match."
+    }
+
     /// Each still's frame, from its take's movie.
     static func stillImages(_ stills: [Overlays.Still], movies: [String: URL]) async throws(RetakeError) -> [CGImage] {
         var images: [CGImage] = []

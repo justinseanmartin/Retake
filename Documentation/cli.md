@@ -736,6 +736,9 @@ iPhone's and the iPad's side by side, see [`share`](#retake-share).
 
 Warns, and carries on, when the edit's takes were recorded on more than one build of the app, device
 or iOS version, or Button Heist, naming the takes on each; the video's [metadata](#a-videos-fields) lists all of them.
+Warns, too, when the edit's videos for its device types, those cut before included, play for
+lengths more than a frame apart, giving each, since [side by side](#retake-share) one ends before
+the other; a clip lengthened or shortened on one brings them together.
 
 Fails (1) if a scene has no successful take, saying why when its take can't be read, an anchor doesn't resolve, an element a spotlight
 or blur names isn't in the take's step log at that moment, one device type's takes come from devices
