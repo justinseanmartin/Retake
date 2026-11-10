@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.1/scene.schema.json",
+  "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.2/scene.schema.json",
   "title": "A scene",
   "description": "A scene: a set, and the steps played on it.",
   "type": "object",

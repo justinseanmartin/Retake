@@ -4,7 +4,7 @@
 
 A Retake project's configuration. Every field is optional.
 
-Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.1/retake.schema.json>, and `retake schema retake` prints it.
+Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.2/retake.schema.json>, and `retake schema retake` prints it.
 
 ## Fields
 

@@ -4,7 +4,7 @@
 
 A scene: a set, and the steps played on it.
 
-Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.1/scene.schema.json>, and `retake schema scene` prints it.
+Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.2/scene.schema.json>, and `retake schema scene` prints it.
 
 ## Fields
 

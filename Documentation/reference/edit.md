@@ -4,7 +4,7 @@
 
 An edit: the video cut from the takes, for each device type it names. Anything in a clip, or at the top, can be given again under a device type, and applies only to that type's video.
 
-Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.1/edit.schema.json>, and `retake schema edit` prints it.
+Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.2/edit.schema.json>, and `retake schema edit` prints it.
 
 Every object in an edit, at the top and in each of the definitions below, can be given again under `iphone` or
 `ipad`, with any of its fields, and applies only to that device type's video. An object in an override is laid over

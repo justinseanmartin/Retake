@@ -4,7 +4,7 @@
 
 A take's step log, `<scene>.json` beside its movie `<scene>.mov` in the output directory's `takes/<type>/`, or `<scene>.previous.json` or `<scene>.failed.json` beside theirs: what was recorded, with what, and when each step happened on the movie's own clock, where it touched, and what was on screen after it. Retake writes it when it records the take, and reads it to list, clean and cut takes; a project doesn't write or edit it. Times are seconds into the movie, to the millisecond; positions and sizes on the screen are its points, portrait, to the hundredth.
 
-Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.1/take.schema.json>, and `retake schema take` prints it.
+Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.2/take.schema.json>, and `retake schema take` prints it.
 
 ## Fields
 
