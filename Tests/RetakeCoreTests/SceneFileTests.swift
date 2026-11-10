@@ -47,6 +47,7 @@ struct SceneFileTests {
                 { "tap": { "x": 195, "y": 410 } },
                 { "id": "reorder", "drag": { "from": { "x": 120, "y": 590 }, "to": { "x": 260, "y": 500 }, "duration": 0.8 } },
                 { "id": "synced", "waitFor": { "label": "Synced" } },
+                { "capture": "synced-list" },
                 { "hold": 2 }
               ]
             }
@@ -61,12 +62,34 @@ struct SceneFileTests {
                 Step(.tapPoint(Position(Point(x: 195, y: 410)))),
                 Step(id: "reorder", .drag(from: .point(x: 120, y: 590), to: .point(x: 260, y: 500), duration: 0.8)),
                 Step(id: "synced", .waitFor(ElementTarget(label: "Synced"), gone: false, timeout: Step.defaultWaitTimeout)),
+                Step(.capture("synced-list")),
                 Step(nil, hold: 2),
             ],
             leadIn: 1.5,
             tail: 2,
             defaultHold: 0.5,
         ))
+    }
+
+    @Test func aCaptureNamesItsStillsFileUniquelyAndIsntInSetup() {
+        #expect(steps(#"{"capture": "home.1_a-b"}, {"capture": "list", "hold": 1, "id": "list"}"#).scene?.steps == [
+            Step(.capture("home.1_a-b")), Step(id: "list", .capture("list"), hold: 1),
+        ])
+        #expect(steps(#"{"capture": "home"}, {"tap": {"label": "Add"}}, {"capture": "home"}"#).problems == [
+            #"scenes/ipad/create-note.json: steps[2].capture: "home" is already steps[0]'s capture; each capture names a still of its own"#,
+        ])
+        #expect(steps(#"{"capture": "home"}, {"capture": "Home"}"#).problems == [
+            #"scenes/ipad/create-note.json: steps[1].capture: "Home" is already steps[0]'s capture ("home", in another case, names the same file); each capture names a still of its own"#,
+        ])
+        for bad in ["../home", ".home", "home screen", "home/1"] {
+            #expect(steps(#"{"capture": "\#(bad)"}"#).problems == [
+                #"scenes/ipad/create-note.json: steps[0].capture: "\#(bad)" names the still's file, so it's letters, digits, -, _ and ., starting with a letter or digit"#,
+            ])
+        }
+        #expect(read(#"{"setup": [{"capture": "home"}], "steps": [{"hold": 1}]}"#).problems == [
+            "scenes/ipad/create-note.json: setup[0].capture: setup steps aren't recorded, so nothing is captured in them; move it into the steps",
+        ])
+        #expect(steps(#"{"capture": "home", "tap": {"label": "Add"}}"#).problems.first?.contains(#""tap" and "capture" can't be given together"#) == true)
     }
 
     @Test func aScenesLaunchIsItsSetsAlone() {
@@ -88,15 +111,18 @@ struct SceneFileTests {
     @Test func aPointCanBeAShareOfTheScreenAndADragsEndsElements() {
         let scene = steps(#"""
             {"tap": {"x": "50%", "y": 410}},
-            {"drag": {"from": {"label": "Reorder Book club"}, "to": {"label": "Reorder Weekend plans"}, "duration": 0.6}}
+            {"drag": {"from": {"label": "Reorder Book club"}, "to": {"label": "Reorder Weekend plans"}, "duration": 0.6}},
+            {"capture": "list", "hold": 1}
             """#).scene
         #expect(scene?.steps.map(\.action) == [
             .tapPoint(Position(x: .share(0.5), y: .points(410))),
             .drag(from: .element(ElementTarget(label: "Reorder Book club")), to: .element(ElementTarget(label: "Reorder Weekend plans")), duration: 0.6),
+            .capture("list"),
         ])
         #expect(scene?.steps.map(\.json) == [
             .object(JSONObject([.init(key: "tap", value: .object(JSONObject([.init(key: "x", value: .string("50%")), .init(key: "y", value: .number(410))])))])),
             try! JSONParser.parse(#"{"drag": {"from": {"label": "Reorder Book club"}, "to": {"label": "Reorder Weekend plans"}, "duration": 0.6}}"#),
+            try! JSONParser.parse(#"{"capture": "list", "hold": 1}"#),
         ], "written back as given")
     }
 
@@ -136,7 +162,7 @@ struct SceneFileTests {
     @Test(arguments: [
         (#"{"tapp": {"label": "a"}}"#, #"scenes/ipad/create-note.json: steps[0]: unknown key "tapp"; did you mean "tap"?"#),
         (#"{"tap": {"label": "a"}, "drag": {"from": {"x": 1, "y": 1}, "to": {"x": 2, "y": 2}}}"#, #"scenes/ipad/create-note.json: steps[0]: does one thing, so "tap" and "drag" can't be given together"#),
-        (#"{"id": "pause"}"#, "scenes/ipad/create-note.json: steps[0]: has nothing to do: give an action (tap, drag, type, activate, orientation, waitFor) or a hold"),
+        (#"{"id": "pause"}"#, "scenes/ipad/create-note.json: steps[0]: has nothing to do: give an action (tap, drag, type, activate, orientation, waitFor, capture) or a hold"),
         (#"{"tap": {"x": 10, "y": 10, "label": "a"}}"#, #"scenes/ipad/create-note.json: steps[0].tap: taps a point ("x" and "y") or an element, not both"#),
         (#"{"tap": {"x": 10}}"#, #"scenes/ipad/create-note.json: steps[0].tap: is missing "y""#),
         (#"{"tap": {"occurrence": 2}}"#, #"scenes/ipad/create-note.json: steps[0].tap: needs an element to name: its "label", "value", "identifier", "hint" or "traits""#),

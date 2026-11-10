@@ -341,6 +341,17 @@ extension ComposeActionSpec {
             return .step(Step(.orientation(orientation)))
         },
         ComposeActionSpec(
+            name: "capture", summary: "Adds a step that saves the screen as a still when the scene is recorded; composing captures nothing.",
+            options: [.option("name", "<name>", "the still's name: letters, digits, -, _ and .")] + stepOptions,
+            required: ["name"], isStep: true,
+        ) { given throws(ComposeAction.Problem) in
+            let name = given["name"]!
+            guard name.wholeMatch(of: try! Regex(Step.capturePattern)) != nil else {
+                throw .wrong("--name names the still's file, so it's letters, digits, -, _ and ., starting with a letter or digit.")
+            }
+            return .step(Step(.capture(name)))
+        },
+        ComposeActionSpec(
             name: "hold", summary: "A step that's only a pause.",
             options: [.option("seconds", "<seconds>", "how long"), .option("id", "<name>", "names the step", default: "none")],
             required: ["seconds"], isStep: true,

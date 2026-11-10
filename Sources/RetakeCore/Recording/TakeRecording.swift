@@ -34,7 +34,9 @@ public enum TakeRecording {
     /// `TakeStore.keepRecording` says. A take whose step doesn't run is kept as the scene's
     /// latest failure, for its footage to show what went wrong, and the failure is thrown after;
     /// one that couldn't record at all, or is interrupted, keeps nothing and leaves the scene's
-    /// takes as they were. Returns the log.
+    /// takes as they were. The scene's `capture` steps take their stills from the screen being
+    /// recorded, which replace the scene's captures when every step ran, as `CaptureStore` says.
+    /// Returns the log.
     @discardableResult
     public static func record(
         _ target: Target,
@@ -89,6 +91,15 @@ public enum TakeRecording {
             report(event)
         }
         player.turning = { recorder.turning(to: TakeWriter.Facing($0)) }
+        let captures = project.captures(for: type)
+        let hasCaptures = scene.steps.contains { $0.action?.capture != nil }
+        CaptureStore.discardRecording(of: target.scene, in: captures)
+        defer { CaptureStore.discardRecording(of: target.scene, in: captures) }
+        let taker = CaptureTaker(
+            scene: target.scene, folder: CaptureStore.recording(of: target.scene, in: captures), project: project, report: report,
+            screenshot: { url throws(RetakeError) in try Devicectl().screenshot(of: device, to: url) },
+        )
+        player.capturing = { name throws(RetakeError) in try await taker.take(name) { () throws(RetakeError) in try await recorder.frame() } }
         player.readBeforeSteps = { elements, at in collected.beforeSteps = (elements, at) }
 
         var failure: RetakeError?
@@ -173,7 +184,53 @@ public enum TakeRecording {
             throw RetakeError(.failed, "Couldn't keep the take of \(target.scene) in \(project.displayPath(target.folder)): \(error.localizedDescription)")
         }
         if let failure { throw failure }
+        if hasCaptures { try keepCaptures(of: target.scene, in: captures, project: project) }
         return log
+    }
+
+    /// The captures a recording took, kept in place of the scene's.
+    static func keepCaptures(of scene: String, in captures: URL, project: Project) throws(RetakeError) {
+        do {
+            try CaptureStore.keepRecording(of: scene, in: captures)
+        } catch {
+            throw RetakeError(.failed, "Couldn't keep the captures of \(scene) in \(project.displayPath(captures)): \(error.localizedDescription)")
+        }
+    }
+
+    /// Plays `scene` on its set with the device's screen open but not recorded, for its `capture`
+    /// steps alone: its setup, then its steps with their holds, without a lead-in or a tail, and
+    /// writes no movie and no step log. Its captures replace the scene's once every step has run;
+    /// a failure keeps none, and leaves the scene's as they were. Returns each capture's size.
+    @discardableResult
+    public static func captureStills(
+        of name: String,
+        scene: SceneFile,
+        set: ResolvedSet,
+        in project: Project,
+        on device: Device,
+        capture: CaptureDevice,
+        player: Player,
+        cleanUp: Bool = true,
+    ) async throws(RetakeError) -> [(width: Int, height: Int)] {
+        guard let type = device.type else {
+            throw RetakeError(.environment, "Retake can't tell whether \(device.name) is an iPhone or an iPad.")
+        }
+        let captures = project.captures(for: type)
+        CaptureStore.discardRecording(of: name, in: captures)
+        defer { CaptureStore.discardRecording(of: name, in: captures) }
+        let recorder = try DeviceRecorder(capture)
+        let taker = CaptureTaker(
+            scene: name, folder: CaptureStore.recording(of: name, in: captures), project: project, report: player.report,
+            screenshot: { url throws(RetakeError) in try Devicectl().screenshot(of: device, to: url) },
+        )
+        var player = player
+        player.capturing = { name throws(RetakeError) in try await taker.take(name) { () throws(RetakeError) in try await recorder.frame() } }
+        defer { recorder.close() }
+        try await AppSession.run(name, in: project, set: set, scene: scene, on: device, report: player.report, cleanUp: cleanUp) { driver, _ throws(RetakeError) in
+            try await player.play(scene, named: name, on: driver) { () throws(RetakeError) in try await recorder.open() }
+        }
+        try keepCaptures(of: name, in: captures, project: project)
+        return taker.taken.map { ($0.width, $0.height) }
     }
 
     /// What the take gathered as it went, across the closures it runs in.

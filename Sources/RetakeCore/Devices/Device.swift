@@ -122,6 +122,12 @@ public struct Devicectl: DeviceControl {
         return CGSize(width: min(first, second) / scale, height: max(first, second) / scale)
     }
 
+    /// Saves a screenshot of the device's screen to `url`, a PNG: at the screen's own resolution,
+    /// as the device faces, in its color space, with an alpha channel on some devices.
+    public func screenshot(of device: Device, to url: URL) throws(RetakeError) {
+        _ = try run(["device", "capture", "screenshot", "--device", device.udid, "--destination", url.path])
+    }
+
     /// Runs `devicectl` with `arguments`, returning the JSON it writes.
     public func run(_ arguments: [String]) throws(RetakeError) -> Data {
         let output = FileManager.default.temporaryDirectory.appending(path: "retake-devicectl-\(UUID().uuidString).json")

@@ -1,7 +1,7 @@
 # Retake
 
-Retake makes App Store preview videos from your running iOS app, and makes them again whenever the
-app changes.
+Retake makes App Store preview videos and screenshots from your running iOS app, and makes them
+again whenever the app changes.
 
 You write down a walk through your app once, as a **scene**, starting from a known state, its
 **set**. Retake plays the scene on a real device while the Mac records the screen, giving you a
@@ -11,6 +11,11 @@ renders the edit into a video ready to upload to App Store Connect.
 
 When the app changes, you record the scenes again and render the same edits. There's no screen
 recording by hand, no editing timeline to rebuild, and no guessing which frames you used last time.
+
+The same scenes take your screenshots: a **`capture`** step saves the screen as a PNG at its own
+resolution, so the screenshots for App Store Connect come
+from the same walk through the app, and are taken again with it. See
+[Captures](#captures-screenshots-from-the-same-scenes).
 
 https://github.com/user-attachments/assets/416e4ecd-30a8-4cd1-bf05-2343f5dca131
 
@@ -38,6 +43,7 @@ in the iPhone's place.
 - [Sets: the state a take starts from](#sets-the-state-a-take-starts-from) ([`state`](#state-clean-cloned-or-live))
 - [Scenes: the walk through the app](#scenes-the-walk-through-the-app)
 - [Takes: footage and a step log](#takes-footage-and-a-step-log)
+- [Captures: screenshots from the same scenes](#captures-screenshots-from-the-same-scenes)
 - [Edits: the video cut from the takes](#edits-the-video-cut-from-the-takes)
 - [What's recorded in each file](#whats-recorded-in-each-file)
 - [Devices](#devices)
@@ -327,6 +333,7 @@ project's `defaultSet` unless it names one:
     { "tap": { "x": 195, "y": 410 } },
     { "drag": { "from": { "x": 120, "y": 590 }, "to": { "x": 260, "y": 500 }, "duration": 0.8 }, "id": "reorder" },
     { "waitFor": { "label": "Synced" }, "id": "synced" },
+    { "capture": "synced-list" },
     { "hold": 2 }
   ]
 }
@@ -354,6 +361,10 @@ Each step does one thing, led by what it does:
   at most 60 seconds, so a longer `timeout` is refused when the scene is read, unless
   `BUTTONHEIST_MAX_WAIT_TIMEOUT` raises the limit: The Button Heist reads it both where Retake runs
   and in the app, so set it in Retake's environment and in the set's `environment`.
+- **`capture`** saves the screen as a still, by the name it gives, as it is when the step before has
+  ended and held; see
+  [captures](#captures-screenshots-from-the-same-scenes). Each capture in a scene has a name of its
+  own, of letters, digits, `-`, `_` and `.`, and none is in `setup`, which isn't recorded.
 
 After what it does, a step can give its `hold`, the pause after it, so the take has room to breathe;
 the edit trims what it doesn't need. A tap's hold runs from when the tap is sent, so taps land a
@@ -464,6 +475,81 @@ main thread for missed frames: `record` warns of the take's hitches from its fir
 and the longest, saying whether the longest came while a step was being played, and `cut` warns of
 any a clip plays, the lead-in's included. Only hitches as long as `retake.json`'s `hitchWarning`,
 50 ms unless it says otherwise, are warned of.
+
+## Captures: screenshots from the same scenes
+
+A scene's **`capture`** step saves the screen as a still, a PNG named for the step, as `record`
+plays the scene:
+
+<!-- schema: scene -->
+```json
+{
+  "set": "screenshots",
+  "steps": [
+    { "waitFor": { "label": "Reading list" } },
+    { "capture": "library" },
+    { "tap": { "label": "Reading list" } },
+    { "waitFor": { "label": "Share" } },
+    { "capture": "note" }
+  ]
+}
+```
+
+Each still is a screenshot the device takes, through `devicectl`, at its screen's own resolution:
+1668×2388 on an iPad Pro (11-inch) (3rd generation), whose screen `record` films at 1200×1718. It's
+taken while Retake has the screen open, as `record` does even with `--stills-only`, so its status
+bar is the one QuickTime shows, the device's while its screen is recorded: 9:41, with full bars and
+battery. That's all it cleans, though: a Focus's symbol stays beside the time, and so does iOS's
+link back to the app that was open before Retake launched yours, such as "◀ Slack". Turn Focus off,
+and go to the home screen, before recording to keep both out. A still faces as the screen did,
+landscape when the device was turned, with no touches drawn on it; like every App Store
+screenshot, it has no alpha channel, and it's in the device's color space, such as Display P3.
+When the device can't take a screenshot, `record` warns and captures the frame its screen is
+filmed in instead.
+
+The step takes the screen as the step before left it, once that step has ended and its hold is
+over, without waiting for it to settle, which a screen with a looping animation never does. A step
+ends once The Button Heist sees the app settle, so most need no hold before a capture; one whose
+screen goes on moving after it ends needs a `hold` long enough for it to come to rest, such as a
+turn, which ends once the app has laid itself out, while the device is still drawing the rotation,
+or a timed animation the app starts.
+
+**A capture takes 1 to 2 seconds**, as long as the device takes to answer `devicectl`, and the app
+waits on that screen for all of it. A take recorded with its captures shows that as a still stretch
+at each one, the capture step's length, which the movie records through. So a capture in the middle
+of a scene an edit cuts from puts that pause in the video, unless the edit cuts it out: give the
+capture step an `id`, and end one clip at its start and begin the next at its end. Keep a video's
+scenes free of captures, and take the screenshots in scenes of their own, with
+`record --stills-only`, unless the pause is wanted.
+
+The stills go in the output directory's `captures/<type>/<scene>/<name>.png`, apart from the
+scene's takes. A recording takes them into a folder of its own, and only when it plays every step
+do they replace the scene's captures, all together, so a scene's captures are always from one
+recording. One that fails leaves the scene's captures as they were. A scene can be recorded for its
+captures and its take together, and an edit can cut from a scene that captures; a capture step is
+a step like any other in the take, which an edit can anchor to.
+
+**`retake record --stills-only`** takes only the captures, writing no take: it plays the scenes
+that capture with the device's screen open but not recorded, without their lead-in and tail, and
+leaves their takes alone. With no scene named, it takes the captures of each scene that captures
+and has none yet, or with `--force`, every one.
+
+`record` says, for each size it captured, whether it's a size App Store Connect takes screenshots
+in, for which display, and when that isn't the display it requires, which that is. App Store
+Connect takes only exact sizes, and requires one display's for each device type, scaling them down
+for the others: iPhone with Dynamic Island (medium display), 1179×2556 or 1206×2622, and the iPad
+13-inch display, 2064×2752 or 2048×2732. So the device a scene captures on decides which of its
+slots the stills can fill: an iPhone 17e's 1170×2532 is its size for iPhone with Face ID (medium
+display), and an iPad Pro (11-inch) (3rd generation)'s 1668×2388 for the iPad 11-inch display,
+neither of them required. Its
+[screenshot specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications)
+list every display and size. A set with [`previewAspect`](#previewaspect-the-previews-shape) shrinks the app's window
+to a preview video's shape, which a screenshot doesn't want, so a scene for screenshots starts on a
+set that leaves it off; one that extends the set the videos use, with `"previewAspect": false`, is
+enough.
+
+`retake clean --captures` deletes captures, every scene's or those named, and `retake clean` with
+nothing else deletes them with the takes and cuts.
 
 ## Edits: the video cut from the takes
 
@@ -774,7 +860,7 @@ Retake/
   scenes/iphone/*.json
   scenes/ipad/*.json
   edits/*.json
-  output/            # takes and videos; gitignored, and movable with --output-dir
+  output/            # takes, captures and videos; gitignored, and movable with --output-dir
 ```
 
 The folders' names are lowercase, and Retake reads them only as named: a folder in another case,

@@ -183,13 +183,16 @@ final class Interruption: @unchecked Sendable {
 
 struct Record: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        abstract: "Records takes, or with --dry-run, plays scenes without recording them.",
+        abstract: "Records takes, or with --stills-only, only their captures, or with --dry-run, plays scenes without recording them.",
         discussion: """
             With no scenes named, records every scene in scenes/<type>/ with no take yet, or every one \
             with --force. With --for, the scenes an edit uses. Scenes named are recorded whether or not \
             they have takes. A take that succeeds replaces the scene's take, which is kept as its \
             previous one, replacing that; one that fails is kept as the scene's latest failure, and \
-            leaves its take alone, as does one interrupted. With --dry-run, plays the scenes chosen \
+            leaves its take alone, as does one interrupted. A scene's capture steps save the screen as \
+            stills, in output/captures/<type>/<scene>/, replacing its captures when every step ran. With \
+            --stills-only, plays the scenes with capture steps, those with no captures yet unless --force, \
+            taking their captures without recording a take. With --dry-run, plays the scenes chosen \
             the same way, and writes nothing to the project: its console log goes to a temporary \
             folder, as every launch's does.
             """,
@@ -212,11 +215,20 @@ struct Record: AsyncParsableCommand {
     @Flag(help: "Play the scenes without recording them, writing nothing.")
     var dryRun = false
 
+    @Flag(help: "Take only the scenes' captures, recording no take: the scenes with capture steps, those with no captures yet unless --force.")
+    var stillsOnly = false
+
     @OptionGroup var project: ProjectOptions
 
     func validate() throws {
         if !scenes.isEmpty, edit != nil {
             throw ValidationError("Name scenes or give --for, not both.")
+        }
+        if stillsOnly, dryRun {
+            throw ValidationError("--stills-only takes captures, and --dry-run takes nothing; give one.")
+        }
+        if stillsOnly, edit != nil {
+            throw ValidationError("--for chooses the scenes an edit cuts, and an edit uses no captures; name the scenes, or give neither.")
         }
     }
 
@@ -226,18 +238,24 @@ struct Record: AsyncParsableCommand {
         guard let type = target.type else {
             throw RetakeError(.environment, "Retake can't tell whether \(target.name) is an iPhone or an iPad.")
         }
-        let (chosen, taken) = try RecordRun.scenes(named: scenes, edit: edit, force: force, for: type, in: located)
+        let (chosen, taken) = try RecordRun.scenes(named: scenes, edit: edit, force: force, stillsOnly: stillsOnly, for: type, in: located)
         guard !chosen.isEmpty else {
-            print(taken.isEmpty
-                ? "There are no \(type.rawValue) scenes in \(located.displayPath(located.scenes(for: type)))."
-                : "Every scene chosen already has a take: \(taken.joined(separator: ", ")). Give --force to record them again.")
+            if stillsOnly {
+                print(taken.isEmpty
+                    ? "No \(type.rawValue) scene in \(located.displayPath(located.scenes(for: type))) has a capture step."
+                    : "Every scene chosen already has its captures: \(taken.joined(separator: ", ")). Give --force to take them again.")
+            } else {
+                print(taken.isEmpty
+                    ? "There are no \(type.rawValue) scenes in \(located.displayPath(located.scenes(for: type)))."
+                    : "Every scene chosen already has a take: \(taken.joined(separator: ", ")). Give --force to record them again.")
+            }
             return
         }
         let capture = dryRun ? nil : try directory.captureDevice(for: target)
-        let name = target.name, dryRun = dryRun
-        let player = Player(report: { event in Self.show(event, scene: "", device: name, dryRun: dryRun) })
+        let name = target.name, dryRun = dryRun, stillsOnly = stillsOnly
+        let player = Player(report: { event in Self.show(event, scene: "", device: name, dryRun: dryRun, stillsOnly: stillsOnly) })
         let outcomes = await RecordRun.run(
-            chosen, in: located, on: target, capture: capture, dryRun: dryRun,
+            chosen, in: located, on: target, capture: capture, dryRun: dryRun, stillsOnly: stillsOnly,
             stopOnFailure: stopOnFailure, player: player,
         )
         // What became of each scene, and the worst status among them.
@@ -249,10 +267,19 @@ struct Record: AsyncParsableCommand {
                 let message = failure.message.hasPrefix("\(outcome.scene): ") ? String(failure.message.dropFirst(outcome.scene.count + 2)) : failure.message
                 print("✖ \(outcome.scene)\(take): \(message)")
             } else if let movie = outcome.movie {
-                print("✓ \(outcome.scene): \(String(format: "%.1f", outcome.duration ?? 0)) s, in \(located.displayPath(movie))")
+                let stills = outcome.captures.map { ", and \(Self.captures(outcome.captured.count)) in \(located.displayPath($0))" } ?? ""
+                print("✓ \(outcome.scene): \(String(format: "%.1f", outcome.duration ?? 0)) s, in \(located.displayPath(movie))\(stills)")
+            } else if let folder = outcome.captures {
+                print("✓ \(outcome.scene): \(Self.captures(outcome.captured.count)), in \(located.displayPath(folder))")
             } else {
                 print("✓ \(outcome.scene): played every step")
             }
+        }
+        // Whether App Store Connect takes the captures as screenshots, once for each size.
+        var sizes: [CaptureSize] = []
+        for size in outcomes.flatMap(\.captured) where !sizes.contains(where: { $0.width == size.width && $0.height == size.height }) {
+            sizes.append(size)
+            print(AppStoreScreenshots.note(width: size.width, height: size.height, for: type))
         }
         let skipped = chosen.dropFirst(outcomes.count)
         if !skipped.isEmpty { print("Not \(dryRun ? "played" : "recorded"): \(skipped.joined(separator: ", ")).") }
@@ -261,11 +288,13 @@ struct Record: AsyncParsableCommand {
         }
     }
 
+    static func captures(_ count: Int) -> String { count == 1 ? "1 capture" : "\(count) captures" }
+
     /// Each scene as it starts, and each step once it's played, with how long it took.
-    @Sendable static func show(_ event: Player.Event, scene: String, device: String, dryRun: Bool) {
+    @Sendable static func show(_ event: Player.Event, scene: String, device: String, dryRun: Bool, stillsOnly: Bool = false) {
         switch event {
         case .scene(let name, let recording):
-            Swift.print(recording ? "Recording \(name) on \(device)." : "Playing \(name) on \(device).")
+            Swift.print(!recording ? "Playing \(name) on \(device)." : stillsOnly ? "Capturing \(name) on \(device)." : "Recording \(name) on \(device).")
         case .launching(let set, let state):
             Swift.print("  From \(set) (\(state.rawValue)).")
         case .started:
@@ -389,14 +418,15 @@ enum TakesOutput {
 
 struct Clean: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        abstract: "Deletes takes and cuts, or take data left on the device.",
+        abstract: "Deletes takes, cuts and captures, or take data left on the device.",
         discussion: """
-            With neither --takes nor --cuts, deletes every take and every cut, of both device types \
-            unless --type names one. --takes alone deletes every take, and given scenes, only theirs: \
-            each one's take, previous take and latest failure, and any numbered takes an earlier \
-            Retake left; --cuts alone every cut, and given edits, only theirs. --unused deletes every \
-            previous take and failure, and the takes and scene definitions no edit needs, keeping \
-            each needed scene's take. \
+            With none of --takes, --cuts and --captures, deletes every take, cut and capture, of both \
+            device types unless --type names one. --takes alone deletes every take, and given scenes, \
+            only theirs: each one's take, previous take and latest failure, and any numbered takes an \
+            earlier Retake left; --cuts alone every cut, and given edits, only theirs; --captures alone \
+            every scene's captures, and given scenes, only theirs. --unused deletes every previous take \
+            and failure, the takes and scene definitions no edit needs, keeping each needed scene's \
+            take and every scene that captures, and the captures of scenes that no longer do. \
             Lists what it will delete, naming takes an edit is cut from, and asks first unless --yes. With \
             --on-device, deletes instead what Retake leaves in the app's container on the device \
             (takes' copies of its data, and staged set files), which record does at the end of a run.
@@ -409,6 +439,9 @@ struct Clean: AsyncParsableCommand {
 
     @Option(help: ArgumentHelp("Delete cuts: every one, or the edits' given, as video1,video2.", valueName: "edits"))
     var cuts: String?
+
+    @Option(help: ArgumentHelp("Delete captures: every scene's, or the given scenes', as home,settings.", valueName: "scenes"))
+    var captures: String?
 
     @Option(help: ArgumentHelp("Only this device type's.", valueName: "type"))
     var type: DeviceType?
@@ -426,16 +459,16 @@ struct Clean: AsyncParsableCommand {
     @OptionGroup var project: ProjectOptions
 
     /// The options whose value may be left out.
-    static let optionalValues = ["--takes", "--cuts"]
+    static let optionalValues = ["--takes", "--cuts", "--captures"]
 
     func validate() throws {
-        if onDevice, takes != nil || cuts != nil || type != nil || yes || unused {
+        if onDevice, takes != nil || cuts != nil || captures != nil || type != nil || yes || unused {
             throw ValidationError(
-                "--on-device deletes only what's on the device; it takes no --takes, --cuts, --type, --unused or --yes.",
+                "--on-device deletes only what's on the device; it takes no --takes, --cuts, --captures, --type, --unused or --yes.",
             )
         }
-        if unused, takes != nil || cuts != nil {
-            throw ValidationError("--unused chooses takes and scenes itself; it can't be combined with --takes or --cuts.")
+        if unused, takes != nil || cuts != nil || captures != nil {
+            throw ValidationError("--unused chooses takes, scenes and captures itself; it can't be combined with --takes, --cuts or --captures.")
         }
         if !onDevice, device.device != nil {
             throw ValidationError("--device applies only with --on-device.")
@@ -455,7 +488,7 @@ struct Clean: AsyncParsableCommand {
             if unused {
                 cleaning = try TakeStore.unused(for: types, in: located)
             } else {
-                cleaning = try TakeStore.cleaning(takes: Self.list(takes), cuts: Self.list(cuts), for: types, in: located)
+                cleaning = try TakeStore.cleaning(takes: Self.list(takes), cuts: Self.list(cuts), captures: Self.list(captures), for: types, in: located)
             }
             guard !cleaning.isEmpty else { return print("Nothing to delete.") }
             Self.describe(cleaning, in: located)
@@ -502,6 +535,10 @@ struct Clean: AsyncParsableCommand {
         if !cleaning.scenes.isEmpty {
             print("Scenes:")
             for scene in cleaning.scenes { print("  \(project.displayPath(scene))") }
+        }
+        if !cleaning.captures.isEmpty {
+            print("Captures:")
+            for folder in cleaning.captures { print("  \(project.displayPath(folder))/") }
         }
         for take in cleaning.used {
             Console.warn("\(take.scene)'s \(take.type.rawValue) take is used by \(take.usedBy.joined(separator: ", ")); record it again before the next cut.")

@@ -45,6 +45,24 @@ struct RecordRunTests {
         #expect(throws: RetakeError.self) { try RecordRun.scenes(named: [], edit: "video9", force: false, for: .ipad, in: project) }
     }
 
+    @Test func stillsOnlyChoosesScenesThatCaptureWithoutCapturesYetUnlessForced() throws {
+        try makeProject()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try write("scenes/ipad/home.json", #"{ "steps": [{ "capture": "home" }] }"#)
+        try write("scenes/ipad/list.json", #"{ "steps": [{ "capture": "list" }] }"#)
+        try write("output/captures/ipad/home/home.png", "")
+        let unforced = try RecordRun.scenes(named: [], edit: nil, force: false, stillsOnly: true, for: .ipad, in: project)
+        #expect(unforced.chosen == ["list"] && unforced.alreadyTaken == ["home"])
+        #expect(try RecordRun.scenes(named: [], edit: nil, force: true, stillsOnly: true, for: .ipad, in: project).chosen == ["home", "list"])
+        #expect(try RecordRun.scenes(named: ["home"], edit: nil, force: false, stillsOnly: true, for: .ipad, in: project).chosen == ["home"])
+        do {
+            _ = try RecordRun.scenes(named: ["a"], edit: nil, force: false, stillsOnly: true, for: .ipad, in: project)
+            Issue.record("a scene that captures nothing")
+        } catch {
+            #expect(error.status == .usage && error.message == "a has no capture steps, so --stills-only has nothing to take of it.")
+        }
+    }
+
     @Test func scenesNamedAreChosenTakeOrNotOnceEach() throws {
         try makeProject()
         defer { try? FileManager.default.removeItem(at: root) }

@@ -134,6 +134,10 @@ extension SceneFile {
                     ).defaulting(to: Step.defaultWaitTimeout)),
                 ],
             ).atLeastOne(of: ElementTarget.keys)),
+            .init("capture", .string(
+                "Saves the screen as a still, as it is when the step before has ended and its hold is over, as a PNG named for it in the output directory's captures/<type>/<scene>/, when the scene is recorded. Unique in the scene. Not in setup.",
+                pattern: Step.capturePattern,
+            )),
         ]
         var holdOnly = Schema.object(nil, [], required: ["hold"])
         holdOnly.type = []
@@ -453,7 +457,7 @@ extension TakeLog {
         let step = Schema.object("One step as it was recorded.", [
             .init("number", .integer("Its number among the scene's steps, from 1.", atLeast: 1)),
             .init("id", .string("Its id in the scene, for one that has one.", nonEmpty: true)),
-            .init("action", .string("The kind of step: tap, drag, type, activate, orientation or waitFor, or hold for one that's only a pause.", nonEmpty: true)),
+            .init("action", .string("The kind of step: tap, drag, type, activate, orientation, waitFor or capture, or hold for one that's only a pause.", nonEmpty: true)),
             .init("start", .number("When it began, in \(seconds), as the device saw it where it could.")),
             .init("end", .number("When it ended, in \(seconds); for a waitFor, when its element came or went.")),
             .init("timedBy", .choice(

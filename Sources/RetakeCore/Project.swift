@@ -46,6 +46,11 @@ public struct Project: Sendable, Equatable {
         output.appending(path: "takes/\(type.rawValue)", directoryHint: .isDirectory)
     }
 
+    /// Where `record` keeps the stills scenes capture, a folder for each scene.
+    public func captures(for type: DeviceType) -> URL {
+        output.appending(path: "captures/\(type.rawValue)", directoryHint: .isDirectory)
+    }
+
     public func cuts(for type: DeviceType) -> URL {
         output.appending(path: "cuts/\(type.rawValue)", directoryHint: .isDirectory)
     }

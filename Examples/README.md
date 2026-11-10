@@ -19,6 +19,10 @@ Its Retake project is in `Notes/Retake/`, as `retake init` makes one: `retake.js
 scenes and edits, the files its sets copy, in `data/`, and the music and sound effects its edits
 play, in `audio/`. Run Retake's commands from `Examples/Notes/`, or from inside `Retake/`.
 
+A `screenshots` scene, for iPhone and iPad, captures stills of the library and of a note, on the
+iPad open beside the library in landscape, into `Notes/Retake/output/captures/`. Its set,
+`screenshots`, is `returning-user` with the app filling the screen, as a screenshot wants.
+
 It has two edits:
 
 - `tour`, for iPhone and iPad: getting started, then a note written, synced, shared and filed.
@@ -43,7 +47,7 @@ Examples/Notes/run.sh
 ```
 
 It does each step below, and finishes with the video's master and App Store files in
-`Notes/Retake/output/cuts/`; once an iPhone's and an iPad's are both cut, it shares the two side by
+`Notes/Retake/output/cuts/`, and the `screenshots` scene's stills in `Notes/Retake/output/captures/`; once an iPhone's and an iPad's are both cut, it shares the two side by
 side, a small MP4 with sound, in `Notes/Retake/output/share/`. Run it again to record and cut
 again. Its options:
 

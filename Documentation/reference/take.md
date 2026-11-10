@@ -117,7 +117,7 @@ One step as it was recorded.
 | --- | --- | --- | --- |
 | `number` | integer ≥ 1 | required | Its number among the scene's steps, from 1. |
 | `id` | string, not empty |  | Its id in the scene, for one that has one. |
-| `action` | string, not empty | required | The kind of step: tap, drag, type, activate, orientation or waitFor, or hold for one that's only a pause. |
+| `action` | string, not empty | required | The kind of step: tap, drag, type, activate, orientation, waitFor or capture, or hold for one that's only a pause. |
 | `start` | number | required | When it began, in seconds into the movie, to the millisecond, as the device saw it where it could. |
 | `end` | number | required | When it ended, in seconds into the movie, to the millisecond; for a waitFor, when its element came or went. |
 | `timedBy` | `"device"` or `"mac"` | required | Whose times start and end are. device: the device's own, placed through clock.deviceAhead. mac: when the Mac sent the step and heard back, which a round trip either side widens. |

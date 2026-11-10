@@ -313,7 +313,7 @@
           "minLength": 1
         },
         "action": {
-          "description": "The kind of step: tap, drag, type, activate, orientation or waitFor, or hold for one that's only a pause.",
+          "description": "The kind of step: tap, drag, type, activate, orientation, waitFor or capture, or hold for one that's only a pause.",
           "type": "string",
           "minLength": 1
         },

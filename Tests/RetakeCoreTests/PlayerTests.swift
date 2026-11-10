@@ -61,6 +61,7 @@ extension Step.Action {
 /// The screens a player was told of.
 final class Readings: @unchecked Sendable {
     var elements: [[ScreenElement]] = []
+    var names: [String] = []
 }
 
 /// A clock that moves only when the player pauses, recording each pause.
@@ -91,6 +92,26 @@ struct PlayerTests {
         try await time.player().play(scene, named: "create-note", on: driver)
         #expect(driver.done == ["run", "run", "run", "run"])
         #expect(time.pauses == [0.5, 1, 2, 3])
+    }
+
+    @Test func aCaptureIsTakenInItsTurnWithItsHoldAfterAndPassedOverWhenNothingCaptures() async throws {
+        let driver = FakeDriver()
+        let scene = SceneFile(steps: [tap, Step(.capture("home"), hold: 1), tap])
+        let time = FakeTime()
+        let captured = Readings()
+        var player = time.player()
+        player.capturing = { name throws(RetakeError) in captured.names.append(name) }
+        try await player.play(scene, named: "create-note", on: driver)
+        #expect(captured.names == ["home"] && driver.runs == 2)
+        #expect(time.pauses == [1])
+
+        player.capturing = { _ throws(RetakeError) in throw RetakeError(.failed, "no frames arrived") }
+        await #expect {
+            try await player.play(scene, named: "create-note", on: FakeDriver())
+        } throws: { error in
+            (error as? RetakeError)?.message == #"create-note: step 2 of 3, capture "home", didn't run: no frames arrived"#
+        }
+        try await FakeTime().player().play(scene, named: "create-note", on: FakeDriver())
     }
 
     @Test func theScreenIsReadOnceAfterTheSetupAndLeadInJustBeforeTheFirstStepOnlyWhenAsked() async throws {

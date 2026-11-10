@@ -34,10 +34,11 @@ One thing the scene does, led by what it does, and the pause after it. A step ca
 | `activate` | [element](#element) |  | An accessibility activation of an element, with no touch, for getting somewhere off camera. |
 | `orientation` | `"portrait"`, `"portrait-upside-down"`, `"landscape-left"` or `"landscape-right"` |  | Turns the device, with no hand on it; the step ends when the app has turned. |
 | `waitFor` | [object](#stepwaitfor) |  | Waits until an element is on screen, or with gone until it isn't. The step fails if it doesn't happen in time. |
+| `capture` | string matching `^[A-Za-z0-9][A-Za-z0-9._-]*$` |  | Saves the screen as a still, as it is when the step before has ended and its hold is over, as a PNG named for it in the output directory's captures/<type>/<scene>/, when the scene is recorded. Unique in the scene. Not in setup. |
 | `hold` | number ≥ 0 |  | Seconds to pause after the step, or for a tap, from when it's sent; the scene's defaultHold when not given. |
 | `id` | string, not empty |  | The name edits anchor to. Unique in the scene; it can't look like a number, which anchors count steps by, nor be start or end. |
 
-Gives exactly one of `tap`, `drag`, `type`, `activate`, `orientation` or `waitFor`, or only `hold`.
+Gives exactly one of `tap`, `drag`, `type`, `activate`, `orientation`, `waitFor` or `capture`, or only `hold`.
 
 #### `step.tap`, with `x`
 

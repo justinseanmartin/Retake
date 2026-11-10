@@ -1,0 +1,11 @@
+{
+  "set": "screenshots",
+  "steps": [
+    { "waitFor": { "label": "Book club" } },
+    { "capture": "library" },
+    { "tap": { "label": "Book club" } },
+    { "waitFor": { "label": "Share" } },
+    { "orientation": "landscape-left", "hold": 0.5 },
+    { "capture": "side-by-side" }
+  ]
+}

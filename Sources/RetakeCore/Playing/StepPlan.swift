@@ -11,6 +11,8 @@ public enum StepPlay: Equatable, Sendable {
     case direct(HeistActionCommand)
     /// Turn the device, then wait for the app to turn with it.
     case turn(SceneFile.Orientation)
+    /// Save the screen as a still, by this name, as it is now.
+    case capture(String)
     /// Nothing but the step's hold.
     case pause
 
@@ -58,6 +60,8 @@ public enum StepPlay: Equatable, Sendable {
                 return .heist(try HeistPlan(body: [.wait(WaitStep(predicate: predicate, timeout: try WaitTimeout(validatingSeconds: timeout)))]))
             case .orientation(let orientation):
                 return .turn(orientation)
+            case .capture(let name):
+                return .capture(name)
             }
         } catch let error as RetakeError {
             throw error
@@ -108,6 +112,7 @@ extension Step {
         case .activate(let element): return "activate \(element)"
         case .orientation(let orientation): return "turn to \(orientation.rawValue)"
         case .waitFor(let element, let gone, _): return gone ? "wait for \(element) to go" : "wait for \(element)"
+        case .capture(let name): return "capture \(JSONWriter.quote(name))"
         }
     }
 

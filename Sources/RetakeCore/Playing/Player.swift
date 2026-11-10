@@ -65,6 +65,9 @@ public struct Player: Sendable {
     /// Told which way an `orientation` step is about to turn the device, before it does: for the
     /// recorder, to store frames of the new shape facing the right way.
     public var turning: @Sendable (SceneFile.Orientation) -> Void = { _ in }
+    /// Takes a `capture` step's still, by its name, of the screen as it is now. Nil, as for
+    /// composing or a dry run, which open no screen to capture, passes over each capture.
+    public var capturing: (@Sendable (String) async throws(RetakeError) -> Void)? = nil
     /// The device's screen in points, held upright: what a step's share of the screen is of, turned
     /// as the device faces. Nil when it isn't known, and a step that gives a share fails.
     public var screen: CGSize? = nil
@@ -136,6 +139,8 @@ public struct Player: Sendable {
             case .turn(let target):
                 evidence.elements = try await turn(from: orientation, to: target, on: driver)
                 orientation = target
+            case .capture(let name):
+                try await capturing?(name)
             case .pause:
                 break
             }
