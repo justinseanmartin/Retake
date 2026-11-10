@@ -34,11 +34,14 @@ public enum Subprocess {
         process.standardInput = FileHandle.nullDevice
         try process.run()
         // Both pipes are drained while it runs, so a tool that prints a lot can't fill one and stall.
+        // Each on a thread of its own, not a Dispatch queue: this is called from Swift concurrency's
+        // threads, and with each of them waiting here, as on a CI machine with 3 cores, a queue's
+        // reader was seen never to run, so none of them returned.
         let collected = Collected()
         let group = DispatchGroup()
         for (pipe, keyPath) in [(output, \Collected.output), (error, \Collected.error)] {
             group.enter()
-            DispatchQueue.global().async {
+            Thread.detachNewThread {
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 collected.set(keyPath, data)
                 group.leave()
