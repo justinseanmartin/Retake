@@ -16,7 +16,7 @@ extension ProjectSettings {
                 .init("xcodeproj", .string("The project holding the scheme, needed only when the directory holds more than one. \(path)", nonEmpty: true)),
                 .init("configuration", .string("The build configuration, which must be development-signed for the device.", nonEmpty: true).defaulting(to: ProjectSettings.SchemeBuild.defaultConfiguration)),
                 .init("allowProvisioningUpdates", .bool("Lets xcodebuild register the device and update profiles on your team.").defaulting(to: ProjectSettings.SchemeBuild.defaultAllowProvisioningUpdates)),
-                .init("optimize", .bool("Builds with the compiler's optimisation on, Swift at -O and C at -Os, whatever the configuration says, so the app runs as fast as its users see it.").defaulting(to: ProjectSettings.SchemeBuild.defaultOptimize)),
+                .init("optimize", .bool("Builds with the compiler's optimization on, Swift at -O and C at -Os, whatever the configuration says, so the app runs as fast as its users see it.").defaulting(to: ProjectSettings.SchemeBuild.defaultOptimize)),
             ],
             required: ["scheme"],
         )
@@ -123,7 +123,7 @@ extension SceneFile {
                 .init("into", .ref("element", "The element to type into; the field already being typed in when not given.")),
             ], required: ["text"])),
             .init("activate", .ref("element", "An accessibility activation of an element, with no touch, for getting somewhere off camera.")),
-            .init("orientation", orientation.described("Turns the device, with no hand on it; the step ends when the app has turned.")),
+            .init("orientation", orientation.described("Turns the device, with no hand on it; the step ends when the app has turned and the device has drawn the rotation.")),
             .init("waitFor", Schema.object(
                 "Waits until an element is on screen, or with gone until it isn't. The step fails if it doesn't happen in time.",
                 elementProperties + [
@@ -134,6 +134,10 @@ extension SceneFile {
                     ).defaulting(to: Step.defaultWaitTimeout)),
                 ],
             ).atLeastOne(of: ElementTarget.keys)),
+            .init("capture", .string(
+                "Saves the screen as a still, as it is when the step before has ended and its hold is over, as a PNG named for it in the output directory's captures/<type>/<scene>/, when the scene is recorded. Unique in the scene. Not in setup.",
+                pattern: Step.capturePattern,
+            )),
         ]
         var holdOnly = Schema.object(nil, [], required: ["hold"])
         holdOnly.type = []
@@ -225,8 +229,8 @@ extension EditFile {
             .init("crossfade", .number("Seconds it cross-fades in over the clip before.", atLeast: 0).defaulting(to: Edit.Clip.defaultCrossfade)),
             .init("audioCrossfade", .number("Seconds the sound cross-fades over, when longer than crossfade, which the picture still cross-fades over: the clip before's take sound fades out over this long before that clip ends, and this clip's starts as it does, this minus crossfade ahead of the picture and from as far before `from` in the take, fading in until the clip before ends. Each side fades so even when the other plays no take sound. The clip's sound starts no earlier than its take, or the clip before, does.", atLeast: 0)),
             .init("touches", .bool("Draws the take's touches, from the step log.").defaulting(to: Edit.Clip.defaultTouches)),
-            .init("touchColor", .ref("color", "The colour of the clip's touches; the edit's touchColor when not given.")),
-            .init("touchColors", .array("Colours for single touches, over the clip's or the edit's.", of: .object(nil, [
+            .init("touchColor", .ref("color", "The color of the clip's touches; the edit's touchColor when not given.")),
+            .init("touchColors", .array("Colors for single touches, over the clip's or the edit's.", of: .object(nil, [
                 .init("step", stepReference),
                 .init("color", .ref("color")),
             ], required: ["step", "color"]))),
@@ -238,7 +242,7 @@ extension EditFile {
             .init("stills", .array("Frames of other takes, popped in over the clip.", of: .ref("still"))),
             .init("stillsIn", .ref("anchor", "When the first still pops in, the rest following one after another, 0.22 s apart; 0.35 s into the clip when not given.")),
             .init("stillsOut", .ref("anchor", "When the stills pop out, one after another in the order they popped in; they stay to the clip's end when not given.")),
-            .init("stillsBackground", .ref("color", "A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture.")),
+            .init("stillsBackground", .ref("color", "A color filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture.")),
             .init("card", .ref("card")),
             .init("devices", .array("The device types whose videos play it; every one of the edit's when not given.", of: .choice(nil, DeviceType.allCases.map(\.rawValue)), minItems: 1, unique: true)),
             .init("turns", turns.described("How this clip shows the device turning; the edit's turns when not given.")),
@@ -247,7 +251,7 @@ extension EditFile {
 
         let caption = Schema.object("Text over the video, from its from to its to.", [
             .init("text", .string(nil, nonEmpty: true)),
-            .init("y", .number("Its centre, as a share of the video's height: 0 at the top, 1 at the bottom.", atLeast: 0, atMost: 1)),
+            .init("y", .number("Its center, as a share of the video's height: 0 at the top, 1 at the bottom.", atLeast: 0, atMost: 1)),
             .init("color", .ref("color")),
             .init("from", .ref("anchor", "When it starts; once its clip has faded in when not given.")),
             .init("to", .oneOf("When it ends: an anchor in its clip's take, or, naming a later clip, in that clip's take; as the next clip starts to fade in when not given.", [
@@ -259,7 +263,7 @@ extension EditFile {
         var stepAnchor = Schema.object("A step, and where to go from it.", [
             .init("step", stepReference),
             .init("offset", .number("Seconds from the step's start, or its end with edge end: forward when positive, back when negative; 0 is that edge itself.")),
-            .init("fraction", .number("A share of the way from the step's start, or its end with edge end, to the neighbouring step: forward when positive, to the next step's start, back when negative, to the previous step's end.", atLeast: -1, atMost: 1)),
+            .init("fraction", .number("A share of the way from the step's start, or its end with edge end, to the neighboring step: forward when positive, to the next step's start, back when negative, to the previous step's end.", atLeast: -1, atMost: 1)),
             .init("edge", .choice("Which of the step's edges the anchor is at, and counts its offset or fraction from: start, the default, or end.", Anchor.Edge.allCases.map(\.rawValue))),
         ], required: ["step"])
         stepAnchor.not = [{ var both = Schema(); both.required = ["offset", "fraction"]; return both }()]
@@ -282,7 +286,7 @@ extension EditFile {
                 .init("degrees", .number("Clockwise when positive.")),
                 .init("duration", .number("Seconds it takes.", above: 0)),
             ], required: ["degrees", "duration"])),
-            .init("card", .object("A colour covering the clip's picture, and everything drawn over it but its captions, for a card between clips: over the whole clip, fading in and out with the cross-fades either side, or from its from to its to.", [
+            .init("card", .object("A color covering the clip's picture, and everything drawn over it but its captions, for a card between clips: over the whole clip, fading in and out with the cross-fades either side, or from its from to its to.", [
                 .init("color", .ref("color")),
                 .init("from", .ref("anchor", "When it starts; the clip's from when not given.")),
                 .init("to", .ref("anchor", "When it ends; the clip's to when not given.")),
@@ -295,7 +299,7 @@ extension EditFile {
             ], required: ["file", "at"])),
             .init("spotlight", Schema.object("Dims the rest of the screen around an element or a rectangle, with a pulsing ring.", region + [
                 .init("padding", .number("Points of space around it.", atLeast: 0).defaulting(to: Edit.Spotlight.defaultPadding)),
-                .init("color", .ref("color", "The ring's colour.").defaulting(to: Edit.Spotlight.defaultColor)),
+                .init("color", .ref("color", "The ring's color.").defaulting(to: Edit.Spotlight.defaultColor)),
                 .init("from", from), .init("to", to),
             ]).exactlyOne(of: ["element", "rect"])),
             .init("blur", Schema.object("A blur over an element or a rectangle.", region + [
@@ -332,7 +336,7 @@ extension EditFile {
             .init("step-anchor", stepAnchor),
             .init("caption-end", captionEnd),
             .init("element", SceneFile.element),
-            .init("color", .string("A colour: #RRGGBB, or #RRGGBBAA with its opacity.", pattern: "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$").example("#1F6FEB")),
+            .init("color", .string("A color: #RRGGBB, or #RRGGBBAA with its opacity.", pattern: "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$").example("#1F6FEB")),
         ]
 
         let devices = DeviceType.allCases.map(\.rawValue)
@@ -345,10 +349,10 @@ extension EditFile {
                 .init("music", .ref("music")),
                 .init("tapSound", .ref("tap-sound")),
                 .init("takeAudioVolume", .number("The level of the take's own sound, where a clip plays it.", atLeast: 0).defaulting(to: Edit.defaultTakeAudioVolume)),
-                .init("background", .ref("color", "The colour of letterbox bands, and of the corners a turn uncovers.").defaulting(to: Edit.defaultBackground)),
+                .init("background", .ref("color", "The color of letterbox bands, and of the corners a turn uncovers.").defaulting(to: Edit.defaultBackground)),
                 .init("turns", turns.defaulting(to: Edit.defaultTurns)),
                 .init("turnBlur", .ref("turn-blur")),
-                .init("touchColor", .ref("color", "The colour touches are drawn in: a filled ring, its fill at 45% of the colour's opacity and its rim at 90%.").defaulting(to: Edit.defaultTouchColor)),
+                .init("touchColor", .ref("color", "The color touches are drawn in: a filled ring, its fill at 45% of the color's opacity and its rim at 90%.").defaulting(to: Edit.defaultTouchColor)),
                 .init("clips", .array(nil, of: .ref("clip"), minItems: 1)),
             ],
             required: ["devices", "clips"],
@@ -434,7 +438,7 @@ extension TakeLog {
                 .init("shapes", .array("The movie's first shape, and each change after it, as the device turned.", of: .object(nil, [
                     .init("at", .number("When the frames took this shape, in \(seconds).", atLeast: 0)),
                     .init("size", size.described("The frames' size as the device sent them, [width, height], in capture pixels.")),
-                    .init("turn", .integer("Degrees clockwise the frames are turned to fit the movie's size: 0, 90, or -90 for a quarter anticlockwise.")),
+                    .init("turn", .integer("Degrees clockwise the frames are turned to fit the movie's size: 0, 90, or -90 for a quarter counterclockwise.")),
                 ], required: ["at", "size", "turn"]))),
                 .init("hitches", .array("Each time the app's main thread missed a frame while it was recorded. Absent when Retake's support library didn't watch.", of: .object(nil, [
                     .init("at", .number("When the app last drew, in \(seconds).")),
@@ -453,7 +457,7 @@ extension TakeLog {
         let step = Schema.object("One step as it was recorded.", [
             .init("number", .integer("Its number among the scene's steps, from 1.", atLeast: 1)),
             .init("id", .string("Its id in the scene, for one that has one.", nonEmpty: true)),
-            .init("action", .string("The kind of step: tap, drag, type, activate, orientation or waitFor, or hold for one that's only a pause.", nonEmpty: true)),
+            .init("action", .string("The kind of step: tap, drag, type, activate, orientation, waitFor or capture, or hold for one that's only a pause.", nonEmpty: true)),
             .init("start", .number("When it began, in \(seconds), as the device saw it where it could.")),
             .init("end", .number("When it ended, in \(seconds); for a waitFor, when its element came or went.")),
             .init("timedBy", .choice(

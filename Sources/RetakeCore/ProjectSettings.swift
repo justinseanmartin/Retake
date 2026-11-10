@@ -55,7 +55,7 @@ public struct ProjectSettings: Equatable, Sendable {
         public var configuration: String?
         /// Whether `xcodebuild` may register the device and update profiles on the team.
         public var allowProvisioningUpdates: Bool
-        /// Whether the compiler optimises, whatever the configuration says: Swift at `-O`, C and
+        /// Whether the compiler optimizes, whatever the configuration says: Swift at `-O`, C and
         /// Objective-C at `-Os`, so the app runs as fast as its users see it.
         public var optimize: Bool
 

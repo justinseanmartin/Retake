@@ -366,7 +366,7 @@ extension EditFile {
     static func readColor(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> Color? {
         guard let text = reader.string(value, at: path) else { return nil }
         guard let color = Color(hex: text) else {
-            reader.problem("\"\(text)\" isn't a colour: #RRGGBB, or #RRGGBBAA with its opacity, such as #1F6FEB", at: path)
+            reader.problem("\"\(text)\" isn't a color: #RRGGBB, or #RRGGBBAA with its opacity, such as #1F6FEB", at: path)
             return nil
         }
         return color

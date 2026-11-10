@@ -58,7 +58,7 @@ RETAKE_CONFIG = "{{config_root}}/Previews/retake.json"
 
 ### The output directory
 
-What Retake makes that's worth keeping — takes and cuts — goes in the project's output directory,
+What Retake makes that's worth keeping — takes, captures and cuts — goes in the project's output directory,
 the first of these that's given:
 
 1. `--output-dir <dir>`, relative to the current directory;
@@ -115,7 +115,8 @@ Scenes, sets and edits are named by their file name without `.json`: `create-not
 scene: for each device type, a scene has its take, `create-note.mov`, the take that one replaced,
 `create-note.previous.mov`, and its latest failure, `create-note.failed.mov`, each with its step
 log beside it. A video's record names each take it was cut from by its scene, device type and when
-it was recorded.
+it was recorded. A scene's captures are named by their `capture` steps: `library` is
+`captures/<type>/<scene>/library.png`.
 
 ### Takes from an earlier Retake
 
@@ -214,13 +215,31 @@ Creates a project: `retake.json`, and beside it the folders `sets/`, `scenes/iph
 `scenes/ipad/` and `edits/`. They go in `Retake/` in the current directory, unless `--config` (or
 `RETAKE_CONFIG`) names the configuration file to create, such as `--config Previews/retake.json`.
 
+In a new project, those folders start with a file each, to record from at once and to show each
+file's shape:
+
+- `sets/base.json`, a `clean` set, which `retake.json` names as its `defaultSet`;
+- `scenes/iphone/launch.json` and `scenes/ipad/launch.json`, which record the app launching and
+  hold it, 15 seconds after the launch, the shortest an App Store preview runs;
+- `edits/preview.json`, which cuts the whole of `launch`'s take for both device types, with the
+  caption "Recorded by Retake!" from once the app is up. With a take of only one type, cut it with
+  `--type`.
+
+When the folders already hold JSON files, as when a `retake.json` is made again for files kept
+from before, none of these is written and no `defaultSet` is named.
+
 `--output-dir` puts the [output directory](#the-output-directory) somewhere other than `output/` beside the configuration
 file, and writes it into `retake.json` as `output`, so every command uses it without being told.
 `RETAKE_OUTPUT_DIR` isn't read here: it's for one shell's commands, not the project's.
 
 The output directory is gitignored: in a `.gitignore` in the project's folder, or when it's outside
 that folder, in the current directory's `.gitignore`, when it's below the current directory, and in
-neither when it isn't.
+neither when it isn't. What it holds is too big to keep in a repository: every take is a movie, and
+a video's ProRes master runs to hundreds of megabytes (the example's are 140 to 200 MB), past
+GitHub's limit of 100 MB a file. To keep them long term, store them with
+[Git LFS](https://git-lfs.com) instead, taking the entry out of `.gitignore`, or move the output
+directory somewhere kept, such as a shared drive, with `--output-dir` here or `retake.json`'s
+`output` later.
 
 Asks for the scheme when it isn't given and can't be found in an Xcode project in the current
 directory. Writes `bundleID` only when `--bundle-id` gives one; otherwise the bundle ID comes from
@@ -358,7 +377,7 @@ builds, and finds the `.app` from the build's settings. Signing is the project's
 configuration works, so long as it's development-signed for the device; `Debug` is the default
 because it usually is.
 
-It builds with the compiler's optimisation on, whatever the configuration says (Swift at `-O`, C and
+It builds with the compiler's optimization on, whatever the configuration says (Swift at `-O`, C and
 Objective-C at `-Os`), since a preview should show the app running as fast as it does for its users,
 and a Debug build at `-Onone` can stutter where a release wouldn't. The configuration is otherwise
 the same, so `#if DEBUG` code, and the launch flags a set turns on, still work. `--no-optimize` (or
@@ -474,6 +493,7 @@ takes the options its step does there; every one but `hold` also takes `--id <na
 | `activate` | An element | |
 | `orientation` | `--to portrait`, `portrait-upside-down`, `landscape-left` or `landscape-right` | |
 | `waitFor` | An element | `--gone`, `--timeout <seconds>` (10, at most The Button Heist's longest wait, 60 unless `BUTTONHEIST_MAX_WAIT_TIMEOUT` raises it) |
+| `capture` | `--name <name>` | |
 | `hold` | `--seconds <seconds>` | |
 
 A `tap` at a point that lands on an element is added, and `compose` says so, with the `tap` that
@@ -486,6 +506,10 @@ changes. In `--json`, that step is the reply's `suggestion`.
 
 `hold` adds a step that's only a pause, as `{ "hold": 2 }` does in a file. A step's `--hold` is the
 scene's `defaultHold` when it isn't given.
+
+`capture` adds a step that saves the screen as a still, as `{ "capture": "<name>" }` does in a
+file. Composing doesn't record, so it captures nothing: the step is added as it is, and `record`
+takes the still.
 
 An element is any of `--label <text>`, `--value <text>`, `--identifier <text>`, `--hint <text>` and
 `--traits <trait>,<trait>`, at least one, with `--occurrence <n>` (counted from 1, optional) to pick
@@ -554,7 +578,7 @@ names one.
 
 ```
 retake record [<scene>... | --for <edit>] [--force] [--device <device>] [--stop-on-failure]
-              [--dry-run]
+              [--dry-run | --stills-only]
 ```
 
 Records each scene chosen again:
@@ -580,24 +604,40 @@ For each scene, in order:
    step, saying to `retake embed` or `retake install` the app again.
 3. Plays the setup steps, then records the lead-in, the steps with their holds, and the tail. After
    each step, and when each `waitFor` is satisfied, records the elements on screen in the step log,
-   and once before the first step, when the lead-in is over.
+   and once before the first step, when the lead-in is over. Each `capture` step has the device
+   take a screenshot through `devicectl`, as the step before left the screen, and saves it as a PNG
+   into `output/captures/<type>/<scene>.recording/`; when the device can't take one, it warns and
+   saves the frame the screen is filmed in instead. A capture takes 1 to 2 seconds, which the take
+   records as a still stretch, the capture step's length.
 4. Writes the movie and its step log as `output/takes/<type>/<scene>.recording.mov` and `.json`,
    then, when every step ran, renames them into place as the scene's take, `<scene>.mov` and
    `<scene>.json`. The take it replaces becomes `<scene>.previous.*`, deleting the previous one
    before it, and the scene's latest failure, `<scene>.failed.*`, is deleted: it's no longer the
-   latest news.
+   latest news. A scene that captures has its captures replaced, all together, by those just taken,
+   in `output/captures/<type>/<scene>/`; earlier captures aren't kept.
 
 After the last scene, when any take was `clean` or `cloned`, launches the app once more to delete
 the take's copy of its data and the staged set files from the device, as [`clean --on-device`](#retake-clean) does,
 so none is left behind.
 
 A take whose step fails is kept as the scene's latest failure, `<scene>.failed.mov` and `.json`,
-replacing the last, for its footage to show what went wrong; no edit is cut from it, and the take
-and the previous one are left alone. A recording that's interrupted, or can't record at all, keeps
+replacing the last, for its footage to show what went wrong; no edit is cut from it, and the take,
+the previous one and the scene's captures are left alone, the captures it took being deleted. A recording that's interrupted, or can't record at all, keeps
 nothing and changes none of the scene's takes; what it wrote under `.recording` is deleted then, or,
 for one killed outright, by the next recording of the scene. Recording carries on with the next
 scene unless `--stop-on-failure` is given, and a summary at the end lists each scene's new take or
 failure.
+
+After the summary, `record` says of each size it captured whether App Store Connect takes
+screenshots that size, for which display, and which display it requires when that isn't the one,
+such as `Captures of 1170×2532 are App Store Connect's size for iPhone with Face ID (medium
+display). App Store Connect requires iPhone with Dynamic Island (medium display) screenshots,
+1179×2556 or 1206×2622, and scales them down for the other displays.`
+
+A capture is only as large as the device's screen, so it's often not a size App Store Connect
+takes. Resized, it can still be framed in a device's chrome for marketing. Retake isn't purpose
+built specifically for App Store screenshots at exact sizes, which a tool made for them, such as
+[Goldie](https://github.com/software-mansion-labs/goldie), serves better.
 
 Since a stutter or a hitch still counts as success, the take a retake replaces is kept as the
 previous one: when the new take came out worse, [`retake takes --restore <scene>`](#retake-takes)
@@ -610,6 +650,17 @@ at the end. It writes nothing to the project, its console log going to a tempora
 launch's does, and fails (1) at the first step that doesn't run, naming it. It plays
 every step with its hold, as a take would: a step can need the app to have settled after the one
 before, so a dry run that skipped holds could fail where a take wouldn't, or pass where it fails.
+It captures nothing.
+
+**`--stills-only`** takes the scenes' captures and records no take, for scenes kept for their
+screenshots, or captures wanted again without the footage. It chooses scenes as the table does,
+among those with a `capture` step: with none named, each with no captures yet, or every one with
+`--force`. It launches on each scene's set and plays its setup and steps with their holds as
+`record` does, with the device's screen open but not recorded, and no lead-in or tail; and it
+writes no movie and no step log, leaving the scene's takes alone. Its captures replace the scene's
+when every step ran, as above, and a failure leaves them as they were. It fails (2) for a scene
+named with no `capture` step, and with `--for`, since an edit uses no captures; it can't be given
+with `--dry-run`.
 
 ### `retake takes`
 
@@ -664,23 +715,25 @@ Moving the files by hand does the same: rename `<scene>.mov` and `<scene>.json` 
 ### `retake clean`
 
 ```
-retake clean [--takes [<scene>,...]] [--cuts [<edit>,...]] [--type <type>] [--yes]
+retake clean [--takes [<scene>,...]] [--cuts [<edit>,...]] [--captures [<scene>,...]] [--type <type>] [--yes]
 retake clean --unused [--type <type>] [--yes]
 retake clean --on-device [--device <device>]
 ```
 
-Deletes takes and cuts, of both device types unless `--type` names one:
+Deletes takes, cuts and captures, of both device types unless `--type` names one:
 
 | Form | Deletes |
 | --- | --- |
-| `retake clean` | Every take and every cut. |
+| `retake clean` | Every take, every cut and every capture. |
 | `retake clean --takes` | Every take. |
 | `retake clean --takes create-note,share-note` | The takes of `create-note` and `share-note`: each one's take, previous take and latest failure. |
 | `retake clean --cuts` | Every cut. |
 | `retake clean --cuts video1` | `video1`'s cuts. |
-| `retake clean --unused` | Every unreferenced scene definition and take, and every previous take and failure. Keeps each referenced scene's take. |
+| `retake clean --captures` | Every scene's captures. |
+| `retake clean --captures home` | `home`'s captures. |
+| `retake clean --unused` | Every unreferenced scene definition and take, every previous take and failure, and the captures of every scene that no longer captures. Keeps each referenced scene's take, and every scene that captures. |
 
-`--takes` and `--cuts` can be given together. `--takes` also deletes the numbered takes an
+`--takes`, `--cuts` and `--captures` can be given together. `--takes` also deletes the numbered takes an
 [earlier Retake](#takes-from-an-earlier-retake) left, in `output/takes/<type>/<scene>/`, of the
 scenes named, or of every scene. It lists what it will delete, warning of each take an edit is cut
 from, which the edit needs recorded again before its next cut, and asks first, unless `--yes`.
@@ -690,8 +743,11 @@ Fails (2), deleting nothing, if a scene or edit named has nothing to delete.
 or the failure, delete its two files, `<scene>.previous.*` or `<scene>.failed.*`, by hand, or
 `--unused` drops every one.
 
-`--unused` derives what is needed from every edit, including scenes used only for stills. It refuses
-to delete anything if an edit cannot be read, because that edit's dependencies are unknown. It
+`--unused` derives what is needed from every edit, including scenes used only for stills, and from
+every scene: one with a `capture` step is needed for its captures, so it's kept, while the captures
+of a scene that's gone, or no longer captures, are deleted. A scene that can't be read is kept, with
+its captures. It refuses to delete anything if an edit cannot be read, because that edit's
+dependencies are unknown. It
 leaves rendered cuts, sets and other project files alone. `--type` limits both takes and scene
 definitions to one device type. It refuses to run while an earlier Retake's numbered takes are there.
 
@@ -780,7 +836,7 @@ second, with AAC stereo sound, at about 1.2 Mbps for two clips:
 
 - One clip alone is 720 pixels wide.
 - Clips side by side are each 960 pixels tall, with 24-pixel gutters around and between them in
-  `--background`'s colour, `#RRGGBB`, black unless given; all of it shrunk to fit 1920 pixels wide.
+  `--background`'s color, `#RRGGBB`, black unless given; all of it shrunk to fit 1920 pixels wide.
   At most 4 clips are joined, past which each is too small to make out on a phone.
 
 A video plays as long as its longest clip, and a clip that ends sooner holds its last frame. Its
@@ -1004,6 +1060,8 @@ What's worth keeping, and nothing that's rewritten wholesale:
 | `takes/<type>/<scene>.previous.mov`, `.json` | The take the scene's take replaced, for [`takes --restore`](#retake-takes) to put back. A new take that succeeds deletes it, keeping the take it replaces here instead. |
 | `takes/<type>/<scene>.failed.mov`, `.json` | The scene's latest failure, kept to show what went wrong. A new failure replaces it, and a new take that succeeds deletes it. |
 | `takes/<type>/<scene>.recording.mov`, `.json` | A take while it's recorded, renamed into place once it's done. One left by a recording killed outright is deleted by the next. |
+| `captures/<type>/<scene>/<name>.png` | The scene's captures, from its latest recording that played every step, with or without `--stills-only`. |
+| `captures/<type>/<scene>.recording/` | Captures while they're taken, put in place of the scene's once every step has run. One left by a recording killed outright is deleted by the next. |
 | `cuts/<type>/<edit>/` | Rendered videos, from `cut`. |
 | `share/` | Small videos to share, from [`share`](#retake-share). |
 | `installed.json` | The bundle ID of the app `install` last embedded, for [finding the app](#finding-the-app). |

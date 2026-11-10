@@ -2,7 +2,8 @@ import AVFoundation
 import Foundation
 
 /// Records a USB-connected device's screen and sound, as QuickTime's "New Movie Recording" does: at
-/// the device's own size and frame rate, with nothing shown on the device. See README.md, "Takes".
+/// the size and frame rate the device sends, which on some iPads is less than its screen's, with
+/// nothing shown on the device. See README.md, "Takes".
 public final class DeviceRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureAudioDataOutputSampleBufferDelegate, @unchecked Sendable {
     private let session = AVCaptureSession()
     private let videoOutput = AVCaptureVideoDataOutput()
@@ -11,6 +12,19 @@ public final class DeviceRecorder: NSObject, AVCaptureVideoDataOutputSampleBuffe
     private let queue = DispatchQueue(label: "retake.recorder")
     private var writer: TakeWriter?
     private var facing: TakeWriter.Facing = .portrait
+    /// The last frame the device sent: what a capture takes. The device sends its screen 60 times
+    /// a second whether or not it changes, so the last is at most a sixtieth of a second old.
+    private var latest: CVPixelBuffer?
+
+    /// The last frame's samples, and each recent frame's arrival and difference from the one before,
+    /// for `RotationWatch`; kept only while a turn is watched for.
+    private var samples: [UInt8]?
+    private var motion: [(at: Double, difference: Double)] = []
+    /// When a turn was last asked for, which frames are watched from until it's drawn.
+    private var turnAsked: Double?
+
+    /// How long a capture waits for the first frame, when none has come yet.
+    public static let firstFrameTimeout = 5.0
 
     /// How long to wait for the first frames after recording starts: they take 2 to 3 seconds.
     public static let firstFramesTimeout = 15.0
@@ -72,6 +86,34 @@ public final class DeviceRecorder: NSObject, AVCaptureVideoDataOutputSampleBuffe
         }
     }
 
+    /// Opens the device's screen without recording it, for captures alone, returning once its first
+    /// frame has arrived. `close` closes it.
+    public func open() async throws(RetakeError) {
+        session.startRunning()
+        let deadline = Date().addingTimeInterval(Self.firstFramesTimeout)
+        while Date() < deadline {
+            if queue.sync(execute: { latest != nil }) { return }
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        session.stopRunning()
+        throw RetakeError(.environment, "No frames arrived from the device's screen in \(Int(Self.firstFramesTimeout)) s.")
+    }
+
+    /// Closes the screen `open` opened.
+    public func close() {
+        session.stopRunning()
+    }
+
+    /// The screen as it is now: the last frame the device sent, or the first, waiting for it.
+    public func frame() async throws(RetakeError) -> ScreenFrame {
+        let deadline = Date().addingTimeInterval(Self.firstFrameTimeout)
+        repeat {
+            if let latest = queue.sync(execute: { self.latest }) { return ScreenFrame(pixels: latest) }
+            try? await Task.sleep(for: .milliseconds(10))
+        } while Date() < deadline
+        throw RetakeError(.environment, "No frames arrived from the device's screen in \(Int(Self.firstFrameTimeout)) s, so nothing could be captured.")
+    }
+
     /// When the movie's first frame was, on the Mac's clock: now, less how long ago that was on the
     /// capture clock its frames are stamped with.
     public var startedAt: Date { Date().addingTimeInterval(-elapsed) }
@@ -90,6 +132,22 @@ public final class DeviceRecorder: NSObject, AVCaptureVideoDataOutputSampleBuffe
         queue.sync {
             self.facing = facing
             writer?.facing = facing
+            turnAsked = ProcessInfo.processInfo.systemUptime
+            motion = []
+        }
+    }
+
+    /// Waits for the rotation of the turn last asked for to finish, as `RotationWatch` decides.
+    public func rotated() async {
+        while true {
+            let (asked, motion) = queue.sync { (turnAsked, motion) }
+            guard let asked, !RotationWatch.isOver(motion, asked: asked, now: ProcessInfo.processInfo.systemUptime) else { break }
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        queue.sync {
+            turnAsked = nil
+            motion = []
+            samples = nil
         }
     }
 
@@ -106,6 +164,14 @@ public final class DeviceRecorder: NSObject, AVCaptureVideoDataOutputSampleBuffe
     }
 
     public func captureOutput(_ output: AVCaptureOutput, didOutput sample: CMSampleBuffer, from _: AVCaptureConnection) {
+        if output === videoOutput, let pixels = sample.imageBuffer {
+            latest = pixels
+            if turnAsked != nil {
+                let samples = RotationWatch.samples(pixels)
+                motion.append((ProcessInfo.processInfo.systemUptime, self.samples.map { RotationWatch.difference($0, samples) } ?? 0))
+                self.samples = samples
+            }
+        }
         guard let writer else { return }
         if output === videoOutput {
             writer.appendVideo(sample)

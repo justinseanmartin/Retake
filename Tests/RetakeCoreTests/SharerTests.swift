@@ -119,7 +119,7 @@ struct SharerTests {
             context.draw(image, in: CGRect(x: -x, y: -(image.height - 1 - y), width: image.width, height: image.height))
             return (Int(pixel[0]), Int(pixel[1]), Int(pixel[2]))
         }
-        // H.264's colour conversion moves pure red to about (232, 36, 2).
+        // H.264's color conversion moves pure red to about (232, 36, 2).
         func near(_ found: (Int, Int, Int), _ wanted: (Int, Int, Int)) -> Bool {
             abs(found.0 - wanted.0) < 48 && abs(found.1 - wanted.1) < 48 && abs(found.2 - wanted.2) < 48
         }

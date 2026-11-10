@@ -2,7 +2,7 @@ import SwiftUI
 
 // Config/Base.xcconfig sets this when no team is given to sign with.
 #if NOTES_NEEDS_TEAM
-#error("Notes has no development team to sign with. Run Examples/Notes/run.sh --setup, or copy Config/Signing.example.xcconfig to Config/Signing.local.xcconfig and fill it in.")
+#error("Notes has no development team to sign with. Run Example/run.sh --setup, or copy Config/Signing.example.xcconfig to Config/Signing.local.xcconfig and fill it in.")
 #endif
 
 /// Notes, Retake's example app: a small notes app with everything a scene can drive, and

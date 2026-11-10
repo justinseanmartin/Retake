@@ -32,7 +32,7 @@ struct TakeTimelineTests {
         #expect(try Self.timeline().time(of: .seconds(2.5)) == 2.5)
     }
 
-    @Test func aFractionIsAShareOfTheWayFromThereToTheNeighbouringStep() throws {
+    @Test func aFractionIsAShareOfTheWayFromThereToTheNeighboringStep() throws {
         #expect(try time(.id("b"), fraction: 0.5) == 3, "from its start to step 3's start")
         #expect(try time(.id("b"), fraction: -0.5) == 1.75, "from its start back to step 1's end")
         #expect(try time(.id("b"), fraction: 0.5, edge: .end) == 3.5, "from its end to step 3's start")
@@ -65,7 +65,7 @@ struct TakeTimelineTests {
     }
 
     @Test func theExamplesAnchorsLandWhereTheyDidBeforeTheRuleChanged() throws {
-        let edits = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/Notes/Retake/edits")
+        let edits = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Example/Retake/edits")
         var anchors: [Anchor.StepAnchor] = []
         func collect(_ value: JSONValue) {
             switch value {

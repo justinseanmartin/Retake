@@ -1,49 +1,85 @@
 # Retake
 
-Retake makes App Store preview videos from your running iOS app, and makes them again whenever the
-app changes.
+**App Store preview videos captured on real iOS devices and defined in JSON as sets, scenes and edits.**
 
-You write down a walk through your app once, as a **scene**, starting from a known state, its
-**set**. Retake plays the scene on a real device while the Mac records the screen, giving you a
-**take**. You describe the video you want cut from your takes as an **edit**: which stretches to
-keep, how fast they play, and the captions, touches, spotlights, sound and music over them. Retake
-renders the edit into a video ready to upload to App Store Connect.
-
-When the app changes, you record the scenes again and render the same edits. There's no screen
-recording by hand, no editing timeline to rebuild, and no guessing which frames you used last time.
+Retake plays your app on a USB-connected iPhone or iPad while the Mac records its screen and sound,
+then cuts the recordings into a finished preview with captions, touches, spotlights, cards,
+transitions, sound and music. Everything that makes the video is a file kept with your code, so when
+the app changes you record again and render the same edits: no screen recording by hand, no
+timeline to rebuild, and no guessing which frames you used last time.
 
 https://github.com/user-attachments/assets/416e4ecd-30a8-4cd1-bf05-2343f5dca131
 
-Every frame of [the showcase](Documentation/media/showcase.mp4) is Retake's: the example app,
-recorded on an iPhone and an iPad, and cut for each from the one
-[`showcase`](Examples/Notes/Retake/edits/showcase.json) edit, which turns the iPad and puts a card
-in the iPhone's place.
+Every frame of the video above was made by Retake from [the example app](Example),
+recorded on a physical iPhone and iPad, and cut for each from the one
+[`showcase`](Example/Retake/edits/showcase.json) edit.
 
-> **Status:** an early release, 0.0.1. Retake is an experiment in making a general tool of
-> something built twice before, for two apps' App Store previews on iPhone and iPad, and it makes
-> both of theirs.
+Retake's lingo:
+
+- A **[set](#sets-the-state-a-take-starts-from)** defines the app's state before recording: its
+  files, user defaults, launch arguments and environment.
+- A **[scene](#scenes-the-walk-through-the-app)** is a walk through the app, starting from a set,
+  which Retake plays on the device and records.
+- A scene is **[composed](Documentation/cli.md#retake-compose)** one action (tap, drag, wait, etc.)
+  at a time, interactively, by a person or an agent.
+- A **[take](#takes-footage-and-a-step-log)** is a scene's recording: the movie, with a log of its
+  steps.
+- An **[edit](#edits-the-video-cut-from-the-takes)** defines how takes are mixed into a finished
+  video.
+- A **[cut](Documentation/cli.md#retake-cut)** is that finished video, rendered from an edit's
+  takes.
+
+**How you use it.** [Install Retake](#install), then start your favorite coding agent in your app's
+repository and ask it to integrate Retake. Describe the flows you want recorded, the state each one
+starts from, and what each video should emphasize. The agent writes the sets, composes the scenes on
+your device, records the takes, writes the edits and renders the cuts. Watch them, and keep asking
+for changes to the scenes and edits until the video looks just how you want it.
+
+Retake is made to be driven that way: an agent composes a scene as you would, told after each
+action what happened and what's on screen; every file has a [schema](#schemas) that `retake validate`
+checks a project against; and the commands that report something take `--json`.
+
+**What sets it apart:**
+
+- **Recorded on real hardware.** Anything that animates renders best on the device itself, and a
+  simulator recording stutters where a preview needs to be smooth. Retake records at the rate the
+  device sends its screen, and [warns of hitches](#takes-footage-and-a-step-log).
+- **The same starting state, every take.** A scene's [set](#sets-the-state-a-take-starts-from) is
+  put in place before the app launches, with nothing added to your project, so what changes between
+  takes is the app, not its data.
+- **Edits anchored to steps, not seconds.** An edit cuts at moments such as 0.2 s before a sheet
+  appears, not at timestamps. When an animation that took 700 ms takes 950 ms in the next build, or
+  on the iPad, the same edit still lines up; see [anchors](#anchors-times-that-follow-the-app).
+
+**What about App Store screenshots?** Retake is purpose built for App Store preview videos. Its
+`capture` step saves stills from the same scenes, which can serve, but at the device's own
+resolution, which often isn't a size App Store Connect takes; see
+[Captures](#captures-stills-from-the-same-scenes).
+
+> **Status:** an early release, 0.0.2. Retake is an experiment in generalizing a tool I'd used for
+> two of the apps I've released to the App Store.
 >
-> **Stability:** until 1.0, nothing is guaranteed to stay the same between versions: not the
-> command line, not the JSON of its files, schemas or output. If you depend on it, pin an exact
-> version, such as `mise use github:justinseanmartin/Retake@0.0.1`. What is promised is that every
-> breaking change is spelled out in the release notes and comes with a new minor version, from 0.1
-> to 0.2. Compatibility guarantees start at 1.0.
+> **Stability:** until 1.0, nothing is guaranteed to stay the same between versions. If you'd like to
+> avoid breakage, pin to an exact version, such as `mise use github:justinseanmartin/Retake@0.0.2`.
+> Breaking changes will be documented in the [release notes](RELEASE.md) and come with a new minor
+> version, from 0.1 to 0.2. Compatibility guarantees start at 1.0.
 
 ## Contents
 
 - [How it works](#how-it-works)
 - [Install](#install)
 - [Quick start](#quick-start)
-- [Your app](#your-app)
+- [Embedding Retake into your app](#embedding-retake-into-your-app)
 - [Sets: the state a take starts from](#sets-the-state-a-take-starts-from) ([`state`](#state-clean-cloned-or-live))
 - [Scenes: the walk through the app](#scenes-the-walk-through-the-app)
 - [Takes: footage and a step log](#takes-footage-and-a-step-log)
+- [Captures: stills from the same scenes](#captures-stills-from-the-same-scenes)
 - [Edits: the video cut from the takes](#edits-the-video-cut-from-the-takes)
 - [What's recorded in each file](#whats-recorded-in-each-file)
 - [Devices](#devices)
 - [The Button Heist, and Retake's version pin](#the-button-heist-and-retakes-version-pin)
 - [Project layout](#project-layout)
-- [Building from source](#building-from-source)
+- [Limitations](#limitations)
 
 The full command reference is [Documentation/cli.md](Documentation/cli.md), and every field of every file is in
 [Documentation/reference](Documentation/reference/), generated from Retake's [schemas](#schemas).
@@ -61,12 +97,8 @@ The full command reference is [Documentation/cli.md](Documentation/cli.md), and 
 2. **`retake record <scene>`** launches the app on the scene's set, plays its steps, and records the
    device's screen and sound. A recording that succeeds becomes the scene's take, and the take it
    replaces is kept as the previous one.
-3. **`retake cut <edit>`** renders the edit from each scene's take, to a ProRes
-   master and an `.mp4` for App Store Connect.
-
-An edit's times are anchored to the scene's steps, so one edit cuts the same video from any take of
-its scenes. `retake cut` always uses each scene's take, and the same edit serves iPhone
-and iPad.
+3. **`retake cut <edit>`** renders the edit from each scene's take, for every device type it names,
+   to a ProRes master and an `.mp4` for App Store Connect.
 
 ## Install
 
@@ -79,65 +111,44 @@ mise use github:justinseanmartin/Retake   # from GitHub Releases
 Add `@<version>` to pin one, since nothing is guaranteed stable before 1.0 (see the status note
 above).
 
-When a command fails and its message doesn't say why, `retake doctor` checks each part of the setup
-in turn, to find which.
-
 **You need:**
 
 - A Mac with Apple silicon, running macOS 14 or later.
 - Xcode, for `devicectl` and `codesign`. Its version doesn't matter to Retake.
 - A physical iPhone or iPad on iOS 17 or later, connected **by USB**. Devices over Wi-Fi can't be
-  recorded, and a simulator recording stutters where a preview needs to be smooth.
+  recorded.
 - Camera and microphone access for the terminal you run `retake` in, which macOS asks for, in the
   terminal's name, the first time `record` runs from it: a device's screen and sound come to the Mac
   as a camera does.
 
-> [!NOTE]
-> **The iPhone Duo isn't supported yet.** Its folding screen gives it two sizes of screen, which
-> scenes, aspects and edits don't yet tell apart. Support should be straightforward to add, but
-> needs a physical iPhone Duo to test it on.
-
-You don't need any other tools installed to use Retake.
+You don't need any other tools installed to use Retake. When a command fails and its message
+doesn't say why, `retake doctor` checks each part of the setup in turn, to find which.
 
 ## Quick start
 
 ```sh
-retake init                              # Retake/: retake.json and the folders below
-retake devices add iphone                # name the connected device "iphone"
+retake init                              # Retake/: retake.json, a starter set, scene and edit; output/ gitignored
+retake devices add iphone                # name the USB-connected device
 retake install --scheme MyApp            # build Debug, embed Retake, and install it
-retake compose create-note               # write a scene a step at a time, on the device
-retake record --dry-run create-note      # play a scene without recording it
-retake record create-note share-note     # record takes
-retake cut video1                        # render the video, for each device type
+retake record launch                     # record the starter scene: the app launching
+retake cut preview --type iphone         # cut the starter edit, for the iPhone only
+retake compose <scene>                   # then write your own scenes, a step at a time, on the device
 ```
 
-**The way to start is the example**, [`Examples/Notes`](Examples/Notes): a small notes app with no Retake code in
-it, and its `Retake/` project, ready to run. Its sets start the app on a first launch and on a
-returning user's notes; its scenes, for iPhone and iPad, walk through getting started, writing a
-note, syncing and sharing it; and its edits cut them into a preview, `tour`, and into `showcase`,
-the video above. From a fresh clone, with a device connected by USB, one script builds
-Retake, signs the example with your team, and records and cuts it:
+**NOTE:** Start recording with the device on the home screen, and with Focus modes off, to keep
+extra noise out of the status bar, such as "◀ Safari" or a Do Not Disturb moon.
 
-```sh
-Examples/Notes/run.sh
-```
+**Take a look at the example app.** [`Example`](Example) is a simple notes app with its `Retake/`
+project, ready to run. Its sets start the app fresh or as a returning user with stored notes. Its
+scenes walk through getting started, writing a note, sharing it and seeing it sync, and reordering
+notes with the device turned. Its edits cut those into an App Store preview (`tour`) and a tour of
+Retake's editing features (`showcase`), the video above. To run it from a clone of Retake, see
+[running the example](CONTRIBUTING.md#running-the-example).
 
-[Examples/README.md](Examples/README.md) says what it does, step by step. By hand, once
-`run.sh --setup` has signed it, from `Examples/Notes`:
+## Embedding Retake into your app
 
-```sh
-retake install                           # builds the example, embeds Retake, installs it
-retake record                            # records each scene, for the device's type
-retake cut tour                          # renders it, for the device's type
-```
-
-Its integration test does all of that, from a copy of the project: `RETAKE_TEST_DEVICE=<device>
-swift test --filter EndToEnd`.
-
-## Your app
-
-**Retake needs nothing from your app's code.** `retake install` takes a Debug build of it, adds The
-Button Heist's in-app server (TheInsideJob) and Retake's own small support library into the app's
+**Retake needs nothing from your app's code.** `retake install` takes a Debug build of it, adds
+[The Button Heist](#the-button-heist-and-retakes-version-pin)'s in-app server (TheInsideJob) and Retake's own small support library into the app's
 bundle, re-signs it with the identity and profile it was already signed with, and installs it. Both
 are loaded only when Retake launches the app, through the launch environment; the app's own
 executable is unchanged. Nothing is added to your project, so neither can reach an App Store build.
@@ -150,10 +161,9 @@ retake embed build/Debug-iphoneos/MyApp.app
 xcrun devicectl device install app --device "$UDID" build/Debug-iphoneos/MyApp.app
 ```
 
-An embedded app behaves as it always does when opened from the home screen, since nothing Retake
-added loads unless Retake launches it. So you can embed every build you install for testing, and
-record with whichever one is on the device. Run `retake check` on release archives if a build you
-embed in could ever be archived.
+An embedded app behaves as it always does when opened from the home screen, so you can embed every
+build you install for testing, and record with whichever one is on the device. Run `retake check`
+on release archives if a build you embed could ever be archived.
 
 `install` can also run your own build command, from `retake.json`, when one `xcodebuild` call can't
 build your app; see [`retake install`](Documentation/cli.md#retake-install).
@@ -225,7 +235,8 @@ kept. In the order to reach for them:
   takes that build on each other.
 
 `clean` and `cloned` give each take its own copy of the app's data, so recording never changes the
-data you use the app with.
+data you use the app with. Some of the app's state is out of their reach; see
+[what `state` doesn't cover yet](#what-state-doesnt-cover-yet).
 
 **How it works.** At launch, before any of the app's code runs, Retake's support library builds the
 take's home folder inside the app's container, puts the set's files in it, and points the app at it.
@@ -257,16 +268,6 @@ It behaves as the real defaults do in the ways an app notices: values the app re
 `integer(forKey:)` and so on) read the same values; and every write updates `@AppStorage` views and
 key-value observers, and posts `UserDefaults.didChangeNotification`.
 
-### What `state` doesn't cover yet
-
-- **App group containers** (`containerURL(forSecurityApplicationGroupIdentifier:)`) and **defaults
-  suites** (`UserDefaults(suiteName:)`) are the real ones in every state. A group's container is
-  shared with the app's extensions, which Retake doesn't launch.
-- **Code that calls `CFPreferences` directly** reads the real defaults, and so do system frameworks
-  that keep their own state in the app's defaults, such as StoreKit's update timestamps.
-- **The keychain** is the real one: iOS keeps it even across reinstalls. Keychain state needs a
-  launch flag of the app's own.
-
 ### `previewAspect`: the preview's shape
 
 With `"previewAspect": true`, Retake's support library sizes the app's window to the App Store
@@ -291,14 +292,6 @@ geometry won't follow; one that reads the screen once at launch and then its geo
 is set to, so a take looks the same on any device. The launch screen is the system's, drawn before
 the app runs, so it still follows the device: on a device in dark mode, a `light` take starts dark
 and turns light as the app's first frame comes up.
-
-### Things a set can't control
-
-On a physical device, nothing outside the app can grant permissions in advance, change the clock, or
-fill the photo library, and a scene can't answer a permission prompt either (see
-[what a scene can't reach](#what-a-scene-cant-reach)). A permission granted by hand stays granted, whatever a set's `state`,
-since iOS keeps it apart from the app's files and defaults; so grant what a scene needs once, before
-recording.
 
 ## Scenes: the walk through the app
 
@@ -327,6 +320,7 @@ project's `defaultSet` unless it names one:
     { "tap": { "x": 195, "y": 410 } },
     { "drag": { "from": { "x": 120, "y": 590 }, "to": { "x": 260, "y": 500 }, "duration": 0.8 }, "id": "reorder" },
     { "waitFor": { "label": "Synced" }, "id": "synced" },
+    { "capture": "synced-list" },
     { "hold": 2 }
   ]
 }
@@ -348,12 +342,18 @@ Each step does one thing, led by what it does:
 - **`activate`** is an accessibility activation of an element, with no touch, for getting somewhere
   off camera.
 - **`orientation`** turns the device, to `portrait`, `portrait-upside-down`, `landscape-left` or
-  `landscape-right`, with no hand on it, and ends when the app has turned.
+  `landscape-right`, with no hand on it, and ends when the app has turned and the device has drawn
+  the rotation: while `record` has its screen, once the screen stops moving; otherwise, as when
+  composing, a second and a half after the turn.
 - **`waitFor`** waits until an element is on screen, or with `"gone": true` until it isn't, for up
   to `timeout` seconds, 10 unless given. The step fails if it doesn't happen. The Button Heist waits
   at most 60 seconds, so a longer `timeout` is refused when the scene is read, unless
   `BUTTONHEIST_MAX_WAIT_TIMEOUT` raises the limit: The Button Heist reads it both where Retake runs
   and in the app, so set it in Retake's environment and in the set's `environment`.
+- **`capture`** saves the screen as a still, by the name it gives, as it is when the step before has
+  ended and held; see
+  [captures](#captures-stills-from-the-same-scenes). Each capture in a scene has a name of its
+  own, of letters, digits, `-`, `_` and `.`, and none is in `setup`, which isn't recorded.
 
 After what it does, a step can give its `hold`, the pause after it, so the take has room to breathe;
 the edit trims what it doesn't need. A tap's hold runs from when the tap is sent, so taps land a
@@ -378,7 +378,9 @@ wherever the layout puts it, on every device, and after the app's layout changes
 belongs to one screen's layout. And an element a step can name is one VoiceOver can reach, so
 writing scenes this way checks your app's accessibility as you go: a button a step can't name is one
 a VoiceOver user can't find either, and is worth an accessibility label. Points are for what has no
-element of its own, such as a spot on a canvas or a game board.
+element of its own, such as a spot on a canvas or a game board: a point's `x` and `y` are screen
+points, or a percentage of the screen's width or height as the device faces, such as `"50%"`, which
+holds better across devices.
 
 A tap or a drag that lands while something is still moving, such as a sheet rising, can miss what it
 was aimed at, so a step that follows one that presents or dismisses something should wait for it: a
@@ -401,36 +403,19 @@ step and after the last, 1 second each unless given, so the edit has frames to c
 lead-in then starts once the app is up and reachable, so the first step waits for its first screen
 to settle, as it would without the launch.
 
-Name elements where you can. Where there's nothing to name, a point's `x` and `y` are screen
-points, or a percentage of the screen's width or height as the device faces, such as `"50%"`, which
-holds better across devices. Points, and layouts, differ between devices, so scenes are written per
-device type: `scenes/iphone/` and `scenes/ipad/`. A scene of the same name on each type, with every step id an edit references, is what lets
-one edit cut both.
+Points, and layouts, differ between devices, so scenes are written per device type: `scenes/iphone/`
+and `scenes/ipad/`. A scene of the same name on each type, with every step id an edit references, is
+what lets one edit cut both.
 
-### What a scene can't reach
-
-The Button Heist acts from inside the app, so a scene sees and touches only what the app itself
-draws. What another process shows is out of its reach:
-
-- **The system's alerts**: permission prompts (location, notifications, camera, tracking and the
-  rest), and other alerts iOS shows over the app.
-- **Share sheets, and other system screens shown inside the app**, such as composing mail or picking
-  a document.
-- **`SFSafariViewController`**, and the pages a `WKWebView` shows.
-- **Notifications, Control Center, the home screen and other apps.**
-
-A step naming one fails, as if it weren't on screen. Keep them out of takes: grant a permission by
-hand before recording, as it then stays granted; and where a preview should show one, have the app
-show a stand-in of its own under a launch flag the set turns on. The recording still captures
-whatever is on screen, so a system alert that appears unasked is in the take. The Button Heist's
-[scope and limits](https://github.com/TheButtonHeist/TheButtonHeist/blob/v0.7.1/docs/SCOPE-AND-LIMITS.md) say more.
+A scene sees and touches only what the app itself draws, not the system's alerts or share sheets;
+see [what a scene can't reach](#what-a-scene-cant-reach).
 
 ## Takes: footage and a step log
 
 `retake record` records a USB-connected device's screen and sound the way QuickTime's "New Movie
-Recording" does: at the device's own resolution and frame rate, with no prompt or recording
-indicator on the device. The app plays on the device's screen as usual, but its sound comes through
-the Mac while it's recorded, rather than the device's speaker.
+Recording" does: at the resolution and frame rate the device sends its screen in, with no prompt or
+recording indicator on the device. While it's recorded, the device's sound goes to the Mac, so the
+device itself plays none.
 
 Each take is a movie and a step log: when each step started and ended on the movie's own clock,
 where each touch landed, and the elements on screen after each step, with their labels and frames.
@@ -438,30 +423,63 @@ The log is what lets an edit draw touches where they happened, find elements to 
 and cut on steps rather than seconds, on any take of the same scene. Retake writes it, and a project
 never edits it; every field is in the [step log reference](Documentation/reference/take.md).
 
-A scene keeps, for each device type, one take: the latest that succeeded, which edits are cut from.
-Recording it again keeps the take it replaces as its previous one, deleting the one before, so a
-retake that came out worse, with a stutter a step can't see, loses nothing: `retake takes --restore
-<scene>` puts the previous take back. A recording that fails is kept as the scene's latest failure,
-to show what went wrong, and leaves the take alone, as does one that's interrupted; a success
-deletes the failure. Each take records the app's version and build, the device, and when it was
-made, which `retake takes` lists, and a video's record names each take it was cut from by when it
-was recorded. Retake never decides a take is out of date: you know when the app has changed enough
-to record again. `retake clean` then `retake record` starts everything over.
+A scene keeps two takes for each device type: the latest that succeeded, which edits are cut from,
+and the one before it. If a new take comes out worse, `retake takes --restore <scene>` puts the
+previous one back. A recording that fails or is interrupted doesn't replace a take.
 
-Recording a device reliably takes more care than it looks. Retake handles the failures that
-otherwise cost a take: a break in the stream doesn't end the file; silences, when the device sends
-no audio, are filled so later sounds stay on their frames; the device's full-range color is
-converted rather than played back oversaturated; and a recording that fails to start, or a launch
-that doesn't take, is tried again.
+Each take records how it was made, which `retake takes` lists; see
+[what's recorded in each file](#whats-recorded-in-each-file). Retake doesn't guess when the app has
+changed enough to need new takes: `retake record` records only scenes with no take yet, and
+`retake record --force` records them all again.
 
-Two more are the app's side of it. When an app's sound starts again after a quiet stretch, the
-device restarts its sound output, and the recording loses up to half a second of video while it
-does, though the app looks smooth on the device; Retake's support library plays noise far below
-hearing for as long as the app runs, so the output never stops. And the library watches the app's
-main thread for missed frames: `record` warns of the take's hitches from its first step on, how many
-and the longest, saying whether the longest came while a step was being played, and `cut` warns of
-any a clip plays, the lead-in's included. Only hitches as long as `retake.json`'s `hitchWarning`,
-50 ms unless it says otherwise, are warned of.
+Recording a device reliably takes care. Retake handles invalid or incomplete video streams, avoids
+the hitch an audio stream causes as it starts, records in the right color space, and recovers from
+the app or the recording failing to start.
+
+Retake's support library logs each time the app's main thread misses a frame. `record` warns of
+those from the first step on, and `cut` of any a clip plays across, including in the lead-in, just
+after the app launches.
+
+## Captures: stills from the same scenes
+
+A scene's **`capture`** step saves the screen as a still, a PNG named for the step, as `record`
+plays the scene:
+
+<!-- schema: scene -->
+```json
+{
+  "set": "screenshots",
+  "steps": [
+    { "waitFor": { "label": "Reading list" } },
+    { "capture": "library" },
+    { "tap": { "label": "Reading list" } },
+    { "waitFor": { "label": "Share" } },
+    { "capture": "note" }
+  ]
+}
+```
+
+Each `capture` is a screenshot the device takes, at its screen's own resolution, in the device's
+orientation, with the same clean status bar as a recording. It has no alpha channel, as App Store
+Connect requires, and keeps the device's color space. When `devicectl` can't take a screenshot,
+`record` warns and saves the frame the screen is filmed in instead, which can be a different size.
+
+A capture is taken as soon as the step before it ends. If the screen needs longer to settle, give
+that step a `hold`, though it's rarely needed. A capture takes 1 to 2 seconds waiting on `devicectl`,
+which the take records as a still stretch: cut it in the edit, or capture in a scene of its own. A
+capture step is a step like any other in the take, which an edit can anchor to.
+
+The stills go in the output directory's `captures/<type>/<scene>/<name>.png`, and are replaced only
+when the scene plays through without a failure. `retake record --stills-only` takes only the
+captures, leaving takes alone: with no scene named, those of each scene missing them, or all of
+them with `--force`. `retake clean --captures` deletes them.
+
+**NOTE: A capture may not be the right size for App Store Connect,** which takes screenshots only
+in exact sizes. A capture is the device's screen size, so the device decides which display it can
+serve. Leave `"previewAspect": true` out of a set used for captures, so the app fills the screen.
+See Apple's
+[screenshot specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications)
+for the sizes.
 
 ## Edits: the video cut from the takes
 
@@ -513,67 +531,19 @@ every device type it names, from that type's takes of the same scenes:
 }
 ```
 
+The `intent` fields aren't read by the render. They say what the edit and each clip are there to
+show, in your app's terms, so whoever changes the video later knows what each moment is for.
+
 An edit doesn't name its takes: it's always cut from each scene's take, and the video records which
-those were. The take it replaced stays on disk to compare against; to cut from that one, put it back
-with `retake takes --restore <scene>`.
+those were. To cut from a scene's previous take, [put it back](#takes-footage-and-a-step-log) first.
 
 `retake clean --unused` keeps the take of every scene any edit uses and deletes previous takes and
-failures, along with scene definitions and takes no edit uses.
+failures, along with scene definitions and takes no edit uses, though it keeps every scene that
+captures.
 
-### Anchors: times that follow the app
+### Clips
 
-Every time in an edit — a clip's `from` and `to`, a caption's, spotlight's, blur's or card's
-`from` and `to`, a sound's `at`, a still's `at`, and `stillsIn` and `stillsOut` — is an anchor: a
-moment in the clip's take, given by a step and where to go from it.
-
-An anchor's `step` is a step's `id`, its number counted from 1, or a negative number counting back
-from the last (`-1` is the last step); `start` and `end` are the take's first and last frames,
-lead-in and tail included. An anchor is at the step's start, or at its end with `"edge": "end"`, and
-moves from there: `offset` in seconds, forward when positive and back when negative, so an offset of
-0 is that edge itself; `fraction`, from -1 to 1, a share of the way from there to the neighbouring
-step, forward to the next step's start or back to the previous step's end, with the take's `start`
-and `end` standing in past the first and last steps.
-
-An anchor has `offset` or `fraction`, not both; with neither, it's the edge itself. A plain number
-of seconds from the take's start still works, and the first `cut` turns it into an anchor against
-the scene's take.
-
-Since a take's steps are the same however long the app takes over them, an edit anchored to steps
-cuts the same moments from any take of its scenes: a newer take on the same device, or a take on a
-different device whose animations run longer. Which kind of anchor to use:
-
-- **Near a cut, an `offset`** from the nearest step: 0.2 s before a sheet appears is 0.2 s before it
-  on every device.
-- **Partway through something that stretches, a `fraction`**, between two moments the app decides,
-  such as a tap and the `waitFor` that sees its animation finish. A gap that's mostly a step's fixed
-  `hold` doesn't stretch with the app, so a fraction across it lands at different points in the
-  animation on different devices.
-
-Anchor to a step's `id` rather than its number. Ids make an edit readable and survive steps being
-added to a scene; numbers don't, though `-1` always finds the last step. An anchor that doesn't
-resolve — an unknown id, a number past either end, a fraction outside -1 to 1 or with no step on
-that side — fails the `cut`, naming the clip.
-
-### One edit for every device type
-
-Anything in a clip, or at the top of the edit, can be given again under a device type, such as
-`"ipad": { "speed": 1.3 }`, and applies only to that type's video. That's for what is a choice of
-design rather than of timing: a caption's height clear of each layout, a clip a little faster where
-an animation runs longer. The canvas, frame rate and size come from App Store Connect's preview
-specifications for each type, so an edit names device types rather than pixels.
-
-An override is laid over what it overrides: an object merges key by key, so `"ipad": { "y": 0.08 }`
-in a caption changes only its `y`, while a list or a single value replaces what's there, so an
-override of a clip's `captions` gives that type's video its whole list.
-
-A clip that names `devices`, such as `"devices": ["iphone"]`, is in only those types' videos: one
-type can show something the others don't, or show something else in its place.
-
-One device type's takes in an edit must come from devices with the same screen, since positions in
-the step log are the screen's points: `cut` refuses an edit whose iPhone takes, say, mix a 6.1-inch
-and a 6.9-inch iPhone, naming the takes on each.
-
-### What a clip can do
+A clip can:
 
 - **Play faster or slower**, to skip waits without cutting them.
 - **Cross-fade** into the clip before, with its sound fading over a longer time if needed.
@@ -583,15 +553,15 @@ and a 6.9-inch iPhone, naming the takes on each.
 - **Carry captions**, any number, each up between two moments; see [captions](#captions).
 - **Spotlight** an element, dimming the rest, with a pulsing ring around it.
 - **Blur** an element over a stretch of the take, for anything private it shows.
-- **Show a card**, a colour covering the picture with its captions on it, for a title between
+- **Show a card**, a color covering the picture with its captions on it, for a title between
   clips (`card`). Over the whole clip, it fades in and out with the cross-fades either side, so
   what's under it never shows; with a `from` or `to`, over that stretch only.
-- **Pop in stills** from other takes, over the clip or over a colour of their own (`stillsBackground`),
+- **Pop in stills** from other takes, over the clip or over a color of their own (`stillsBackground`),
   one after another from `stillsIn`, or just after the clip starts, and pop them out again, in the
   same order, at `stillsOut`.
 - **Cue sound effects**, which play at normal speed however fast the clip plays, or play the take's
   own sound; see [sound](#sound).
-- **Show the device turning**, when a scene turns it; see [turns](#turns).
+- **Show the device orientation rotating**, when a scene turns it; see [turns](#turns).
 
 Spotlights and blurs name an element the way steps do, by its accessibility label, and Retake finds
 its frame in the take's step log, which records what was on screen just before the first step, and
@@ -614,24 +584,133 @@ whole frame on any side not given: `"part": { "x": "62%", "width": "31%" }` is t
 covered by a `rect`, in screen points or percentages of the screen as the device faced, given per
 device type where layouts differ.
 
+### Anchors: times that follow the app
+
+Every time referenced by an edit is an anchor: a moment in the clip's take, given by a step and how
+far from it. Anchors are:
+
+- a clip's `from`, `to`, `stillsIn` and `stillsOut`;
+- a caption's, card's, spotlight's or blur's `from` and `to`;
+- a sound's or still's `at`.
+
+Anchors should name steps by `id`, which stays the same as steps are added and removed. The `start` and `end` anchors are reserved and reference the take's first and
+last frames, lead-in and tail included. You can also use step numbers as an anchor, counted from 1
+(or backwards from -1), but this is not very durable and thus not encouraged. An anchor is the
+moment its step starts, unless `"edge": "end"` makes it the moment the step ends: to start a clip
+just after a turn has finished, for instance. It can then be moved from there by one of:
+
+- **`offset`**, in seconds, back when negative: for breathing room before or after a moment.
+- **`fraction`**, from -1 to 1, a share of the way to the next step's start, or back to the
+  previous step's end: for a moment partway through something whose length varies between devices
+  or builds, such as an animation.
+
+If no step marks the moment you want, add a `waitFor` step (optionally with `"gone": true`) to get more
+granular anchors to use.
+
+For example, this scene taps New Note, types a title, and waits for the note to sync:
+
+<!-- schema: scene -->
+```json
+{
+  "set": "returning-user",
+  "steps": [
+    { "waitFor": { "label": "New Note" }, "hold": 1 },
+    { "tap": { "label": "New Note" }, "hold": 1.5, "id": "new-note" },
+    { "type": { "text": "Groceries\n", "into": { "value": "Title" } }, "hold": 0.5, "id": "type-title" },
+    { "waitFor": { "label": "Synced" }, "hold": 2, "id": "synced" }
+  ]
+}
+```
+
+and this clip cuts it, anchored to those step ids:
+
+<!-- schema: edit clip -->
+```json
+"take": "create-note",
+"from": { "step": "new-note", "offset": -0.5 },
+"to": { "step": "synced", "offset": 1, "edge": "end" },
+"captions": [
+  { "text": "Jot it down", "y": 0.8, "color": "#1F6FEB", "to": { "step": "type-title", "fraction": 0.5 } }
+],
+"sounds": [{ "file": "audio/chime.m4a", "at": { "step": "synced", "edge": "end" } }]
+```
+
+- `from` starts the clip half a second before New Note is tapped.
+- The caption goes halfway between the start of typing and the start of the next step, however long
+  the typing took in this take.
+- The chime plays at the `synced` step's end: the moment Synced appeared, whenever the sync finished.
+- `to` ends the clip a second after that, within the step's 2-second hold.
+
+Anchored this way, an edit lines up again when the scene is recorded again as the app changes, and
+one edit can cut both the iPhone's takes and the iPad's.
+
+### One edit for every device type
+
+Anything in a clip, or at the top of the edit, can be given again under a device type, such as
+`"ipad": { "speed": 1.3 }`, and applies only to that type's video. That's for what is a choice of
+design rather than of timing: a caption's height clear of each layout, a clip a little faster where
+an animation runs longer. The canvas, frame rate and size come from App Store Connect's preview
+specifications for each type, so an edit names device types rather than pixels.
+
+In the [showcase](Example/Retake/edits/showcase.json), trimmed here, the iPad turns to landscape
+while the iPhone stays upright, and a card fills the iPhone's video for as long as the iPad's turn
+takes:
+
+<!-- schema: edit -->
+```json
+{
+  "devices": ["iphone", "ipad"],
+  "clips": [
+    {
+      "take": "reorder",
+      "from": { "step": "reorder", "offset": -0.4 },
+      "to": { "step": "open", "offset": -0.1 },
+      "captions": [
+        { "text": "Drags, drawn with a tail", "y": 0.8, "color": "#1F6FEB", "to": { "step": "turn", "offset": -0.3 } },
+        { "text": "Turns, kept upright", "y": 0.8, "color": "#1F6FEB", "from": { "step": "turn", "offset": -0.3 } }
+      ],
+      "iphone": {
+        "to": { "step": "turn", "offset": -0.3 },
+        "captions": [{ "text": "Drags, drawn with a tail", "y": 0.8, "color": "#1F6FEB" }]
+      }
+    },
+    {
+      "devices": ["iphone"],
+      "take": "reorder",
+      "from": { "step": "reorder", "offset": -1.2 },
+      "to": { "step": "turn", "offset": -0.1 },
+      "card": { "color": "#FFD43B" },
+      "captions": [{ "text": "Customize the cut for each device", "y": 0.5, "color": "#1B2A4E" }]
+    }
+  ]
+}
+```
+
+An override is laid over what it overrides: an object merges key by key, so the `iphone` override
+above changes the clip's `to` and keeps its `take` and `from`, and `"ipad": { "y": 0.08 }` in a
+caption changes only its `y`. A list or a single value replaces what's there, so the iPhone's
+`captions` are its whole list, without the caption for the turn it doesn't show.
+
+A clip that names `devices`, as the card does, is in only those types' videos: one type can show
+something the others don't, or show something else in its place.
+
+One device type's takes in an edit must come from devices with the same screen, since positions in
+the step log are the screen's points: `cut` refuses an edit whose iPhone takes, say, mix a 6.1-inch
+and a 6.9-inch iPhone, naming the takes on each.
+
 ### Captions
 
-A clip's `captions` are text over the video, each shown from its `from` to its `to`, which are
-anchors. A caption with neither is up for the whole clip, but clear of its cross-fades: it comes up
-once the clip has faded in, and goes as the next clip starts to fade in, so one caption is gone
-before the next arrives. Any number can be up at once, and they may overlap; where each sits is the
-edit's to say.
-
-A caption can run on over the clips after it. Its `to` names a later clip by its `id`, and is then
-an anchor in that clip's take, with everything an anchor takes: a `step`, and an `offset`,
-`fraction` or `edge` from it, as `{ "clip": "sync", "step": "synced", "offset": -0.2 }` does above.
-`{ "clip": "sync" }` alone keeps the caption up through that clip, leaving as the next clip starts
-to fade in. Only `to` can name another clip: a caption
-that starts in a later clip belongs to that clip.
+A clip's `captions` are text over the video, shown from its `from` to its `to`
+[anchors](#anchors-times-that-follow-the-app). A caption with neither is up for the whole clip, but
+clear of its cross-fades. Any number can be up at once, and they may overlap; when and where each
+appears is the edit's to say. A caption's `to` can name a later clip by its `id`, to stay up over the
+clips until then, as `{ "clip": "sync", "step": "synced", "offset": -0.2 }` does in the
+[edit above](#edits-the-video-cut-from-the-takes). Only `to` can name another clip: a caption that
+starts in a later clip belongs to that clip.
 
 An anchor outside the part of the take its clip plays fails the `cut`, naming the caption.
 
-`y` places a caption's centre as a share of the video's height, from 0 at the top to 1 at the
+`y` places a caption's center as a share of the video's height, from 0 at the top to 1 at the
 bottom, measured on the video itself, so after any band `previewAspect` crops away. Since it's a share
 rather than pixels, one value suits every size of a device type's video; a per-device value is for
 layouts that differ, where each needs the caption clear of something else.
@@ -676,7 +755,8 @@ A video's sound is the edit's music, under the sound of its clips:
   each tap, and at the start of each drag, where its finger comes down.
 
 Sound files are paths relative to the directory holding the configuration file, as every path in an
-edit is.
+edit is. A take's own sound plays at its clip's `speed`, so it may not sound right in a clip sped
+up or slowed down.
 
 ### Turns
 
@@ -690,10 +770,7 @@ sideways while the device is landscape, as a camera fixed to the device would se
 `"turnBlur": { "duration": 0.6 }` blurs each turn, easing in just before it and out after, which
 hides the in-between frames of the rotation and the device's short gap in frames as the screen
 changes shape. Both can be set for the whole edit, or for one clip. The letterbox bands, and the
-corners a turn uncovers, are the edit's `background` colour, black unless it says otherwise.
-
-The `intent` fields aren't read by the render. They say what each clip is there to show in your
-app's terms, so whoever changes the video later — you, or an agent — knows what each moment is for.
+corners a turn uncovers, are the edit's `background` color, black unless it says otherwise.
 
 ## What's recorded in each file
 
@@ -707,8 +784,8 @@ later can be traced to the app and the setup behind it:
   version.
 
 A take also records its scene, set and state. A video records the edit it was cut from, the same
-details for each take in it, with its scene and when it was recorded, and every app build, device and Button Heist its takes were
-recorded with, since they may differ. `retake cut` warns when they do.
+details for each take in it, with its scene and when it was recorded, and every app build, device
+and Button Heist its takes were recorded with, since they may differ. `retake cut` warns when they do.
 
 `retake info <movie>` prints all of it. Takes and masters are QuickTime movies, so other tools read
 the fields too: `ffprobe` lists them, and Finder shows the software that made it. The `.mp4` for App
@@ -738,7 +815,7 @@ session, over the project's.
 ## The Button Heist, and Retake's version pin
 
 Retake drives your app with [The Button Heist](https://github.com/TheButtonHeist/TheButtonHeist), which acts on the app through its accessibility
-interface: steps find elements the way VoiceOver does, and touches are synthesised inside the app.
+interface: steps find elements the way VoiceOver does, and touches are synthesized inside the app.
 
 > [!IMPORTANT]
 > **Each Retake release is built against exactly one release of The Button Heist, and works only
@@ -772,8 +849,12 @@ Retake/
   scenes/iphone/*.json
   scenes/ipad/*.json
   edits/*.json
-  output/            # takes and videos; gitignored, and movable with --output-dir
+  output/            # takes, captures and videos; gitignored, and movable with --output-dir
 ```
+
+`output/` is gitignored, since its movies are too large for a repository: `retake init` adds it to
+the `.gitignore`, so a project made without `init` should add it there itself. See
+[`retake init`](Documentation/cli.md#retake-init) for keeping its movies long term.
 
 The folders' names are lowercase, and Retake reads them only as named: a folder in another case,
 such as `Edits/`, which git can keep after a folder is renamed on a Mac, is reported, by `validate`
@@ -793,7 +874,7 @@ Every file Retake reads has a [JSON Schema](https://json-schema.org), released w
 reads every file against its own schema, so a file needn't name one. For an editor, a file can name
 its schema in a `"$schema"` key: the URL its schema is published at, which names Retake's version,
 such as
-`https://justinseanmartin.github.io/Retake/schemas/0.0.1/edit.schema.json`. Editors that read JSON
+`https://justinseanmartin.github.io/Retake/schemas/0.0.2/edit.schema.json`. Editors that read JSON
 Schema, VS Code among them, fetch it from there, and complete fields as you type, describe them on
 hover, and mark mistakes; nothing is copied into the project. Retake never adds the key, and `retake
 cut` keeps one up to date. `retake schema` prints the schemas, for tools and agents, or writes
@@ -807,77 +888,59 @@ device, including what only the takes can answer, such as an anchor's step id ex
 The [reference](Documentation/reference/) lists every field of every file, generated from the schemas. This README explains
 how the pieces fit together; the reference is where each field is defined.
 
-## Building from source
+## Limitations
 
-Retake is a Swift package. To work on it you need only Xcode.
+Retake does what the App Store previews it was first built for needed. There is definitely still
+room for improvement and additions:
 
-`.xcode-version` names the Xcode that Retake's releases are built with. For working on Retake it's
-the version known to work, not a requirement: nothing checks it locally, and other versions usually
-work too. If a build fails on yours, that's the version to try. Releases are different: the release
-build uses exactly that version, and fails without it. TheInsideJob isn't built by Retake at all;
-it's The Button Heist's own release build, which records its Xcode in the bundle's `XCODE_VERSION`.
+- **The effects are limited.** Each of [a clip's effects](#clips) takes a handful of
+  options, not full control of its style, and there are few kinds: a caption's symbol has one
+  animation, for one.
+- **The iPhone Duo isn't supported yet.** Its folding screen gives it two sizes of screen, which
+  scenes, aspects and edits don't yet tell apart. Support should be straightforward to add, but
+  needs a physical iPhone Duo to be tested on.
+- **Captures are done in the device's own resolution,** which often isn't a size App Store Connect
+  takes screenshots in; see [Captures](#captures-stills-from-the-same-scenes).
 
-```sh
-Scripts/build.sh               # builds a runnable retake, and prints its path
-swift test
-```
+### What `state` doesn't cover yet
 
-`Scripts/build.sh` is the three steps a source checkout needs before `retake` can install an app,
-each quick when there's nothing new: `swift build -c release`, `Scripts/build-support.sh`, which
-builds Retake's support library for iOS, and `Scripts/fetch-insidejob.sh`, which gets the
-TheInsideJob Retake installs, for the pinned release. It builds into `RETAKE_SCRATCH_PATH`, or
-`.build`, and prints the path of the `retake` it built, last and alone, for a script to run:
-`retake="$(Scripts/build.sh)"` builds once, then `"$retake"` runs it as often as needed.
+- **App group containers** (`containerURL(forSecurityApplicationGroupIdentifier:)`) and **defaults
+  suites** (`UserDefaults(suiteName:)`) are the real ones in every state. A group's container is
+  shared with the app's extensions, which Retake doesn't launch.
+- **Code that calls `CFPreferences` directly** reads the real defaults, and so do system frameworks
+  that keep their own state in the app's defaults, such as StoreKit's update timestamps.
+- **The keychain** is the real one: iOS keeps it even across reinstalls. Keychain state needs a
+  launch flag of the app's own.
 
-`swift build` fetches The Button Heist's packages at the pinned release, since Retake links its
-client library directly. `Scripts/fetch-insidejob.sh` downloads the same release's
-`theinsidejob-<version>.zip`, checks it against the release's checksums, and puts its
-`TheInsideJob.xcframework` where a locally built `retake` installs it from. Released builds include
-it. Neither needs The Button Heist's own development tools.
+### Things a `set` can't control
 
-The schemas in `Documentation/reference/` are generated from Retake's file types, and checked in.
-After changing what a file may say, regenerate them, and the reference beside them:
+On a physical device, nothing outside the app can grant permissions in advance, change the clock, or
+fill the photo library, and a scene can't answer a permission prompt either (see
+[what a scene can't reach](#what-a-scene-cant-reach)). A permission granted by hand stays granted,
+whatever a set's `state`, since iOS keeps it apart from the app's files and defaults, so grant it
+once, before recording.
 
-```sh
-swift run retake schema --output Documentation/reference
-RETAKE_REGENERATE=1 swift test --filter Reference
-```
+### What a `scene` can't reach
 
-A pre-commit hook refuses a commit whose staged schemas differ from what the types generate. Turn it
-on once per clone with `git config core.hooksPath Scripts/git-hooks`. It builds `retake` into
-`RETAKE_SCRATCH_PATH`, or `.build` unless that's set.
+The Button Heist acts from inside the app, so a scene sees and touches only what the app itself
+draws. What another process shows is out of its reach:
 
-Editors fetch the schemas from GitHub Pages, at the URL each one's `$id` names. Once they've changed
-on `main`, publish them there with `Scripts/publish-schemas.sh`: it copies them into
-`schemas/<version>/` on the `gh-pages` branch, checked out in `.pages/` (ignored by Git), pushes,
-and turns Pages on the first time. It publishes only `main` with nothing uncommitted, and won't
-replace a version's schemas once they're published, since files name them by their URL; `--force`
-does all three.
+- **The system's alerts**: permission prompts (location, notifications, camera, tracking and the
+  rest), and other alerts iOS shows over the app.
+- **Share sheets, and other system screens shown inside the app**, such as composing mail or picking
+  a document.
+- **`SFSafariViewController`**, and the pages a `WKWebView` shows.
+- **Notifications, Control Center, the home screen and other apps.**
 
-### Working on Retake and The Button Heist together
+A step naming one fails, as if it weren't on screen. Keep them out of takes: grant a permission by
+hand before recording, as it then stays granted; and where a preview should show one, have the app
+show a stand-in of its own under a launch flag the set turns on. The recording still captures
+whatever is on screen, so a system alert that appears unasked is in the take. The Button Heist's
+[scope and limits](https://github.com/TheButtonHeist/TheButtonHeist/blob/v0.7.1/docs/SCOPE-AND-LIMITS.md) say more.
 
-For changes that span both, point Retake at a local clone of The Button Heist:
-
-```sh
-export RETAKE_BUTTONHEIST_PATH=../TheButtonHeist
-swift build
-Scripts/fetch-insidejob.sh
-```
-
-With `RETAKE_BUTTONHEIST_PATH` set, `swift build` uses that clone instead of the pinned release, and
-`Scripts/fetch-insidejob.sh` builds TheInsideJob from it rather than downloading it. One variable
-drives both on purpose: Retake's client and the framework it installs must come from the same
-source. A clone between releases reports a version with its contract hash, so a framework built from
-a different state of the clone is refused at the handshake rather than half working. Rebuild both
-after changing the clone.
-
-A build from a clone says so. `retake version` names the clone's path and commit, ending in `-dirty`
-when it has uncommitted changes, and so does each take's metadata. Release builds refuse to run with
-the variable set.
-
-SwiftPM drops The Button Heist's pin from `Package.resolved` while building from a clone. Don't
-commit that change: `git checkout Package.resolved` puts the pin back, and
-`Scripts/fetch-insidejob.sh` needs it to download the release.
+Pull requests that add any of these, or anything else, are welcome: see
+[CONTRIBUTING.md](CONTRIBUTING.md) to build Retake from source and send a change. Or fork it and go
+wild.
 
 ## License
 

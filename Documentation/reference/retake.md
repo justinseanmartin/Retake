@@ -4,7 +4,7 @@
 
 A Retake project's configuration. Every field is optional.
 
-Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.1/retake.schema.json>, and `retake schema retake` prints it.
+Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.2/retake.schema.json>, and `retake schema retake` prints it.
 
 ## Fields
 
@@ -29,7 +29,7 @@ Retake builds a scheme with xcodebuild, for iOS devices, with its build products
 | `xcodeproj` | string, not empty |  | The project holding the scheme, needed only when the directory holds more than one. Relative to the directory holding retake.json. |
 | `configuration` | string, not empty | `"Debug"` | The build configuration, which must be development-signed for the device. |
 | `allowProvisioningUpdates` | boolean | `false` | Lets xcodebuild register the device and update profiles on your team. |
-| `optimize` | boolean | `true` | Builds with the compiler's optimisation on, Swift at -O and C at -Os, whatever the configuration says, so the app runs as fast as its users see it. |
+| `optimize` | boolean | `true` | Builds with the compiler's optimization on, Swift at -O and C at -Os, whatever the configuration says, so the app runs as fast as its users see it. |
 
 ### `build`, with `command`
 

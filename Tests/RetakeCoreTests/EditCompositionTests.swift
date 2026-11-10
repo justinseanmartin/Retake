@@ -73,17 +73,17 @@ struct TurnFramingTests {
 
     @Test func aTurnedFrameIsTurnedBackUprightAndLetterboxed() {
         // Turned a quarter clockwise to fit: the upright frame's top left is the stored top right.
-        // Upright, the 4:3 window at the left, 1600×1200, fits the canvas as 1200×900, centred.
+        // Upright, the 4:3 window at the left, 1600×1200, fits the canvas as 1200×900, centered.
         let clockwise = ClipFraming.framing(canvas, stored: stored, turned: 90, aspect: aspect, turns: .letterboxed, screen: screen)
         #expect(clockwise.cropRect == CGRect(x: 0, y: 0, width: 1200, height: 1600))
         #expect(lands(clockwise, CGPoint(x: 1200, y: 0)) == CGPoint(x: 0, y: 350), "the window's top left")
         #expect(lands(clockwise, CGPoint(x: 0, y: 1600)) == CGPoint(x: 1200, y: 1250), "its bottom right")
 
-        // Turned anticlockwise: the upright top left is the stored bottom left.
-        let anticlockwise = ClipFraming.framing(canvas, stored: stored, turned: -90, aspect: aspect, turns: .letterboxed, screen: screen)
-        #expect(anticlockwise.cropRect == CGRect(x: 0, y: 118, width: 1200, height: 1600))
-        #expect(lands(anticlockwise, CGPoint(x: 0, y: 1718)) == CGPoint(x: 0, y: 350))
-        #expect(lands(anticlockwise, CGPoint(x: 1200, y: 118)) == CGPoint(x: 1200, y: 1250))
+        // Turned counterclockwise: the upright top left is the stored bottom left.
+        let counterclockwise = ClipFraming.framing(canvas, stored: stored, turned: -90, aspect: aspect, turns: .letterboxed, screen: screen)
+        #expect(counterclockwise.cropRect == CGRect(x: 0, y: 118, width: 1200, height: 1600))
+        #expect(lands(counterclockwise, CGPoint(x: 0, y: 1718)) == CGPoint(x: 0, y: 350))
+        #expect(lands(counterclockwise, CGPoint(x: 1200, y: 118)) == CGPoint(x: 1200, y: 1250))
     }
 
     @Test func asTheDeviceHeldItTheWindowIsCroppedWhereItLiesAndFillsTheCanvas() {
@@ -131,7 +131,7 @@ struct TurnFramingTests {
 }
 
 /// The composition, from small generated movies: two takes, one red on top and one green, so which
-/// clip shows is a matter of colour.
+/// clip shows is a matter of color.
 struct EditCompositionTests {
     let folder = FileManager.default.temporaryDirectory.appending(path: "retake-composition-\(UUID().uuidString)", directoryHint: .isDirectory)
 
@@ -146,7 +146,7 @@ struct EditCompositionTests {
         return Dictionary(uniqueKeysWithValues: names.map { ($0, log) })
     }
 
-    /// A one-colour movie, `frames` long at 30 frames a second, 2 s unless told, 64×96, a size every
+    /// A one-color movie, `frames` long at 30 frames a second, 2 s unless told, 64×96, a size every
     /// encoder takes.
     func movie(_ name: String, red: UInt8, green: UInt8, blue: UInt8, frames: Int = 60) async throws -> URL {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -186,7 +186,7 @@ struct EditCompositionTests {
     }
 
     /// The middle pixel of the composition's frame at `seconds`, as red, green and blue.
-    func colour(of composition: EditComposition, at seconds: Double) async throws -> (Int, Int, Int) {
+    func color(of composition: EditComposition, at seconds: Double) async throws -> (Int, Int, Int) {
         let generator = AVAssetImageGenerator(asset: composition.composition)
         generator.videoComposition = composition.videoComposition
         generator.requestedTimeToleranceBefore = .zero
@@ -215,11 +215,11 @@ struct EditCompositionTests {
 
         // Through the encoder and back, pure red and green come out a little mixed, so each is told
         // by which channel leads.
-        let red = try await colour(of: composition, at: 0.3)
+        let red = try await color(of: composition, at: 0.3)
         #expect(red.0 > red.1 + 150, "the first clip, alone")
-        let green = try await colour(of: composition, at: 1.15)
+        let green = try await color(of: composition, at: 1.15)
         #expect(green.1 > green.0 + 150, "the second, alone")
-        let between = try await colour(of: composition, at: 0.875)
+        let between = try await color(of: composition, at: 0.875)
         #expect(between.0 > green.0 + 40 && between.1 > red.1 + 40, "half way through the cross-fade, some of each")
     }
 
@@ -234,7 +234,7 @@ struct EditCompositionTests {
         let composition = try await EditComposition.make(plan, movies: movies, logs: logs("red", "green"), spec: PreviewSpec(width: 64, height: 96, framesPerSecond: 30), background: .black)
         // The card, drawn over the picture, fades in and out over these; under it, only red.
         for at in [0.875, 1.625] {
-            let under = try await colour(of: composition, at: at)
+            let under = try await color(of: composition, at: at)
             #expect(under.0 > under.1 + 150, "at \(at) s, only the clip the card doesn't cover")
         }
     }

@@ -146,7 +146,7 @@ public enum Composer {
             }
             switch action {
             case .step(let step):
-                if let problem = problem(withID: step.id, in: state.document.steps) {
+                if let problem = problem(withID: step.id, in: state.document.steps) ?? problem(withCapture: step.action?.capture, in: state.document.steps) {
                     reply(.failed(problem))
                     continue
                 }
@@ -237,6 +237,12 @@ public enum Composer {
             return " --\(name) \"\(answer.replacingOccurrences(of: "\"", with: "\\\""))\""
         }
         return nil
+    }
+
+    /// Why a step can't capture as `name`, as a scene's file reading would say, or nil when it can.
+    static func problem(withCapture name: String?, in steps: some Collection<Step>) -> String? {
+        guard let name, let earlier = steps.compactMap(\.action?.capture).first(where: { $0.lowercased() == name.lowercased() }) else { return nil }
+        return "\"\(earlier)\" is already a step's capture\(earlier == name ? "" : ", which names the same file"); each capture names a still of its own."
     }
 
     /// Why a step can't have `id`, as a scene's file reading would say, or nil when it can.

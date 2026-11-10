@@ -241,20 +241,25 @@ public enum TakeStore {
         public var cuts: [URL]
         /// Scene definitions no edit uses, for a device type.
         public var scenes: [URL] = []
+        /// Scenes' folders of captures, for a device type.
+        public var captures: [URL] = []
 
         /// The takes it deletes that an edit is cut from; its next cut needs the scene recorded again.
         public var used: [Take] { takes.filter { !$0.usedBy.isEmpty } }
 
-        public var isEmpty: Bool { takes.isEmpty && oldTakes.isEmpty && cuts.isEmpty && scenes.isEmpty }
-        public var count: Int { takes.count + oldTakes.count + cuts.count + scenes.count }
+        public var isEmpty: Bool { takes.isEmpty && oldTakes.isEmpty && cuts.isEmpty && scenes.isEmpty && captures.isEmpty }
+        public var count: Int { takes.count + oldTakes.count + cuts.count + scenes.count + captures.count }
     }
 
-    /// What `clean` would delete: with neither `takes` nor `cuts` given, every take and cut;
-    /// otherwise those given, where an empty list is every one. A scene named loses its take, its
-    /// previous one and its failure, and any folder of an earlier Retake's numbered takes. Misuse
-    /// (2) for a scene or edit named that has nothing to delete.
-    public static func cleaning(takes: [String]?, cuts: [String]?, for types: [DeviceType], in project: Project) throws(RetakeError) -> Cleaning {
-        let everything = takes == nil && cuts == nil
+    /// What `clean` would delete: with none of `takes`, `cuts` and `captures` given, every take,
+    /// cut and capture; otherwise those given, where an empty list is every one. A scene named
+    /// loses its take, its previous one and its failure, and any folder of an earlier Retake's
+    /// numbered takes; or with `captures`, its captures. Misuse (2) for a scene or edit named that
+    /// has nothing to delete.
+    public static func cleaning(
+        takes: [String]?, cuts: [String]?, captures: [String]? = nil, for types: [DeviceType], in project: Project,
+    ) throws(RetakeError) -> Cleaning {
+        let everything = takes == nil && cuts == nil && captures == nil
         var chosen: [Take] = [], old: [URL] = []
         if everything || takes != nil {
             let all = Self.takes(for: types, in: project), allOld = oldFolders(for: types, in: project)
@@ -284,11 +289,25 @@ public enum TakeStore {
                 folders = all
             }
         }
-        return Cleaning(takes: chosen, oldTakes: old, cuts: folders)
+        var stills: [URL] = []
+        if everything || captures != nil {
+            let all = types.flatMap { type in CaptureStore.scenes(for: type, in: project).map { CaptureStore.folder(of: $0, for: type, in: project) } }
+            if let scenes = captures, !scenes.isEmpty {
+                for scene in scenes where !all.contains(where: { $0.lastPathComponent == scene }) {
+                    throw RetakeError(.usage, "There are no captures of \(scene)\(types.count == 1 ? " for \(types[0].rawValue)" : "") to delete.")
+                }
+                stills = all.filter { scenes.contains($0.lastPathComponent) }
+            } else {
+                stills = all
+            }
+        }
+        return Cleaning(takes: chosen, oldTakes: old, cuts: folders, captures: stills)
     }
 
     /// What `clean --unused` deletes: every take but the take of a scene an edit uses, so every
-    /// previous take and failure too, and every scene definition no edit uses. Fails before
+    /// previous take and failure too; every scene definition no edit uses that has no `capture`
+    /// step, which its captures need; and the captures of every scene that no longer has a capture
+    /// step, or is gone. A scene that can't be read is kept, with its captures. Fails before
     /// choosing anything if an edit can't be read, since its dependencies aren't safe to infer, or
     /// if an earlier Retake's numbered takes are there.
     public static func unused(for types: [DeviceType], in project: Project) throws(RetakeError) -> Cleaning {
@@ -306,11 +325,19 @@ public enum TakeStore {
         let unneeded = takes(for: types, in: project).filter { take in
             take.kind != .take || needed[take.type]?.contains(take.scene) != true
         }
+        // Whether each scene captures, so its definition and captures are needed: nil when it can't be read.
+        func captures(_ scene: String, for type: DeviceType) -> Bool? {
+            guard FileManager.default.fileExists(atPath: projectFiles.sceneURL(scene, for: type).path) else { return false }
+            return projectFiles.readScene(scene, for: type, into: ProjectFiles.Report()).map { $0.steps.contains { $0.action?.capture != nil } }
+        }
         let unusedScenes = types.flatMap { type in
-            projectFiles.names(in: project.scenes(for: type)).filter { needed[type]?.contains($0) != true }
+            projectFiles.names(in: project.scenes(for: type)).filter { needed[type]?.contains($0) != true && captures($0, for: type) == false }
                 .map { projectFiles.sceneURL($0, for: type) }
         }
-        return Cleaning(takes: unneeded, cuts: [], scenes: unusedScenes)
+        let unusedCaptures = types.flatMap { type in
+            CaptureStore.scenes(for: type, in: project).filter { captures($0, for: type) == false }.map { CaptureStore.folder(of: $0, for: type, in: project) }
+        }
+        return Cleaning(takes: unneeded, cuts: [], scenes: unusedScenes, captures: unusedCaptures)
     }
 
     /// Deletes what `cleaning` chose.
@@ -318,7 +345,7 @@ public enum TakeStore {
         let files = FileManager.default
         do {
             for take in cleaning.takes { try remove((take.movie, take.log)) }
-            for folder in cleaning.oldTakes + cleaning.cuts + cleaning.scenes where files.fileExists(atPath: folder.path) {
+            for folder in cleaning.oldTakes + cleaning.cuts + cleaning.scenes + cleaning.captures where files.fileExists(atPath: folder.path) {
                 try files.removeItem(at: folder)
             }
         } catch {

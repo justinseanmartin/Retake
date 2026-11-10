@@ -16,6 +16,7 @@ struct ComposeActionTests {
         #expect(try parse(#"waitFor --label Done --gone --timeout 4"#) == .step(Step(.waitFor(ElementTarget(label: "Done"), gone: true, timeout: 4))))
         #expect(try parse("orientation --to landscape-left") == .step(Step(.orientation(.landscapeLeft))))
         #expect(try parse("hold --seconds 2 --id rest") == .step(Step(id: "rest", nil, hold: 2)))
+        #expect(try parse("capture --name home --hold 1") == .step(Step(.capture("home"), hold: 1)))
     }
 
     @Test func aTapAtAPointOnAnElementSuggestsTheShortestNameThatPicksItOut() {
@@ -114,6 +115,7 @@ struct ComposeActionTests {
         ("orientation --to sideways", "--to is one of portrait, portrait-upside-down, landscape-left, landscape-right."),
         (#"tap --label "a"#, "A quote isn't closed."),
         ("tap --label a --label b", "--label is given twice."),
+        ("capture --name ../home", "--name names the still's file, so it's letters, digits, -, _ and ., starting with a letter or digit."),
     ])
     func mistakesSayWhatsWrong(_ line: String, _ message: String) {
         #expect(throws: ComposeAction.Problem.wrong(message)) { try parse(line) }
@@ -263,6 +265,13 @@ struct ComposerSessionTests {
         let (_, state, replies) = try await session(["tap --x 1 --y 2 --id start", "tap --x 1 --y 2 --id a", "tap --x 1 --y 2 --id a", "set --id 3"])
         #expect(state.document.steps.map(\.id) == ["a"])
         #expect(replies.failures.count == 3)
+    }
+
+    @Test func aCaptureIsAddedWithoutTakingAnythingAndOnlyOnceByItsName() async throws {
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let (_, state, replies) = try await session(["capture --name home", "capture --name Home", "tap --x 1 --y 2"])
+        #expect(state.document.steps.map(\.action) == [.capture("home"), .tapPoint(Position(Point(x: 1, y: 2)))])
+        #expect(replies.failures == [#""home" is already a step's capture, which names the same file; each capture names a still of its own."#])
     }
 
     @Test func atATerminalWhatsMissingIsAskedFor() async throws {

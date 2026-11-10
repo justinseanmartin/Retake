@@ -27,6 +27,7 @@ extension Step.Action {
             return .object(JSONObject(entries))
         case .activate(let element): return element.json
         case .orientation(let orientation): return .string(orientation.rawValue)
+        case .capture(let name): return .string(name)
         case .waitFor(let element, let gone, let timeout):
             guard case .object(var object) = element.json else { return element.json }
             if gone { object.entries.append(.init(key: "gone", value: .bool(true))) }

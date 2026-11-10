@@ -51,7 +51,7 @@ struct InstallerTests {
         #expect(throws: RetakeError.self) { try Installer.builtApp(fromSettings: Data("[]".utf8)) }
     }
 
-    @Test func anUnregisteredDeviceIsRecognised() {
+    @Test func anUnregisteredDeviceIsRecognized() {
         #expect(Installer.isUnregisteredDevice(#"error: Provisioning profile "iOS Team Provisioning Profile: com.example.notes" doesn't include the currently selected device "Sam’s iPad" (identifier 00008103-1)."#))
         #expect(!Installer.isUnregisteredDevice("error: Signing for \"Notes\" requires a development team."))
     }

@@ -143,7 +143,7 @@ struct ProjectValidatorTests {
         #expect(try validate([.scene("walk", .iphone)]) == ["scenes/iphone/walk.json: an edit \(clash)"])
     }
 
-    @Test func filesAreRecognisedByWhereTheyAre() throws {
+    @Test func filesAreRecognizedByWhereTheyAre() throws {
         let validator = ProjectValidator(files: ProjectFiles(project: try Project.locate(configuration: nil, currentDirectory: root)))
         #expect(validator.target(for: root.appending(path: "retake.json")) == .configuration)
         #expect(validator.target(for: root.appending(path: "sets/base.json")) == .set("base"))

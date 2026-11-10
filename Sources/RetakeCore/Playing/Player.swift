@@ -65,6 +65,13 @@ public struct Player: Sendable {
     /// Told which way an `orientation` step is about to turn the device, before it does: for the
     /// recorder, to store frames of the new shape facing the right way.
     public var turning: @Sendable (SceneFile.Orientation) -> Void = { _ in }
+    /// Waits, once the app has turned, for the rotation the device draws to finish, from the
+    /// device's screen. Nil, as for composing or a dry run, which open no screen, waits instead
+    /// until `rotationTime` after the turn was asked for.
+    public var rotated: (@Sendable () async -> Void)? = nil
+    /// Takes a `capture` step's still, by its name, of the screen as it is now. Nil, as for
+    /// composing or a dry run, which open no screen to capture, passes over each capture.
+    public var capturing: (@Sendable (String) async throws(RetakeError) -> Void)? = nil
     /// The device's screen in points, held upright: what a step's share of the screen is of, turned
     /// as the device faces. Nil when it isn't known, and a step that gives a share fails.
     public var screen: CGSize? = nil
@@ -75,6 +82,10 @@ public struct Player: Sendable {
 
     /// How long an `orientation` step waits for the app to turn.
     public static let turnTimeout = 5.0
+    /// Seconds from asking for a turn until the device has drawn it, with no screen to watch it on:
+    /// an iPad Pro (11-inch) (3rd generation)'s rotation began 0.34 to 0.64 s after it was asked
+    /// for and moved its last 0.82 to 1.35 s after.
+    public static let rotationTime = 1.5
     /// How often an `orientation` step looks at the screen while it waits.
     public static let turnPollInterval = 0.1
 
@@ -136,6 +147,8 @@ public struct Player: Sendable {
             case .turn(let target):
                 evidence.elements = try await turn(from: orientation, to: target, on: driver)
                 orientation = target
+            case .capture(let name):
+                try await capturing?(name)
             case .pause:
                 break
             }
@@ -296,6 +309,7 @@ public struct Player: Sendable {
     func turn(from current: SceneFile.Orientation, to target: SceneFile.Orientation, on driver: some AppDriver) async throws(RetakeError) -> [ScreenElement] {
         let before = try await driver.elements()
         turning(target)
+        let asked = now()
         try await driver.turn(to: target)
         guard target != current else { return before }
         let deadline = now() + Self.turnTimeout
@@ -306,7 +320,16 @@ public struct Player: Sendable {
             let frames = Self.frames(elements)
             if let last, last.count == frames.count {
                 let now = Set(frames.indices.filter { frames[$0] != last[$0] })
-                if Self.hasSettled(frames, from: Self.frames(before), moving: now, before: moving) { return elements }
+                if Self.hasSettled(frames, from: Self.frames(before), moving: now, before: moving) {
+                    // The app lays itself out for the new orientation as the rotation starts, so
+                    // its elements settle before the device has drawn the turn.
+                    if let rotated {
+                        await rotated()
+                    } else if Self.rotationTime > self.now() - asked {
+                        await pause(Self.rotationTime - (self.now() - asked))
+                    }
+                    return elements
+                }
                 moving = now
             } else {
                 moving = nil

@@ -173,7 +173,7 @@ public enum Sharer {
     }
 
     /// How densely the picture is encoded, in bits a pixel a frame: small, for a screen recording
-    /// of an app, which is mostly flat colour and still.
+    /// of an app, which is mostly flat color and still.
     static let bitsPerPixel = 0.04
     public static let framesPerSecond = 30
 

@@ -60,13 +60,13 @@ struct ProjectSettingsTests {
         #expect(text.hasPrefix(#"{\#n  "bundleID""#), "with no \"$schema\", which Retake never adds")
     }
 
-    @Test func aSchemeBuildOptimisesUnlessToldNotTo() {
-        guard case .scheme(let optimised)? = read(#"{"build": {"scheme": "Notes"}}"#).settings?.build,
+    @Test func aSchemeBuildOptimizesUnlessToldNotTo() {
+        guard case .scheme(let optimized)? = read(#"{"build": {"scheme": "Notes"}}"#).settings?.build,
               case .scheme(let asConfigured)? = read(#"{"build": {"scheme": "Notes", "optimize": false}}"#).settings?.build else {
             Issue.record("didn't read the builds")
             return
         }
-        #expect(optimised.optimize && !asConfigured.optimize)
+        #expect(optimized.optimize && !asConfigured.optimize)
         #expect(read(#"{"build": {"command": "make", "app": "a.app", "optimize": false}}"#).problems.count == 1, "a build command is the project's own")
     }
 
@@ -79,7 +79,7 @@ struct ProjectSettingsTests {
     }
 
     @Test func theExamplesConfigurationReadsCleanly() throws {
-        let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/Notes/Retake/retake.json")
+        let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Example/Retake/retake.json")
         let text = try String(contentsOf: example, encoding: .utf8)
         let result = read(text)
         #expect(result.problems.isEmpty)
@@ -182,6 +182,40 @@ struct ProjectInitializerTests {
         #expect(file(".gitignore") == nil)
     }
 
+    @Test func aFreshProjectsStartersValidate() throws {
+        let result = try initialize(scheme: "Notes")
+        #expect(result.starters == ["sets/base.json", "scenes/iphone/launch.json", "scenes/ipad/launch.json", "edits/preview.json"])
+        let project = try Project.locate(configuration: nil, currentDirectory: directory)
+        #expect(project.settings.defaultSet == ProjectInitializer.Starter.setName)
+        let offline = ProjectValidator(files: ProjectFiles(project: project)).validate()
+        #expect(offline.problems.map(\.description) == [])
+        #expect(offline.warnings.map(\.description) == [])
+        // With no takes yet, only that the takes aren't there to check against.
+        let online = ProjectValidator(files: ProjectFiles(project: project), offline: false).validate()
+        #expect(online.problems.map(\.description) == [])
+        #expect(online.warnings.allSatisfy { $0.message.contains("no successful") })
+    }
+
+    @Test func theStarterTakeIsLongEnoughToCut() throws {
+        try initialize(scheme: "Notes")
+        let text = try #require(file("Retake/scenes/iphone/\(ProjectInitializer.Starter.sceneName).json"))
+        let scene = try #require(SceneFile.read(text, with: JSONReader(file: "launch.json")))
+        let holds = scene.steps.map { $0.hold ?? scene.defaultHold }.reduce(0, +)
+        let length = scene.leadIn + holds + scene.tail
+        // The launch comes before the lead-in, and adds its own seconds without passing the longest.
+        #expect(length >= Cutter.length.lowerBound && length + 10 <= Cutter.length.upperBound, "\(length) s")
+    }
+
+    @Test func noStartersBesideFilesOfTheProjectsOwn() throws {
+        try folder("Retake/sets")
+        try Data("{}".utf8).write(to: directory.appending(path: "Retake/sets/mine.json"))
+        let result = try initialize(scheme: "Notes")
+        #expect(result.starters.isEmpty)
+        #expect(result.settings.defaultSet == nil)
+        #expect(file("Retake/edits/preview.json") == nil)
+        #expect(file("Retake/sets/base.json") == nil)
+    }
+
     @Test func besideItsXcodeProjectTheProjectNamesItOnlyWhenXcodebuildCouldntTell() throws {
         try folder("Notes.xcodeproj")
         #expect(try initialize("retake.json", schemes: ["Notes"]).settings.build == .scheme(.init(scheme: "Notes")))
@@ -262,7 +296,7 @@ struct ProjectInitializerTests {
 
 struct FittingWriterTests {
     @Test func anEditLaidOutByHandIsWrittenBackTheSame() throws {
-        let url = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/Notes/Retake/edits/tour.json")
+        let url = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Example/Retake/edits/tour.json")
         let text = try String(contentsOf: url, encoding: .utf8)
         #expect(JSONWriter.fitting(try JSONParser.parse(text)) == text)
     }

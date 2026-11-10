@@ -4,7 +4,7 @@
 
 A take's step log, `<scene>.json` beside its movie `<scene>.mov` in the output directory's `takes/<type>/`, or `<scene>.previous.json` or `<scene>.failed.json` beside theirs: what was recorded, with what, and when each step happened on the movie's own clock, where it touched, and what was on screen after it. Retake writes it when it records the take, and reads it to list, clean and cut takes; a project doesn't write or edit it. Times are seconds into the movie, to the millisecond; positions and sizes on the screen are its points, portrait, to the hundredth.
 
-Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.1/take.schema.json>, and `retake schema take` prints it.
+Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.2/take.schema.json>, and `retake schema take` prints it.
 
 ## Fields
 
@@ -98,7 +98,7 @@ What was on screen once the lead-in was over, read just before the first step: w
 | --- | --- | --- | --- |
 | `at` | number ≥ 0 | required | When the frames took this shape, in seconds into the movie, to the millisecond. |
 | `size` | list of integer ≥ 0, exactly 2 | required | The frames' size as the device sent them, [width, height], in capture pixels. |
-| `turn` | integer | required | Degrees clockwise the frames are turned to fit the movie's size: 0, 90, or -90 for a quarter anticlockwise. |
+| `turn` | integer | required | Degrees clockwise the frames are turned to fit the movie's size: 0, 90, or -90 for a quarter counterclockwise. |
 
 ### `hitches`
 
@@ -117,7 +117,7 @@ One step as it was recorded.
 | --- | --- | --- | --- |
 | `number` | integer ≥ 1 | required | Its number among the scene's steps, from 1. |
 | `id` | string, not empty |  | Its id in the scene, for one that has one. |
-| `action` | string, not empty | required | The kind of step: tap, drag, type, activate, orientation or waitFor, or hold for one that's only a pause. |
+| `action` | string, not empty | required | The kind of step: tap, drag, type, activate, orientation, waitFor or capture, or hold for one that's only a pause. |
 | `start` | number | required | When it began, in seconds into the movie, to the millisecond, as the device saw it where it could. |
 | `end` | number | required | When it ended, in seconds into the movie, to the millisecond; for a waitFor, when its element came or went. |
 | `timedBy` | `"device"` or `"mac"` | required | Whose times start and end are. device: the device's own, placed through clock.deviceAhead. mac: when the Mac sent the step and heard back, which a round trip either side widens. |

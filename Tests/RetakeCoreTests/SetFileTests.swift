@@ -148,9 +148,9 @@ struct ResolvedSetTests {
     }
 
     @Test func theExamplesSetsResolve() throws {
-        let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/Notes").standardizedFileURL
+        let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Example").standardizedFileURL
         let files = ProjectFiles(project: try Project.locate(configuration: nil, currentDirectory: example))
-        #expect(files.names(in: files.project.sets) == ["base", "first-launch", "returning-user"])
+        #expect(files.names(in: files.project.sets) == ["base", "first-launch", "returning-user", "screenshots"])
         for name in files.names(in: files.project.sets) {
             let report = ProjectFiles.Report()
             #expect(files.resolveSet(name, into: report) != nil, "\(name): \(report.problems)")

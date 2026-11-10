@@ -20,12 +20,14 @@ struct TakeStoreTests {
         try record("b", .failed, at: 1, failure: "step 2 didn't run")
         try record("c", at: 1, movie: false)
         try record("a", at: 1, type: .iphone)
-        for scene in ["a", "b", "c", "d"] { try write("scenes/ipad/\(scene).json", "{}") }
-        try write("scenes/iphone/a.json", "{}")
+        for scene in ["a", "b", "c", "d"] { try write("scenes/ipad/\(scene).json", Self.scene) }
+        try write("scenes/iphone/a.json", Self.scene)
         try write("edits/video1.json", #"{ "devices": ["ipad"], "clips": [{ "take": "a", "from": { "step": "start" }, "to": { "step": "end" }, "stills": [{ "take": "c", "at": 0 }] }] }"#)
         try write("output/cuts/ipad/video1/video1-ipad.mp4", "")
         try write("output/cuts/ipad/video2/video2-ipad.mp4", "")
     }
+
+    static let scene = #"{ "steps": [{ "hold": 1 }] }"#
 
     func write(_ path: String, _ text: String) throws {
         let url = root.appending(path: path)
@@ -153,6 +155,34 @@ struct TakeStoreTests {
 
         try write("edits/broken.json", #"{"clips": "not clips"}"#)
         #expect(throws: RetakeError.self, "an edit that can't be read isn't guessed at") { try TakeStore.unused(for: DeviceType.allCases, in: project) }
+    }
+
+    @Test func capturesAreCleanedWithEverythingOrByScene() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try write("output/captures/ipad/a/home.png", "")
+        try write("output/captures/ipad/b/list.png", "")
+        try write("output/captures/iphone/a/home.png", "")
+        let everything = try TakeStore.cleaning(takes: nil, cuts: nil, for: DeviceType.allCases, in: project)
+        #expect(everything.captures.map { "\($0.deletingLastPathComponent().lastPathComponent) \($0.lastPathComponent)" } == ["iphone a", "ipad a", "ipad b"])
+        #expect(try TakeStore.cleaning(takes: [], cuts: nil, for: [.ipad], in: project).captures.isEmpty, "--takes alone leaves captures")
+
+        let some = try TakeStore.cleaning(takes: nil, cuts: nil, captures: ["a"], for: [.ipad], in: project)
+        #expect(some.takes.isEmpty && some.cuts.isEmpty && some.captures.map(\.lastPathComponent) == ["a"])
+        try TakeStore.delete(some, in: project)
+        #expect(CaptureStore.scenes(for: .ipad, in: project) == ["b"] && CaptureStore.scenes(for: .iphone, in: project) == ["a"])
+        #expect(throws: RetakeError.self) { try TakeStore.cleaning(takes: nil, cuts: nil, captures: ["nowhere"], for: [.ipad], in: project) }
+    }
+
+    @Test func unusedKeepsAScenesThatCaptureButNotTheCapturesOfOnesThatNoLongerDo() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try write("scenes/ipad/d.json", #"{ "steps": [{ "capture": "home" }] }"#)
+        try write("scenes/ipad/e.json", "not a scene")
+        try write("output/captures/ipad/d/home.png", "")
+        try write("output/captures/ipad/b/home.png", "")
+        try write("output/captures/ipad/gone/home.png", "")
+        let cleaning = try TakeStore.unused(for: [.ipad], in: project)
+        #expect(cleaning.scenes.map(\.lastPathComponent) == ["b.json"], "d captures, and e can't be read, so either may")
+        #expect(cleaning.captures.map(\.lastPathComponent) == ["b", "gone"])
     }
 
     @Test func anEarlierRetakesNumberedTakesAreRefusedNamingTheWayOutWhichCleanTakes() throws {

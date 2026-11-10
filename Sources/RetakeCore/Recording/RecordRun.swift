@@ -8,9 +8,11 @@ public enum RecordRun {
     /// `force`. A failure is never cut from, so it isn't a take for this. Misuse (2) for a scene or
     /// edit that doesn't exist, or an edit not cut for this device type; a failure (1) when
     /// `scenes/<type>/` lists nothing because it's named in another case, or when the takes folder
-    /// holds an earlier Retake's numbered takes.
+    /// holds an earlier Retake's numbered takes. With `stillsOnly`, the scenes are those with
+    /// `capture` steps, and those that have their captures are already taken: misuse (2) for a
+    /// scene named that captures nothing.
     public static func scenes(
-        named: [String], edit: String?, force: Bool, for type: DeviceType, in project: Project,
+        named: [String], edit: String?, force: Bool, stillsOnly: Bool = false, for type: DeviceType, in project: Project,
     ) throws(RetakeError) -> (chosen: [String], alreadyTaken: [String]) {
         try TakeStore.refuseOldLayout(for: [type], in: project)
         let files = ProjectFiles(project: project)
@@ -27,8 +29,17 @@ public enum RecordRun {
                         + (available.isEmpty ? "." : "; there's \(available.joined(separator: ", ")).")
                 )
             }
+            if stillsOnly, let none = named.first(where: { capturesNothing($0, for: type, in: project) }) {
+                throw RetakeError(.usage, "\(none) has no capture steps, so --stills-only has nothing to take of it.")
+            }
             var seen = Set<String>()
             return (named.filter { seen.insert($0).inserted }, [])
+        }
+        if stillsOnly {
+            let candidates = available.filter { !capturesNothing($0, for: type, in: project) }
+            if force { return (candidates, []) }
+            let taken = Set(CaptureStore.scenes(for: type, in: project))
+            return (candidates.filter { !taken.contains($0) }, candidates.filter { taken.contains($0) })
         }
         var candidates = available
         if let edit {
@@ -51,9 +62,19 @@ public enum RecordRun {
         return (candidates.filter { !taken.contains($0) }, taken)
     }
 
+    /// Whether a scene has no `capture` step. One that can't be read is taken to have one, for
+    /// playing it to say what's wrong with it.
+    static func capturesNothing(_ scene: String, for type: DeviceType, in project: Project) -> Bool {
+        guard let file = ProjectFiles(project: project).readScene(scene, for: type, into: ProjectFiles.Report()) else { return false }
+        return !file.steps.contains { $0.action?.capture != nil }
+    }
+
     /// What became of one scene: its new take, or why it failed, or for a dry run, that it played.
     public struct Outcome: Sendable {
         public var scene: String
+        /// Its captures, once a recording kept them: the folder, and each one's name and size.
+        public var captures: URL?
+        public var captured: [CaptureSize] = []
         /// Where its take is, once it's recorded one, whether or not it succeeded: `<scene>.mov`, or
         /// `<scene>.failed.mov`.
         public var movie: URL?
@@ -71,6 +92,7 @@ public enum RecordRun {
         on device: Device,
         capture: CaptureDevice?,
         dryRun: Bool,
+        stillsOnly: Bool = false,
         stopOnFailure: Bool,
         player: Player,
     ) async -> [Outcome] {
@@ -91,6 +113,11 @@ public enum RecordRun {
                     try await AppSession.run("dry-run-\(name)", in: project, set: set, scene: scene, on: device, report: player.report, cleanUp: false) { driver, _ throws(RetakeError) in
                         try await player.play(scene, named: name, on: driver)
                     }
+                } else if stillsOnly {
+                    guard let capture else { throw RetakeError(.environment, "\(device.name)'s screen isn't offered for recording.") }
+                    player.report(.scene(name, recording: true))
+                    try await TakeRecording.captureStills(of: name, scene: scene, set: set, in: project, on: device, capture: capture, player: player, cleanUp: false)
+                    outcome.keptCaptures(of: name, for: type, in: project)
                 } else {
                     guard let capture else { throw RetakeError(.environment, "\(device.name)'s screen isn't offered for recording.") }
                     player.report(.scene(name, recording: true))
@@ -100,6 +127,7 @@ public enum RecordRun {
                         let log = try await TakeRecording.record(target, scene: scene, set: set, in: project, on: device, capture: capture, player: player, cleanUp: false)
                         outcome.duration = log.duration
                         outcome.movie = target.kept(.take).movie
+                        if scene.steps.contains(where: { $0.action?.capture != nil }) { outcome.keptCaptures(of: name, for: type, in: project) }
                     } catch {
                         // A failure kept now, rather than one from before that a recording which
                         // couldn't write anything left alone.
@@ -123,5 +151,20 @@ public enum RecordRun {
             }
         }
         return outcomes
+    }
+}
+
+/// A capture's name and its size, in pixels.
+public struct CaptureSize: Equatable, Sendable {
+    public var name: String
+    public var width: Int
+    public var height: Int
+}
+
+extension RecordRun.Outcome {
+    mutating func keptCaptures(of scene: String, for type: DeviceType, in project: Project) {
+        let folder = CaptureStore.folder(of: scene, for: type, in: project)
+        captures = folder
+        captured = CaptureStore.captures(in: folder).map { CaptureSize(name: $0.name, width: $0.width, height: $0.height) }
     }
 }

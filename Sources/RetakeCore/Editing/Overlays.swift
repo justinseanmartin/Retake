@@ -9,7 +9,7 @@ public struct Overlays: Equatable, Sendable {
     public struct Caption: Equatable, Sendable {
         public var text: String
         public var color: Color
-        /// Its centre, as a share of the video's height from the top.
+        /// Its center, as a share of the video's height from the top.
         public var y: Double
         public var symbol: Edit.Symbol?
         public var start: Double

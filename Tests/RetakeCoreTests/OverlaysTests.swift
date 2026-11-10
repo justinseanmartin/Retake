@@ -99,18 +99,18 @@ struct OverlaysTests {
         #expect(hidden.touches.isEmpty)
     }
 
-    @Test func aTouchsColourIsItsStepsOverItsClipsOverTheEdits() throws {
+    @Test func aTouchsColorIsItsStepsOverItsClipsOverTheEdits() throws {
         let walk = #""take": "walk", "from": {"step": "start"}, "to": {"step": "end"}"#
         let red = Color(hex: "#FF0000")!, green = Color(hex: "#00FF00")!, blue = Color(hex: "#0000FF80")!
         #expect(try overlays("{\(walk)}").touches.map(\.color) == [.white])
         #expect(try overlays("{\(walk)}", edit: ##""touchColor": "#FF0000", "##).touches.map(\.color) == [red])
-        let clipColour = try overlays(##"{\##(walk), "touchColor": "#00FF00"}"##, edit: ##""touchColor": "#FF0000", "##)
-        #expect(clipColour.touches.map(\.color) == [green])
-        let stepColour = try overlays(##"{\##(walk), "touchColor": "#00FF00", "touchColors": [{"step": "a", "color": "#0000FF80"}]}"##)
-        #expect(stepColour.touches.map(\.color) == [blue])
+        let clipColor = try overlays(##"{\##(walk), "touchColor": "#00FF00"}"##, edit: ##""touchColor": "#FF0000", "##)
+        #expect(clipColor.touches.map(\.color) == [green])
+        let stepColor = try overlays(##"{\##(walk), "touchColor": "#00FF00", "touchColors": [{"step": "a", "color": "#0000FF80"}]}"##)
+        #expect(stepColor.touches.map(\.color) == [blue])
     }
 
-    @Test func aTouchColourForAStepThatDoesntTouchSaysSo() {
+    @Test func aTouchColorForAStepThatDoesntTouchSaysSo() {
         let error = #expect(throws: RetakeError.self) {
             try overlays(##"{"take": "walk", "from": {"step": "start"}, "to": {"step": "end"}, "touchColors": [{"step": "b", "color": "#000000"}]}"##)
         }
@@ -209,7 +209,7 @@ struct OverlaysTests {
         let left = grid[0].minX, across = grid[1].minX - grid[0].maxX, right = canvas.width - grid[1].maxX
         #expect(abs(left - across) < 1e-9 && abs(across - right) < 1e-9)
         let short = OverlayLayers.stillsGrid(count: 3, aspect: 4.0 / 3, canvas: canvas)
-        #expect(abs(short[2].midX - canvas.width / 2) < 1e-9, "a short last row is centred")
+        #expect(abs(short[2].midX - canvas.width / 2) < 1e-9, "a short last row is centered")
         let wide = OverlayLayers.stillsGrid(count: 2, aspect: 2, canvas: CGSize(width: 1600, height: 900))
         #expect(wide.allSatisfy { $0.minY >= OverlayLayers.stillsSpacing && $0.maxY <= 900 - OverlayLayers.stillsSpacing }, "fits a short canvas by its height")
     }

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.1/set.schema.json",
+  "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.2/set.schema.json",
   "title": "A set",
   "description": "A set: the state a take starts from — the app's data, its settings and its launch environment.",
   "type": "object",

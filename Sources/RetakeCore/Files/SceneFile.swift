@@ -80,6 +80,9 @@ public struct Step: Equatable, Sendable {
         case activate(ElementTarget)
         case orientation(SceneFile.Orientation)
         case waitFor(ElementTarget, gone: Bool, timeout: Double)
+        /// Saves the screen as a still, by this name, as it is once the step before has ended and
+        /// held: what `record` captures.
+        case capture(String)
 
         /// The key a step gives the action under.
         public var key: String {
@@ -90,15 +93,25 @@ public struct Step: Equatable, Sendable {
             case .activate: "activate"
             case .orientation: "orientation"
             case .waitFor: "waitFor"
+            case .capture: "capture"
             }
         }
 
-        public static let keys = ["tap", "drag", "type", "activate", "orientation", "waitFor"]
+        public static let keys = ["tap", "drag", "type", "activate", "orientation", "waitFor", "capture"]
+
+        /// The capture's name, for a step that captures the screen.
+        public var capture: String? {
+            if case .capture(let name) = self { name } else { nil }
+        }
     }
 
     public static let defaultDragDuration = 0.5
     public static let defaultWaitTimeout = 10.0
     public static let defaultGone = false
+
+    /// What a capture's name may be, as it names the still's file: letters, digits, `-`, `_` and
+    /// `.`, starting with a letter or digit.
+    public static let capturePattern = "^[A-Za-z0-9][A-Za-z0-9._-]*$"
 
     /// The environment The Button Heist's longest wait is read from: Retake's own, as The Button
     /// Heist reads it where Retake makes a step's plan; a test gives its own.
@@ -238,6 +251,7 @@ extension SceneFile {
         // Steps that couldn't be read are left out, so the ids are checked once each has been.
         if let steps, case .array(let values)? = object.value("steps"), steps.count == values.count {
             checkIDs(steps, at: object.path("steps"), reader)
+            checkCaptures(steps, at: object.path("steps"), reader)
         }
         object.finish()
         guard reader.problems.count == problemsBefore, let steps else { return nil }
@@ -262,6 +276,21 @@ extension SceneFile {
                 reader.problem("\"\(id)\" is already steps[\(earlier)]'s id; ids are unique in a scene", at: at)
             } else {
                 first[id] = index
+            }
+        }
+    }
+
+    /// Captures are named uniquely, each naming a still of its own, ignoring case, as a Mac's disk
+    /// does in the stills' names.
+    static func checkCaptures(_ steps: [Step], at path: JSONPath, _ reader: JSONReader) {
+        var first: [String: (index: Int, name: String)] = [:]
+        for (index, step) in steps.enumerated() {
+            guard let name = step.action?.capture else { continue }
+            if let earlier = first[name.lowercased()] {
+                let same = earlier.name == name ? "" : " (\"\(earlier.name)\", in another case, names the same file)"
+                reader.problem("\"\(name)\" is already steps[\(earlier.index)]'s capture\(same); each capture names a still of its own", at: path.appending(index).appending("capture"))
+            } else {
+                first[name.lowercased()] = (index, name)
             }
         }
     }
@@ -301,6 +330,10 @@ extension SceneFile {
             }
             return reader.problems.count == problemsBefore ? Step(id: id, nil, hold: hold ?? 0) : nil
         }
+        if isSetup, key == "capture" {
+            reader.problem("setup steps aren't recorded, so nothing is captured in them; move it into the steps", at: path.appending(key))
+            return nil
+        }
         let action = object.required(key) { readAction(key, $0, $1, reader) }
         guard let action, reader.problems.count == problemsBefore else { return nil }
         return Step(id: id, action, hold: hold)
@@ -310,6 +343,13 @@ extension SceneFile {
         switch key {
         case "orientation":
             return reader.choice(value, at: path, as: Orientation.self).map(Step.Action.orientation)
+        case "capture":
+            guard let name = reader.nonEmptyString(value, at: path) else { return nil }
+            guard name.wholeMatch(of: try! Regex(Step.capturePattern)) != nil else {
+                reader.problem("\"\(name)\" names the still's file, so it's letters, digits, -, _ and ., starting with a letter or digit", at: path)
+                return nil
+            }
+            return .capture(name)
         default:
             break
         }

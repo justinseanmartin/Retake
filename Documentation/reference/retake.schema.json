@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.1/retake.schema.json",
+  "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.2/retake.schema.json",
   "title": "retake.json",
   "description": "A Retake project's configuration. Every field is optional.",
   "type": "object",
@@ -49,7 +49,7 @@
               "default": false
             },
             "optimize": {
-              "description": "Builds with the compiler's optimisation on, Swift at -O and C at -Os, whatever the configuration says, so the app runs as fast as its users see it.",
+              "description": "Builds with the compiler's optimization on, Swift at -O and C at -Os, whatever the configuration says, so the app runs as fast as its users see it.",
               "type": "boolean",
               "default": true
             }

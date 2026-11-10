@@ -58,6 +58,14 @@ struct Init: AsyncParsableCommand {
         let project = Project(configuration: result.configuration, settings: result.settings)
         let shown = ProjectInitializer.relativePath(of: project.root, from: current)
         print("Created \(shown)/: \(Project.configurationFileName), sets/, scenes/iphone/, scenes/ipad/ and edits/.")
+        if !result.starters.isEmpty {
+            print(
+                "With a starter set, scene and edit: \(result.starters.dropLast().joined(separator: ", ")) and \(result.starters.last!). "
+                    + "Once the app is installed, `retake record \(ProjectInitializer.Starter.sceneName)` records it launching, "
+                    + "and `retake cut \(ProjectInitializer.Starter.editName)` cuts it, once the iPhone and the iPad have a take, "
+                    + "or with `--type iphone` or `--type ipad` for one.",
+            )
+        }
         if case .scheme(let build)? = result.settings.build {
             print("Builds the \(build.scheme) scheme with xcodebuild.")
         }
@@ -489,7 +497,7 @@ struct Install: AsyncParsableCommand {
     @Flag(help: "Let xcodebuild register the device and update profiles on your team.")
     var allowProvisioningUpdates = false
 
-    @Flag(help: "Build as the configuration says, rather than with the compiler's optimisation on.")
+    @Flag(help: "Build as the configuration says, rather than with the compiler's optimization on.")
     var noOptimize = false
 
     @OptionGroup var device: DeviceOptions

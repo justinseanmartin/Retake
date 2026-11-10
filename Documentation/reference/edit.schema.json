@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.1/edit.schema.json",
+  "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.2/edit.schema.json",
   "title": "An edit",
   "description": "An edit: the video cut from the takes, for each device type it names. Anything in a clip, or at the top, can be given again under a device type, and applies only to that type's video.",
   "type": "object",
@@ -37,7 +37,7 @@
     },
     "background": {
       "$ref": "#/$defs/color",
-      "description": "The colour of letterbox bands, and of the corners a turn uncovers.",
+      "description": "The color of letterbox bands, and of the corners a turn uncovers.",
       "default": "#000000"
     },
     "turns": {
@@ -51,7 +51,7 @@
     },
     "touchColor": {
       "$ref": "#/$defs/color",
-      "description": "The colour touches are drawn in: a filled ring, its fill at 45% of the colour's opacity and its rim at 90%.",
+      "description": "The color touches are drawn in: a filled ring, its fill at 45% of the color's opacity and its rim at 90%.",
       "default": "#FFFFFF"
     },
     "clips": {
@@ -82,7 +82,7 @@
         },
         "background": {
           "$ref": "#/$defs/color-override",
-          "description": "The colour of letterbox bands, and of the corners a turn uncovers."
+          "description": "The color of letterbox bands, and of the corners a turn uncovers."
         },
         "turns": {
           "description": "How the video shows the device turning. letterboxed: the app stays upright, landscape letterboxed on the canvas. device: the video stays in the device's frame.",
@@ -94,7 +94,7 @@
         },
         "touchColor": {
           "$ref": "#/$defs/color-override",
-          "description": "The colour touches are drawn in: a filled ring, its fill at 45% of the colour's opacity and its rim at 90%."
+          "description": "The color touches are drawn in: a filled ring, its fill at 45% of the color's opacity and its rim at 90%."
         },
         "clips": {
           "type": "array",
@@ -127,7 +127,7 @@
         },
         "background": {
           "$ref": "#/$defs/color-override",
-          "description": "The colour of letterbox bands, and of the corners a turn uncovers."
+          "description": "The color of letterbox bands, and of the corners a turn uncovers."
         },
         "turns": {
           "description": "How the video shows the device turning. letterboxed: the app stays upright, landscape letterboxed on the canvas. device: the video stays in the device's frame.",
@@ -139,7 +139,7 @@
         },
         "touchColor": {
           "$ref": "#/$defs/color-override",
-          "description": "The colour touches are drawn in: a filled ring, its fill at 45% of the colour's opacity and its rim at 90%."
+          "description": "The color touches are drawn in: a filled ring, its fill at 45% of the color's opacity and its rim at 90%."
         },
         "clips": {
           "type": "array",
@@ -205,10 +205,10 @@
         },
         "touchColor": {
           "$ref": "#/$defs/color",
-          "description": "The colour of the clip's touches; the edit's touchColor when not given."
+          "description": "The color of the clip's touches; the edit's touchColor when not given."
         },
         "touchColors": {
-          "description": "Colours for single touches, over the clip's or the edit's.",
+          "description": "Colors for single touches, over the clip's or the edit's.",
           "type": "array",
           "items": {
             "type": "object",
@@ -281,7 +281,7 @@
         },
         "stillsBackground": {
           "$ref": "#/$defs/color",
-          "description": "A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture."
+          "description": "A color filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture."
         },
         "card": {
           "$ref": "#/$defs/card"
@@ -325,7 +325,7 @@
           "minLength": 1
         },
         "y": {
-          "description": "Its centre, as a share of the video's height: 0 at the top, 1 at the bottom.",
+          "description": "Its center, as a share of the video's height: 0 at the top, 1 at the bottom.",
           "type": "number",
           "minimum": 0,
           "maximum": 1
@@ -432,7 +432,7 @@
       "additionalProperties": false
     },
     "card": {
-      "description": "A colour covering the clip's picture, and everything drawn over it but its captions, for a card between clips: over the whole clip, fading in and out with the cross-fades either side, or from its from to its to.",
+      "description": "A color covering the clip's picture, and everything drawn over it but its captions, for a card between clips: over the whole clip, fading in and out with the cross-fades either side, or from its from to its to.",
       "type": "object",
       "properties": {
         "color": {
@@ -516,7 +516,7 @@
         },
         "color": {
           "$ref": "#/$defs/color",
-          "description": "The ring's colour.",
+          "description": "The ring's color.",
           "default": "#FFFFFF"
         },
         "from": {
@@ -875,7 +875,7 @@
           "type": "number"
         },
         "fraction": {
-          "description": "A share of the way from the step's start, or its end with edge end, to the neighbouring step: forward when positive, to the next step's start, back when negative, to the previous step's end.",
+          "description": "A share of the way from the step's start, or its end with edge end, to the neighboring step: forward when positive, to the next step's start, back when negative, to the previous step's end.",
           "type": "number",
           "minimum": -1,
           "maximum": 1
@@ -929,7 +929,7 @@
           "type": "number"
         },
         "fraction": {
-          "description": "A share of the way from the step's start, or its end with edge end, to the neighbouring step: forward when positive, to the next step's start, back when negative, to the previous step's end.",
+          "description": "A share of the way from the step's start, or its end with edge end, to the neighboring step: forward when positive, to the next step's start, back when negative, to the previous step's end.",
           "type": "number",
           "minimum": -1,
           "maximum": 1
@@ -1069,7 +1069,7 @@
       ]
     },
     "color": {
-      "description": "A colour: #RRGGBB, or #RRGGBBAA with its opacity.",
+      "description": "A color: #RRGGBB, or #RRGGBBAA with its opacity.",
       "type": "string",
       "pattern": "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
       "examples": ["#1F6FEB"]
@@ -1121,10 +1121,10 @@
         },
         "touchColor": {
           "$ref": "#/$defs/color-override",
-          "description": "The colour of the clip's touches; the edit's touchColor when not given."
+          "description": "The color of the clip's touches; the edit's touchColor when not given."
         },
         "touchColors": {
-          "description": "Colours for single touches, over the clip's or the edit's.",
+          "description": "Colors for single touches, over the clip's or the edit's.",
           "type": "array",
           "items": {
             "type": "object",
@@ -1196,7 +1196,7 @@
         },
         "stillsBackground": {
           "$ref": "#/$defs/color-override",
-          "description": "A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture."
+          "description": "A color filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture."
         },
         "card": {
           "$ref": "#/$defs/card-override"
@@ -1231,7 +1231,7 @@
           "minLength": 1
         },
         "y": {
-          "description": "Its centre, as a share of the video's height: 0 at the top, 1 at the bottom.",
+          "description": "Its center, as a share of the video's height: 0 at the top, 1 at the bottom.",
           "type": "number",
           "minimum": 0,
           "maximum": 1
@@ -1302,7 +1302,7 @@
       "additionalProperties": false
     },
     "card-override": {
-      "description": "A colour covering the clip's picture, and everything drawn over it but its captions, for a card between clips: over the whole clip, fading in and out with the cross-fades either side, or from its from to its to.",
+      "description": "A color covering the clip's picture, and everything drawn over it but its captions, for a card between clips: over the whole clip, fading in and out with the cross-fades either side, or from its from to its to.",
       "type": "object",
       "properties": {
         "color": {
@@ -1366,7 +1366,7 @@
         },
         "color": {
           "$ref": "#/$defs/color-override",
-          "description": "The ring's colour."
+          "description": "The ring's color."
         },
         "from": {
           "$ref": "#/$defs/anchor-override",
@@ -1631,7 +1631,7 @@
           "type": "number"
         },
         "fraction": {
-          "description": "A share of the way from the step's start, or its end with edge end, to the neighbouring step: forward when positive, to the next step's start, back when negative, to the previous step's end.",
+          "description": "A share of the way from the step's start, or its end with edge end, to the neighboring step: forward when positive, to the next step's start, back when negative, to the previous step's end.",
           "type": "number",
           "minimum": -1,
           "maximum": 1
@@ -1676,7 +1676,7 @@
           "type": "number"
         },
         "fraction": {
-          "description": "A share of the way from the step's start, or its end with edge end, to the neighbouring step: forward when positive, to the next step's start, back when negative, to the previous step's end.",
+          "description": "A share of the way from the step's start, or its end with edge end, to the neighboring step: forward when positive, to the next step's start, back when negative, to the previous step's end.",
           "type": "number",
           "minimum": -1,
           "maximum": 1
@@ -1782,7 +1782,7 @@
       "additionalProperties": false
     },
     "color-override": {
-      "description": "A colour: #RRGGBB, or #RRGGBBAA with its opacity.",
+      "description": "A color: #RRGGBB, or #RRGGBBAA with its opacity.",
       "type": "string",
       "pattern": "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
       "examples": ["#1F6FEB"]
