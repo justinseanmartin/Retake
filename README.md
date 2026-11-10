@@ -12,7 +12,7 @@ renders the edit into a video ready to upload to App Store Connect.
 When the app changes, you record the scenes again and render the same edits. There's no screen
 recording by hand, no editing timeline to rebuild, and no guessing which frames you used last time.
 
-<video src="Documentation/media/showcase.mp4" controls muted playsinline width="100%" title="The example's showcase, cut by Retake: touches, cuts, a spotlight, a blur, a drag, a turn, a card and a montage, each captioned"></video>
+https://github.com/user-attachments/assets/416e4ecd-30a8-4cd1-bf05-2343f5dca131
 
 Every frame of [the showcase](Documentation/media/showcase.mp4) is Retake's: the example app,
 recorded on an iPhone and an iPad, and cut for each from the one

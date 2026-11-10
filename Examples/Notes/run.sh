@@ -17,7 +17,8 @@ Usage: Examples/Notes/run.sh [--team <id>] [--device <device>] [--setup | --cut-
   --cut-only         Cut from the takes already recorded, with no device: after changing an edit.
                      Give --device or set RETAKE_DEVICE_TYPE (iphone or ipad) to say whose.
   --readme           Copy the iPhone's and iPad's showcases, side by side, to Documentation/media/,
-                     which the README shows: both devices' cuts are needed.
+                     which the README shows: both devices' cuts are needed. GitHub plays only
+                     uploaded video, so upload it on github.com and replace the README's link.
 
 It cuts edits/showcase.json, every feature in one video, for the device's type. Once both an
 iPhone's and an iPad's are cut, `retake share` writes the two side by side, a small MP4 with
