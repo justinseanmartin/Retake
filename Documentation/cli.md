@@ -221,7 +221,12 @@ file, and writes it into `retake.json` as `output`, so every command uses it wit
 
 The output directory is gitignored: in a `.gitignore` in the project's folder, or when it's outside
 that folder, in the current directory's `.gitignore`, when it's below the current directory, and in
-neither when it isn't.
+neither when it isn't. What it holds is too big to keep in a repository: every take is a movie, and
+a video's ProRes master runs to hundreds of megabytes (the example's are 140 to 200 MB), past
+GitHub's limit of 100 MB a file. To keep them long term, store them with
+[Git LFS](https://git-lfs.com) instead, taking the entry out of `.gitignore`, or move the output
+directory somewhere kept, such as a shared drive, with `--output-dir` here or `retake.json`'s
+`output` later.
 
 Asks for the scheme when it isn't given and can't be found in an Xcode project in the current
 directory. Writes `bundleID` only when `--bundle-id` gives one; otherwise the bundle ID comes from

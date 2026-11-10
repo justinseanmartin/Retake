@@ -2,7 +2,7 @@
 # Runs the Notes example from a fresh clone of Retake: builds retake and what it installs, signs
 # Notes with your team, installs it on the connected device, records its scenes, cuts its video,
 # and, once both an iPhone's and an iPad's are cut, shares the two side by side, small enough to
-# check in. See Examples/README.md.
+# upload as the README's video. See Examples/README.md.
 set -euo pipefail
 
 usage() {
@@ -16,9 +16,9 @@ Usage: Examples/Notes/run.sh [--team <id>] [--device <device>] [--setup | --cut-
   --setup            Stop once retake is built and Notes can be signed, and say what to run next.
   --cut-only         Cut from the takes already recorded, with no device: after changing an edit.
                      Give --device or set RETAKE_DEVICE_TYPE (iphone or ipad) to say whose.
-  --readme           Copy the iPhone's and iPad's showcases, side by side, to Documentation/media/,
-                     which the README shows: both devices' cuts are needed. GitHub plays only
-                     uploaded video, so upload it on github.com and replace the README's link.
+  --readme           Say how to upload the iPhone's and iPad's showcases, side by side, as the
+                     README's video: both devices' cuts are needed. GitHub plays only video
+                     uploaded to it, so the README links to an upload rather than a file.
 
 It cuts edits/showcase.json, every feature in one video, for the device's type. Once both an
 iPhone's and an iPad's are cut, `retake share` writes the two side by side, a small MP4 with
@@ -166,10 +166,17 @@ else
     echo "Cut $edit on the other device too, then run this again with --cut-only, to share the two side by side."
 fi
 
+if ((${#made[@]})); then ls -l "${made[@]}"; fi
 if $readme; then
     [[ -f "$both" ]] || fail "--readme shows the iPhone's and the iPad's side by side: record and cut on both, then run this again with --cut-only --readme."
-    mkdir -p "$ROOT/Documentation/media"
-    cp "$both" "$ROOT/Documentation/media/showcase.mp4"
-    made=("$ROOT/Documentation/media/showcase.mp4")
+    cat <<EOF
+
+To put it in the README, upload it to GitHub, which plays only video uploaded to it:
+  1. On github.com, open a new issue in Retake's repository, and drag
+     $EXAMPLE/$both
+     into its description.
+  2. Once it has uploaded, copy the https://github.com/user-attachments/assets/... link it adds,
+     and close the page without creating the issue.
+  3. Put that link in README.md in place of the old one, on a line of its own.
+EOF
 fi
-if ((${#made[@]})); then ls -l "${made[@]}"; fi
