@@ -182,6 +182,40 @@ struct ProjectInitializerTests {
         #expect(file(".gitignore") == nil)
     }
 
+    @Test func aFreshProjectsStartersValidate() throws {
+        let result = try initialize(scheme: "Notes")
+        #expect(result.starters == ["sets/base.json", "scenes/iphone/launch.json", "scenes/ipad/launch.json", "edits/preview.json"])
+        let project = try Project.locate(configuration: nil, currentDirectory: directory)
+        #expect(project.settings.defaultSet == ProjectInitializer.Starter.setName)
+        let offline = ProjectValidator(files: ProjectFiles(project: project)).validate()
+        #expect(offline.problems.map(\.description) == [])
+        #expect(offline.warnings.map(\.description) == [])
+        // With no takes yet, only that the takes aren't there to check against.
+        let online = ProjectValidator(files: ProjectFiles(project: project), offline: false).validate()
+        #expect(online.problems.map(\.description) == [])
+        #expect(online.warnings.allSatisfy { $0.message.contains("no successful") })
+    }
+
+    @Test func theStarterTakeIsLongEnoughToCut() throws {
+        try initialize(scheme: "Notes")
+        let text = try #require(file("Retake/scenes/iphone/\(ProjectInitializer.Starter.sceneName).json"))
+        let scene = try #require(SceneFile.read(text, with: JSONReader(file: "launch.json")))
+        let holds = scene.steps.map { $0.hold ?? scene.defaultHold }.reduce(0, +)
+        let length = scene.leadIn + holds + scene.tail
+        // The launch comes before the lead-in, and adds its own seconds without passing the longest.
+        #expect(length >= Cutter.length.lowerBound && length + 10 <= Cutter.length.upperBound, "\(length) s")
+    }
+
+    @Test func noStartersBesideFilesOfTheProjectsOwn() throws {
+        try folder("Retake/sets")
+        try Data("{}".utf8).write(to: directory.appending(path: "Retake/sets/mine.json"))
+        let result = try initialize(scheme: "Notes")
+        #expect(result.starters.isEmpty)
+        #expect(result.settings.defaultSet == nil)
+        #expect(file("Retake/edits/preview.json") == nil)
+        #expect(file("Retake/sets/base.json") == nil)
+    }
+
     @Test func besideItsXcodeProjectTheProjectNamesItOnlyWhenXcodebuildCouldntTell() throws {
         try folder("Notes.xcodeproj")
         #expect(try initialize("retake.json", schemes: ["Notes"]).settings.build == .scheme(.init(scheme: "Notes")))

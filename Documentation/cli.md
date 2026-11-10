@@ -215,6 +215,19 @@ Creates a project: `retake.json`, and beside it the folders `sets/`, `scenes/iph
 `scenes/ipad/` and `edits/`. They go in `Retake/` in the current directory, unless `--config` (or
 `RETAKE_CONFIG`) names the configuration file to create, such as `--config Previews/retake.json`.
 
+In a new project, those folders start with a file each, to record from at once and to show each
+file's shape:
+
+- `sets/base.json`, a `clean` set, which `retake.json` names as its `defaultSet`;
+- `scenes/iphone/launch.json` and `scenes/ipad/launch.json`, which record the app launching and
+  hold it, 15 seconds after the launch, the shortest an App Store preview runs;
+- `edits/preview.json`, which cuts the whole of `launch`'s take for both device types, with the
+  caption "Recorded by Retake!" from once the app is up. With a take of only one type, cut it with
+  `--type`.
+
+When the folders already hold JSON files, as when a `retake.json` is made again for files kept
+from before, none of these is written and no `defaultSet` is named.
+
 `--output-dir` puts the [output directory](#the-output-directory) somewhere other than `output/` beside the configuration
 file, and writes it into `retake.json` as `output`, so every command uses it without being told.
 `RETAKE_OUTPUT_DIR` isn't read here: it's for one shell's commands, not the project's.

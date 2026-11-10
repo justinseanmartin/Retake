@@ -32,10 +32,69 @@ public enum ProjectInitializer {
         public var configuration: URL
         /// What a person should know about what was or wasn't found, one line each.
         public var notes: [String]
+        /// The starter files written, relative to the project's folder, in `Starter.files`' order; none
+        /// when the project's folders already held files.
+        public var starters: [String] = []
+    }
+
+    /// The files a fresh project starts with: a set, a scene for each device type that records the
+    /// app launching and holds it, and an edit that cuts the scene's whole take for both, with a
+    /// caption. Together they validate, record and cut.
+    public enum Starter {
+        /// The set's name, which the project names as its `defaultSet`.
+        public static let setName = "base"
+        public static let sceneName = "launch"
+        public static let editName = "preview"
+
+        /// Each file by its path in the project's folder, in the order they're written.
+        public static let files: KeyValuePairs<String, String> = [
+            "sets/\(setName).json": set,
+            "scenes/iphone/\(sceneName).json": scene,
+            "scenes/ipad/\(sceneName).json": scene,
+            "edits/\(editName).json": edit,
+        ]
+
+        static let set = """
+            {
+              "state": "clean"
+            }
+
+            """
+
+        /// 15 seconds, with its lead-in and tail, after the launch: the shortest a preview runs.
+        static let scene = """
+            {
+              "recordsLaunch": true,
+              "steps": [
+                { "hold": 13, "id": "launched" }
+              ]
+            }
+
+            """
+
+        static let edit = """
+            {
+              "intent": "A starting point: the app launching, held. Replace it with the flows the preview shows.",
+              "devices": ["iphone", "ipad"],
+              "clips": [
+                {
+                  "intent": "The whole take, from the launch screen on.",
+                  "take": "\(sceneName)",
+                  "from": { "step": "start" },
+                  "to": { "step": "end" },
+                  "captions": [
+                    { "text": "Recorded by Retake!", "y": 0.8, "color": "#1F6FEB", "from": { "step": "launched" } }
+                  ]
+                }
+              ]
+            }
+
+            """
     }
 
     /// Creates `configuration`, and beside it `sets/`, `scenes/iphone/`, `scenes/ipad/` and
-    /// `edits/`, as Documentation/cli.md, "retake init", says. `output`, when given, is written as the
+    /// `edits/`, with the `Starter.files` in them unless they already hold JSON files, as
+    /// Documentation/cli.md, "retake init", says. `output`, when given, is written as the
     /// project's `output`. The output directory is added to the project's `.gitignore`, or one
     /// outside the project to `currentDirectory`'s when it's below it. The scheme is `scheme` when given, else the only one the current directory's Xcode
     /// project has, else `ask`'s choice among several; with none, the project has no `build`, and
@@ -113,16 +172,29 @@ public enum ProjectInitializer {
         let outputSetting = outputDirectory.map { directory in
             isInside(directory, current) || isInside(directory, root) ? relativePath(of: directory, from: root) : directory.path
         }
+        let folders = ["sets", "scenes/iphone", "scenes/ipad", "edits"]
+        // Starters only for a fresh project: beside files of its own, a starter would be clutter,
+        // and could name what isn't there.
+        let fresh = folders.allSatisfy { folder in
+            let names = (try? fileManager.contentsOfDirectory(atPath: root.appending(path: folder).path)) ?? []
+            return !names.contains { $0.hasSuffix(".json") }
+        }
         let settings = ProjectSettings(
             bundleID: bundleID,
             build: chosen.map { .scheme(ProjectSettings.SchemeBuild(scheme: $0, container: container)) },
+            defaultSet: fresh ? Starter.setName : nil,
             output: outputSetting,
         )
         do {
-            for folder in ["sets", "scenes/iphone", "scenes/ipad", "edits"] {
+            for folder in folders {
                 try fileManager.createDirectory(at: root.appending(path: folder), withIntermediateDirectories: true)
             }
             try Data(JSONWriter.write(settings.json).utf8).write(to: configuration)
+            if fresh {
+                for (path, text) in Starter.files {
+                    try Data(text.utf8).write(to: root.appending(path: path))
+                }
+            }
             let outputs = outputDirectory ?? root.appending(path: Project.defaultOutputDirectoryName, directoryHint: .isDirectory)
             if isInside(outputs, root) {
                 try ignore(["/\(relativePath(of: outputs, from: root))/"], in: root, fileManager: fileManager)
@@ -132,7 +204,7 @@ public enum ProjectInitializer {
         } catch {
             throw RetakeError(.failed, "Couldn't create the project in \(root.path): \(error.localizedDescription)")
         }
-        return Result(settings: settings, configuration: configuration, notes: notes)
+        return Result(settings: settings, configuration: configuration, notes: notes, starters: fresh ? Starter.files.map(\.key) : [])
     }
 
     /// The configuration file `init` creates when none is named: `Retake/retake.json`. Misuse (2)
