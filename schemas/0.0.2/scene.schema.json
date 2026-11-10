@@ -1,0 +1,541 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.2/scene.schema.json",
+  "title": "A scene",
+  "description": "A scene: a set, and the steps played on it.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "The URL of the schema the file is written against, for editors. Optional; a file is read against this Retake's schema whatever it names.",
+      "type": "string"
+    },
+    "set": {
+      "description": "The set the scene starts on; the project's defaultSet when not given.",
+      "type": "string",
+      "minLength": 1
+    },
+    "setup": {
+      "description": "Steps played before recording starts. Nothing anchors to them, so they have no id.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/step"
+      }
+    },
+    "leadIn": {
+      "description": "Seconds recorded before the first step. For a scene that records its launch, they start once the app is reachable, after the launch is recorded.",
+      "type": "number",
+      "minimum": 0,
+      "default": 1
+    },
+    "tail": {
+      "description": "Seconds recorded after the last step.",
+      "type": "number",
+      "minimum": 0,
+      "default": 1
+    },
+    "defaultHold": {
+      "description": "The hold of each step that doesn't give its own.",
+      "type": "number",
+      "minimum": 0,
+      "default": 0
+    },
+    "recordsLaunch": {
+      "description": "Starts recording before the app launches, to catch its launch screen.",
+      "type": "boolean",
+      "default": false
+    },
+    "orientation": {
+      "description": "The orientation the device is turned to before the app launches.",
+      "type": "string",
+      "enum": ["portrait", "portrait-upside-down", "landscape-left", "landscape-right"],
+      "default": "portrait"
+    },
+    "steps": {
+      "description": "What the scene does, in order.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/step"
+      },
+      "minItems": 1
+    }
+  },
+  "required": ["steps"],
+  "additionalProperties": false,
+  "$defs": {
+    "step": {
+      "description": "One thing the scene does, led by what it does, and the pause after it. A step can be only a hold.",
+      "type": "object",
+      "properties": {
+        "tap": {
+          "description": "Touches a point, x and y, or an element. An element is touched at its activation point, which the step log records, so either is drawn in the video.",
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "description": "Screen points from the left, or a percentage of the screen's width as the device faces.",
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    {
+                      "description": "A percentage of the screen, such as 50%.",
+                      "type": "string",
+                      "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+                    }
+                  ]
+                },
+                "y": {
+                  "description": "Screen points from the top, or a percentage of the screen's height as the device faces.",
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    {
+                      "description": "A percentage of the screen, such as 50%.",
+                      "type": "string",
+                      "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+                    }
+                  ]
+                }
+              },
+              "required": ["x", "y"],
+              "additionalProperties": false
+            },
+            {
+              "$ref": "#/$defs/element"
+            }
+          ]
+        },
+        "drag": {
+          "description": "A straight one-finger drag from one point or element to another. An element is touched at its activation point, as the screen has it just before the drag.",
+          "type": "object",
+          "properties": {
+            "from": {
+              "description": "Where the finger comes down: a point, x and y, or an element.",
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "description": "Screen points from the left, or a percentage of the screen's width as the device faces.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "description": "A percentage of the screen, such as 50%.",
+                          "type": "string",
+                          "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+                        }
+                      ]
+                    },
+                    "y": {
+                      "description": "Screen points from the top, or a percentage of the screen's height as the device faces.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "description": "A percentage of the screen, such as 50%.",
+                          "type": "string",
+                          "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+                        }
+                      ]
+                    }
+                  },
+                  "required": ["x", "y"],
+                  "additionalProperties": false
+                },
+                {
+                  "$ref": "#/$defs/element"
+                }
+              ]
+            },
+            "to": {
+              "description": "Where it lifts: a point, x and y, or an element.",
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "description": "Screen points from the left, or a percentage of the screen's width as the device faces.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "description": "A percentage of the screen, such as 50%.",
+                          "type": "string",
+                          "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+                        }
+                      ]
+                    },
+                    "y": {
+                      "description": "Screen points from the top, or a percentage of the screen's height as the device faces.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "description": "A percentage of the screen, such as 50%.",
+                          "type": "string",
+                          "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+                        }
+                      ]
+                    }
+                  },
+                  "required": ["x", "y"],
+                  "additionalProperties": false
+                },
+                {
+                  "$ref": "#/$defs/element"
+                }
+              ]
+            },
+            "duration": {
+              "description": "Seconds the drag takes.",
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "default": 0.5
+            }
+          },
+          "required": ["from", "to"],
+          "additionalProperties": false
+        },
+        "type": {
+          "description": "Types text key by key on the on-screen keyboard.",
+          "type": "object",
+          "properties": {
+            "text": {
+              "description": "What to type; \\n presses return.",
+              "type": "string",
+              "minLength": 1
+            },
+            "into": {
+              "$ref": "#/$defs/element",
+              "description": "The element to type into; the field already being typed in when not given."
+            }
+          },
+          "required": ["text"],
+          "additionalProperties": false
+        },
+        "activate": {
+          "$ref": "#/$defs/element",
+          "description": "An accessibility activation of an element, with no touch, for getting somewhere off camera."
+        },
+        "orientation": {
+          "description": "Turns the device, with no hand on it; the step ends when the app has turned and the device has drawn the rotation.",
+          "type": "string",
+          "enum": [
+            "portrait",
+            "portrait-upside-down",
+            "landscape-left",
+            "landscape-right"
+          ]
+        },
+        "waitFor": {
+          "description": "Waits until an element is on screen, or with gone until it isn't. The step fails if it doesn't happen in time.",
+          "type": "object",
+          "properties": {
+            "label": {
+              "description": "Its accessibility label.",
+              "type": "string",
+              "minLength": 1
+            },
+            "value": {
+              "description": "Its value: a text field's placeholder, or what's typed in it.",
+              "type": "string"
+            },
+            "identifier": {
+              "description": "The accessibilityIdentifier the app gives it.",
+              "type": "string",
+              "minLength": 1
+            },
+            "hint": {
+              "description": "Its accessibility hint: what VoiceOver says it does.",
+              "type": "string",
+              "minLength": 1
+            },
+            "traits": {
+              "description": "Traits it has, every one, by The Button Heist's names, as `retake compose` prints them.",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "adjustable",
+                  "alert",
+                  "allowsDirectInteraction",
+                  "autoCorrectCandidate",
+                  "backButton",
+                  "button",
+                  "causesPageTurn",
+                  "deleteKey",
+                  "draggable",
+                  "footer",
+                  "header",
+                  "image",
+                  "inactive",
+                  "isEditing",
+                  "keyboardKey",
+                  "launchIcon",
+                  "link",
+                  "map",
+                  "menuItem",
+                  "notEnabled",
+                  "pickerElement",
+                  "playsSound",
+                  "popupButton",
+                  "radioButton",
+                  "searchField",
+                  "secureTextField",
+                  "selected",
+                  "selectionDismissesItem",
+                  "spacer",
+                  "startsMediaSession",
+                  "staticText",
+                  "statusBarElement",
+                  "summaryElement",
+                  "switchButton",
+                  "tabBar",
+                  "tabBarItem",
+                  "tableIndex",
+                  "textArea",
+                  "textEntry",
+                  "textOperationsAvailable",
+                  "updatesFrequently",
+                  "visited",
+                  "webContent"
+                ]
+              },
+              "minItems": 1,
+              "uniqueItems": true,
+              "examples": [
+                ["header"],
+                ["button", "selected"]
+              ]
+            },
+            "occurrence": {
+              "description": "Which of several matching elements, counted from 1 in the order VoiceOver reads the screen. A last resort, since it breaks when the layout changes: name the element closely enough, by its traits, identifier, value or hint, that only it matches.",
+              "type": "integer",
+              "minimum": 1
+            },
+            "gone": {
+              "description": "Waits for the element to leave instead.",
+              "type": "boolean",
+              "default": false
+            },
+            "timeout": {
+              "description": "Seconds to wait: at most The Button Heist's longest wait, by default 60 s, which BUTTONHEIST_MAX_WAIT_TIMEOUT raises, set where Retake runs and in the set's environment, for the app.",
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 60,
+              "default": 10
+            }
+          },
+          "additionalProperties": false,
+          "anyOf": [
+            {
+              "required": ["label"]
+            },
+            {
+              "required": ["value"]
+            },
+            {
+              "required": ["identifier"]
+            },
+            {
+              "required": ["hint"]
+            },
+            {
+              "required": ["traits"]
+            }
+          ]
+        },
+        "capture": {
+          "description": "Saves the screen as a still, as it is when the step before has ended and its hold is over, as a PNG named for it in the output directory's captures/<type>/<scene>/, when the scene is recorded. Unique in the scene. Not in setup.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        },
+        "hold": {
+          "description": "Seconds to pause after the step, or for a tap, from when it's sent; the scene's defaultHold when not given.",
+          "type": "number",
+          "minimum": 0
+        },
+        "id": {
+          "description": "The name edits anchor to. Unique in the scene; it can't look like a number, which anchors count steps by, nor be start or end.",
+          "type": "string",
+          "minLength": 1,
+          "not": {
+            "type": "string",
+            "enum": ["start", "end"]
+          }
+        }
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": ["tap"]
+        },
+        {
+          "required": ["drag"]
+        },
+        {
+          "required": ["type"]
+        },
+        {
+          "required": ["activate"]
+        },
+        {
+          "required": ["orientation"]
+        },
+        {
+          "required": ["waitFor"]
+        },
+        {
+          "required": ["capture"]
+        },
+        {
+          "required": ["hold"],
+          "not": {
+            "anyOf": [
+              {
+                "required": ["tap"]
+              },
+              {
+                "required": ["drag"]
+              },
+              {
+                "required": ["type"]
+              },
+              {
+                "required": ["activate"]
+              },
+              {
+                "required": ["orientation"]
+              },
+              {
+                "required": ["waitFor"]
+              },
+              {
+                "required": ["capture"]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "element": {
+      "description": "An element on screen, as VoiceOver knows it: by any of its label, value, identifier, hint and traits.",
+      "type": "object",
+      "properties": {
+        "label": {
+          "description": "Its accessibility label.",
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "description": "Its value: a text field's placeholder, or what's typed in it.",
+          "type": "string"
+        },
+        "identifier": {
+          "description": "The accessibilityIdentifier the app gives it.",
+          "type": "string",
+          "minLength": 1
+        },
+        "hint": {
+          "description": "Its accessibility hint: what VoiceOver says it does.",
+          "type": "string",
+          "minLength": 1
+        },
+        "traits": {
+          "description": "Traits it has, every one, by The Button Heist's names, as `retake compose` prints them.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "adjustable",
+              "alert",
+              "allowsDirectInteraction",
+              "autoCorrectCandidate",
+              "backButton",
+              "button",
+              "causesPageTurn",
+              "deleteKey",
+              "draggable",
+              "footer",
+              "header",
+              "image",
+              "inactive",
+              "isEditing",
+              "keyboardKey",
+              "launchIcon",
+              "link",
+              "map",
+              "menuItem",
+              "notEnabled",
+              "pickerElement",
+              "playsSound",
+              "popupButton",
+              "radioButton",
+              "searchField",
+              "secureTextField",
+              "selected",
+              "selectionDismissesItem",
+              "spacer",
+              "startsMediaSession",
+              "staticText",
+              "statusBarElement",
+              "summaryElement",
+              "switchButton",
+              "tabBar",
+              "tabBarItem",
+              "tableIndex",
+              "textArea",
+              "textEntry",
+              "textOperationsAvailable",
+              "updatesFrequently",
+              "visited",
+              "webContent"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "examples": [
+            ["header"],
+            ["button", "selected"]
+          ]
+        },
+        "occurrence": {
+          "description": "Which of several matching elements, counted from 1 in the order VoiceOver reads the screen. A last resort, since it breaks when the layout changes: name the element closely enough, by its traits, identifier, value or hint, that only it matches.",
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": ["label"]
+        },
+        {
+          "required": ["value"]
+        },
+        {
+          "required": ["identifier"]
+        },
+        {
+          "required": ["hint"]
+        },
+        {
+          "required": ["traits"]
+        }
+      ]
+    }
+  }
+}

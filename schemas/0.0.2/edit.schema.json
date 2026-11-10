@@ -1,0 +1,1791 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.2/edit.schema.json",
+  "title": "An edit",
+  "description": "An edit: the video cut from the takes, for each device type it names. Anything in a clip, or at the top, can be given again under a device type, and applies only to that type's video.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "The URL of the schema the file is written against, for editors. Optional; a file is read against this Retake's schema whatever it names.",
+      "type": "string"
+    },
+    "intent": {
+      "description": "What the video is there to show. Not read by the render.",
+      "type": "string"
+    },
+    "devices": {
+      "description": "The device types it makes a video for.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["iphone", "ipad"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "music": {
+      "$ref": "#/$defs/music"
+    },
+    "tapSound": {
+      "$ref": "#/$defs/tap-sound"
+    },
+    "takeAudioVolume": {
+      "description": "The level of the take's own sound, where a clip plays it.",
+      "type": "number",
+      "minimum": 0,
+      "default": 1
+    },
+    "background": {
+      "$ref": "#/$defs/color",
+      "description": "The color of letterbox bands, and of the corners a turn uncovers.",
+      "default": "#000000"
+    },
+    "turns": {
+      "description": "How the video shows the device turning. letterboxed: the app stays upright, landscape letterboxed on the canvas. device: the video stays in the device's frame.",
+      "type": "string",
+      "enum": ["letterboxed", "device"],
+      "default": "letterboxed"
+    },
+    "turnBlur": {
+      "$ref": "#/$defs/turn-blur"
+    },
+    "touchColor": {
+      "$ref": "#/$defs/color",
+      "description": "The color touches are drawn in: a filled ring, its fill at 45% of the color's opacity and its rim at 90%.",
+      "default": "#FFFFFF"
+    },
+    "clips": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/clip"
+      },
+      "minItems": 1
+    },
+    "iphone": {
+      "description": "Overrides for iphone's video, laid over the rest key by key.",
+      "type": "object",
+      "properties": {
+        "intent": {
+          "description": "What the video is there to show. Not read by the render.",
+          "type": "string"
+        },
+        "music": {
+          "$ref": "#/$defs/music-override"
+        },
+        "tapSound": {
+          "$ref": "#/$defs/tap-sound-override"
+        },
+        "takeAudioVolume": {
+          "description": "The level of the take's own sound, where a clip plays it.",
+          "type": "number",
+          "minimum": 0
+        },
+        "background": {
+          "$ref": "#/$defs/color-override",
+          "description": "The color of letterbox bands, and of the corners a turn uncovers."
+        },
+        "turns": {
+          "description": "How the video shows the device turning. letterboxed: the app stays upright, landscape letterboxed on the canvas. device: the video stays in the device's frame.",
+          "type": "string",
+          "enum": ["letterboxed", "device"]
+        },
+        "turnBlur": {
+          "$ref": "#/$defs/turn-blur-override"
+        },
+        "touchColor": {
+          "$ref": "#/$defs/color-override",
+          "description": "The color touches are drawn in: a filled ring, its fill at 45% of the color's opacity and its rim at 90%."
+        },
+        "clips": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/clip"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "ipad": {
+      "description": "Overrides for ipad's video, laid over the rest key by key.",
+      "type": "object",
+      "properties": {
+        "intent": {
+          "description": "What the video is there to show. Not read by the render.",
+          "type": "string"
+        },
+        "music": {
+          "$ref": "#/$defs/music-override"
+        },
+        "tapSound": {
+          "$ref": "#/$defs/tap-sound-override"
+        },
+        "takeAudioVolume": {
+          "description": "The level of the take's own sound, where a clip plays it.",
+          "type": "number",
+          "minimum": 0
+        },
+        "background": {
+          "$ref": "#/$defs/color-override",
+          "description": "The color of letterbox bands, and of the corners a turn uncovers."
+        },
+        "turns": {
+          "description": "How the video shows the device turning. letterboxed: the app stays upright, landscape letterboxed on the canvas. device: the video stays in the device's frame.",
+          "type": "string",
+          "enum": ["letterboxed", "device"]
+        },
+        "turnBlur": {
+          "$ref": "#/$defs/turn-blur-override"
+        },
+        "touchColor": {
+          "$ref": "#/$defs/color-override",
+          "description": "The color touches are drawn in: a filled ring, its fill at 45% of the color's opacity and its rim at 90%."
+        },
+        "clips": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/clip"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["devices", "clips"],
+  "additionalProperties": false,
+  "$defs": {
+    "clip": {
+      "description": "A stretch of a take, played in order.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Names the clip, for a caption to run on into it. Unique in the edit.",
+          "type": "string",
+          "minLength": 1
+        },
+        "intent": {
+          "description": "What the clip is there to show, for whoever changes the video later. Not read by the render.",
+          "type": "string"
+        },
+        "take": {
+          "description": "The scene whose take the clip is cut from.",
+          "type": "string",
+          "minLength": 1
+        },
+        "from": {
+          "$ref": "#/$defs/anchor",
+          "description": "Where the clip starts in the take."
+        },
+        "to": {
+          "$ref": "#/$defs/anchor",
+          "description": "Where it ends."
+        },
+        "speed": {
+          "description": "How fast it plays: 2 is twice as fast.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 1
+        },
+        "crossfade": {
+          "description": "Seconds it cross-fades in over the clip before.",
+          "type": "number",
+          "minimum": 0,
+          "default": 0
+        },
+        "audioCrossfade": {
+          "description": "Seconds the sound cross-fades over, when longer than crossfade, which the picture still cross-fades over: the clip before's take sound fades out over this long before that clip ends, and this clip's starts as it does, this minus crossfade ahead of the picture and from as far before `from` in the take, fading in until the clip before ends. Each side fades so even when the other plays no take sound. The clip's sound starts no earlier than its take, or the clip before, does.",
+          "type": "number",
+          "minimum": 0
+        },
+        "touches": {
+          "description": "Draws the take's touches, from the step log.",
+          "type": "boolean",
+          "default": true
+        },
+        "touchColor": {
+          "$ref": "#/$defs/color",
+          "description": "The color of the clip's touches; the edit's touchColor when not given."
+        },
+        "touchColors": {
+          "description": "Colors for single touches, over the clip's or the edit's.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "step": {
+                "description": "A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene.",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "integer",
+                    "not": {
+                      "enum": [0]
+                    }
+                  }
+                ]
+              },
+              "color": {
+                "$ref": "#/$defs/color"
+              }
+            },
+            "required": ["step", "color"],
+            "additionalProperties": false
+          }
+        },
+        "takeAudio": {
+          "description": "Plays the take's own sound with the clip.",
+          "type": "boolean",
+          "default": false
+        },
+        "captions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/caption"
+          }
+        },
+        "sounds": {
+          "description": "Sound effects, played at normal speed however fast the clip plays.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sound"
+          }
+        },
+        "spotlight": {
+          "$ref": "#/$defs/spotlight"
+        },
+        "blurs": {
+          "description": "Blurs over a stretch of the take, for anything private it shows.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/blur"
+          }
+        },
+        "stills": {
+          "description": "Frames of other takes, popped in over the clip.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/still"
+          }
+        },
+        "stillsIn": {
+          "$ref": "#/$defs/anchor",
+          "description": "When the first still pops in, the rest following one after another, 0.22 s apart; 0.35 s into the clip when not given."
+        },
+        "stillsOut": {
+          "$ref": "#/$defs/anchor",
+          "description": "When the stills pop out, one after another in the order they popped in; they stay to the clip's end when not given."
+        },
+        "stillsBackground": {
+          "$ref": "#/$defs/color",
+          "description": "A color filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture."
+        },
+        "card": {
+          "$ref": "#/$defs/card"
+        },
+        "devices": {
+          "description": "The device types whose videos play it; every one of the edit's when not given.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["iphone", "ipad"]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "turns": {
+          "description": "How this clip shows the device turning; the edit's turns when not given.",
+          "type": "string",
+          "enum": ["letterboxed", "device"]
+        },
+        "turnBlur": {
+          "$ref": "#/$defs/turn-blur"
+        },
+        "iphone": {
+          "$ref": "#/$defs/clip-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/clip-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "required": ["take", "from", "to"],
+      "additionalProperties": false
+    },
+    "caption": {
+      "description": "Text over the video, from its from to its to.",
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "y": {
+          "description": "Its center, as a share of the video's height: 0 at the top, 1 at the bottom.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "from": {
+          "$ref": "#/$defs/anchor",
+          "description": "When it starts; once its clip has faded in when not given."
+        },
+        "to": {
+          "description": "When it ends: an anchor in its clip's take, or, naming a later clip, in that clip's take; as the next clip starts to fade in when not given.",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/anchor"
+            },
+            {
+              "$ref": "#/$defs/caption-end"
+            }
+          ]
+        },
+        "symbol": {
+          "$ref": "#/$defs/symbol"
+        },
+        "iphone": {
+          "$ref": "#/$defs/caption-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/caption-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "required": ["text", "y", "color"],
+      "additionalProperties": false
+    },
+    "symbol": {
+      "description": "An SF Symbol before the caption's text.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "The symbol's name, such as rotate.right.",
+          "type": "string",
+          "minLength": 1
+        },
+        "animation": {
+          "$ref": "#/$defs/animation"
+        },
+        "iphone": {
+          "$ref": "#/$defs/symbol-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/symbol-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "animation": {
+      "description": "How the symbol moves, from when the caption appears.",
+      "type": "object",
+      "properties": {
+        "rotate": {
+          "$ref": "#/$defs/rotate"
+        },
+        "iphone": {
+          "$ref": "#/$defs/animation-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/animation-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "required": ["rotate"],
+      "additionalProperties": false
+    },
+    "rotate": {
+      "description": "Turns the symbol.",
+      "type": "object",
+      "properties": {
+        "degrees": {
+          "description": "Clockwise when positive.",
+          "type": "number"
+        },
+        "duration": {
+          "description": "Seconds it takes.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "iphone": {
+          "$ref": "#/$defs/rotate-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/rotate-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "required": ["degrees", "duration"],
+      "additionalProperties": false
+    },
+    "card": {
+      "description": "A color covering the clip's picture, and everything drawn over it but its captions, for a card between clips: over the whole clip, fading in and out with the cross-fades either side, or from its from to its to.",
+      "type": "object",
+      "properties": {
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "from": {
+          "$ref": "#/$defs/anchor",
+          "description": "When it starts; the clip's from when not given."
+        },
+        "to": {
+          "$ref": "#/$defs/anchor",
+          "description": "When it ends; the clip's to when not given."
+        },
+        "iphone": {
+          "$ref": "#/$defs/card-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/card-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "required": ["color"],
+      "additionalProperties": false
+    },
+    "sound": {
+      "description": "A sound effect.",
+      "type": "object",
+      "properties": {
+        "file": {
+          "description": "A sound file, relative to the directory holding retake.json.",
+          "type": "string",
+          "minLength": 1
+        },
+        "at": {
+          "$ref": "#/$defs/anchor",
+          "description": "When it starts."
+        },
+        "volume": {
+          "description": "Its level, where 1 is as recorded.",
+          "type": "number",
+          "minimum": 0,
+          "default": 1
+        },
+        "duration": {
+          "description": "Seconds it plays before fading out, for an effect longer than its moment; all of it when not given.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "iphone": {
+          "$ref": "#/$defs/sound-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/sound-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "required": ["file", "at"],
+      "additionalProperties": false
+    },
+    "spotlight": {
+      "description": "Dims the rest of the screen around an element or a rectangle, with a pulsing ring.",
+      "type": "object",
+      "properties": {
+        "element": {
+          "$ref": "#/$defs/element",
+          "description": "An element, found in the take's step log at the moment."
+        },
+        "part": {
+          "$ref": "#/$defs/part"
+        },
+        "rect": {
+          "$ref": "#/$defs/rect"
+        },
+        "padding": {
+          "description": "Points of space around it.",
+          "type": "number",
+          "minimum": 0,
+          "default": 8
+        },
+        "color": {
+          "$ref": "#/$defs/color",
+          "description": "The ring's color.",
+          "default": "#FFFFFF"
+        },
+        "from": {
+          "$ref": "#/$defs/anchor",
+          "description": "When it starts; the clip's from when not given."
+        },
+        "to": {
+          "$ref": "#/$defs/anchor",
+          "description": "When it ends; the clip's to when not given."
+        },
+        "iphone": {
+          "$ref": "#/$defs/spotlight-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/spotlight-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": ["element"]
+        },
+        {
+          "required": ["rect"]
+        }
+      ]
+    },
+    "blur": {
+      "description": "A blur over an element or a rectangle.",
+      "type": "object",
+      "properties": {
+        "element": {
+          "$ref": "#/$defs/element",
+          "description": "An element, found in the take's step log at the moment."
+        },
+        "part": {
+          "$ref": "#/$defs/part"
+        },
+        "rect": {
+          "$ref": "#/$defs/rect"
+        },
+        "from": {
+          "$ref": "#/$defs/anchor",
+          "description": "When it starts; the clip's from when not given."
+        },
+        "to": {
+          "$ref": "#/$defs/anchor",
+          "description": "When it ends; the clip's to when not given."
+        },
+        "radius": {
+          "description": "How strong the blur is: the Gaussian blur's radius, its standard deviation, in screen points, scaled to the canvas as the blur's rectangle is.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 9
+        },
+        "iphone": {
+          "$ref": "#/$defs/blur-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/blur-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": ["element"]
+        },
+        {
+          "required": ["rect"]
+        }
+      ]
+    },
+    "still": {
+      "description": "A frame of another take, popped in over the clip.",
+      "type": "object",
+      "properties": {
+        "take": {
+          "description": "The scene whose take it's from.",
+          "type": "string",
+          "minLength": 1
+        },
+        "at": {
+          "$ref": "#/$defs/anchor",
+          "description": "The moment in that take."
+        },
+        "iphone": {
+          "$ref": "#/$defs/still-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/still-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "required": ["take", "at"],
+      "additionalProperties": false
+    },
+    "rect": {
+      "description": "A rectangle of the screen, each side in screen points or a percentage of the screen as the device faced.",
+      "type": "object",
+      "properties": {
+        "x": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "description": "A percentage of the screen, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
+        },
+        "y": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "description": "A percentage of the screen, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
+        },
+        "width": {
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "description": "A percentage of the screen, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
+        },
+        "height": {
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "description": "A percentage of the screen, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
+        },
+        "iphone": {
+          "$ref": "#/$defs/rect-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/rect-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "required": ["x", "y", "width", "height"],
+      "additionalProperties": false
+    },
+    "part": {
+      "description": "Part of the element, each side in points from its top-left corner or a percentage of its frame; its whole frame on a side not given, as \"part\": { \"x\": \"62%\", \"width\": \"38%\" } is its right 38%.",
+      "type": "object",
+      "properties": {
+        "x": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "description": "A percentage of the element, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ],
+          "default": "0%"
+        },
+        "y": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "description": "A percentage of the element, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ],
+          "default": "0%"
+        },
+        "width": {
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "description": "A percentage of the element, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ],
+          "default": "100%"
+        },
+        "height": {
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "description": "A percentage of the element, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ],
+          "default": "100%"
+        },
+        "iphone": {
+          "$ref": "#/$defs/part-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/part-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "additionalProperties": false
+    },
+    "music": {
+      "description": "Plays under the whole video.",
+      "type": "object",
+      "properties": {
+        "file": {
+          "description": "A sound file, relative to the directory holding retake.json.",
+          "type": "string",
+          "minLength": 1
+        },
+        "volume": {
+          "description": "Its level, where 1 is as recorded.",
+          "type": "number",
+          "minimum": 0,
+          "default": 1
+        },
+        "fadeOut": {
+          "description": "Seconds it fades out over at the end.",
+          "type": "number",
+          "minimum": 0,
+          "default": 0
+        },
+        "iphone": {
+          "$ref": "#/$defs/music-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/music-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "required": ["file"],
+      "additionalProperties": false
+    },
+    "tap-sound": {
+      "description": "Plays as each touch a clip draws lands: each tap by point, and the start of each drag.",
+      "type": "object",
+      "properties": {
+        "file": {
+          "description": "A sound file, relative to the directory holding retake.json.",
+          "type": "string",
+          "minLength": 1
+        },
+        "volume": {
+          "description": "Its level, where 1 is as recorded.",
+          "type": "number",
+          "minimum": 0,
+          "default": 1
+        },
+        "iphone": {
+          "$ref": "#/$defs/tap-sound-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/tap-sound-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "required": ["file"],
+      "additionalProperties": false
+    },
+    "turn-blur": {
+      "description": "Blurs each turn, easing in just before it and out after.",
+      "type": "object",
+      "properties": {
+        "duration": {
+          "description": "Seconds the blur lasts.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "iphone": {
+          "$ref": "#/$defs/turn-blur-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/turn-blur-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "required": ["duration"],
+      "additionalProperties": false
+    },
+    "anchor": {
+      "description": "A moment in a take: a step and where to go from it, or plain seconds from the take's start.",
+      "oneOf": [
+        {
+          "description": "Seconds from the take's start, which the first `retake cut` turns into a step anchor.",
+          "type": "number",
+          "minimum": 0
+        },
+        {
+          "$ref": "#/$defs/step-anchor"
+        }
+      ]
+    },
+    "step-anchor": {
+      "description": "A step, and where to go from it.",
+      "type": "object",
+      "properties": {
+        "step": {
+          "description": "A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene.",
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "not": {
+                "enum": [0]
+              }
+            }
+          ]
+        },
+        "offset": {
+          "description": "Seconds from the step's start, or its end with edge end: forward when positive, back when negative; 0 is that edge itself.",
+          "type": "number"
+        },
+        "fraction": {
+          "description": "A share of the way from the step's start, or its end with edge end, to the neighboring step: forward when positive, to the next step's start, back when negative, to the previous step's end.",
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "edge": {
+          "description": "Which of the step's edges the anchor is at, and counts its offset or fraction from: start, the default, or end.",
+          "type": "string",
+          "enum": ["start", "end"]
+        },
+        "iphone": {
+          "$ref": "#/$defs/step-anchor-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/step-anchor-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "required": ["step"],
+      "additionalProperties": false,
+      "not": {
+        "required": ["offset", "fraction"]
+      }
+    },
+    "caption-end": {
+      "description": "A later clip, by its id, and an anchor in that clip's take; as that clip's next starts to fade in, when it gives no step.",
+      "type": "object",
+      "properties": {
+        "clip": {
+          "description": "The later clip's id.",
+          "type": "string",
+          "minLength": 1
+        },
+        "step": {
+          "description": "A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene.",
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "not": {
+                "enum": [0]
+              }
+            }
+          ]
+        },
+        "offset": {
+          "description": "Seconds from the step's start, or its end with edge end: forward when positive, back when negative; 0 is that edge itself.",
+          "type": "number"
+        },
+        "fraction": {
+          "description": "A share of the way from the step's start, or its end with edge end, to the neighboring step: forward when positive, to the next step's start, back when negative, to the previous step's end.",
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "edge": {
+          "description": "Which of the step's edges the anchor is at, and counts its offset or fraction from: start, the default, or end.",
+          "type": "string",
+          "enum": ["start", "end"]
+        },
+        "iphone": {
+          "$ref": "#/$defs/caption-end-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/caption-end-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "required": ["clip"],
+      "additionalProperties": false,
+      "not": {
+        "required": ["offset", "fraction"]
+      }
+    },
+    "element": {
+      "description": "An element on screen, as VoiceOver knows it: by any of its label, value, identifier, hint and traits.",
+      "type": "object",
+      "properties": {
+        "label": {
+          "description": "Its accessibility label.",
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "description": "Its value: a text field's placeholder, or what's typed in it.",
+          "type": "string"
+        },
+        "identifier": {
+          "description": "The accessibilityIdentifier the app gives it.",
+          "type": "string",
+          "minLength": 1
+        },
+        "hint": {
+          "description": "Its accessibility hint: what VoiceOver says it does.",
+          "type": "string",
+          "minLength": 1
+        },
+        "traits": {
+          "description": "Traits it has, every one, by The Button Heist's names, as `retake compose` prints them.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "adjustable",
+              "alert",
+              "allowsDirectInteraction",
+              "autoCorrectCandidate",
+              "backButton",
+              "button",
+              "causesPageTurn",
+              "deleteKey",
+              "draggable",
+              "footer",
+              "header",
+              "image",
+              "inactive",
+              "isEditing",
+              "keyboardKey",
+              "launchIcon",
+              "link",
+              "map",
+              "menuItem",
+              "notEnabled",
+              "pickerElement",
+              "playsSound",
+              "popupButton",
+              "radioButton",
+              "searchField",
+              "secureTextField",
+              "selected",
+              "selectionDismissesItem",
+              "spacer",
+              "startsMediaSession",
+              "staticText",
+              "statusBarElement",
+              "summaryElement",
+              "switchButton",
+              "tabBar",
+              "tabBarItem",
+              "tableIndex",
+              "textArea",
+              "textEntry",
+              "textOperationsAvailable",
+              "updatesFrequently",
+              "visited",
+              "webContent"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "examples": [
+            ["header"],
+            ["button", "selected"]
+          ]
+        },
+        "occurrence": {
+          "description": "Which of several matching elements, counted from 1 in the order VoiceOver reads the screen. A last resort, since it breaks when the layout changes: name the element closely enough, by its traits, identifier, value or hint, that only it matches.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "iphone": {
+          "$ref": "#/$defs/element-override",
+          "description": "Overrides for iphone's video, laid over the rest key by key."
+        },
+        "ipad": {
+          "$ref": "#/$defs/element-override",
+          "description": "Overrides for ipad's video, laid over the rest key by key."
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": ["label"]
+        },
+        {
+          "required": ["value"]
+        },
+        {
+          "required": ["identifier"]
+        },
+        {
+          "required": ["hint"]
+        },
+        {
+          "required": ["traits"]
+        }
+      ]
+    },
+    "color": {
+      "description": "A color: #RRGGBB, or #RRGGBBAA with its opacity.",
+      "type": "string",
+      "pattern": "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+      "examples": ["#1F6FEB"]
+    },
+    "clip-override": {
+      "description": "A stretch of a take, played in order.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Names the clip, for a caption to run on into it. Unique in the edit.",
+          "type": "string",
+          "minLength": 1
+        },
+        "intent": {
+          "description": "What the clip is there to show, for whoever changes the video later. Not read by the render.",
+          "type": "string"
+        },
+        "take": {
+          "description": "The scene whose take the clip is cut from.",
+          "type": "string",
+          "minLength": 1
+        },
+        "from": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "Where the clip starts in the take."
+        },
+        "to": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "Where it ends."
+        },
+        "speed": {
+          "description": "How fast it plays: 2 is twice as fast.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "crossfade": {
+          "description": "Seconds it cross-fades in over the clip before.",
+          "type": "number",
+          "minimum": 0
+        },
+        "audioCrossfade": {
+          "description": "Seconds the sound cross-fades over, when longer than crossfade, which the picture still cross-fades over: the clip before's take sound fades out over this long before that clip ends, and this clip's starts as it does, this minus crossfade ahead of the picture and from as far before `from` in the take, fading in until the clip before ends. Each side fades so even when the other plays no take sound. The clip's sound starts no earlier than its take, or the clip before, does.",
+          "type": "number",
+          "minimum": 0
+        },
+        "touches": {
+          "description": "Draws the take's touches, from the step log.",
+          "type": "boolean"
+        },
+        "touchColor": {
+          "$ref": "#/$defs/color-override",
+          "description": "The color of the clip's touches; the edit's touchColor when not given."
+        },
+        "touchColors": {
+          "description": "Colors for single touches, over the clip's or the edit's.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "step": {
+                "description": "A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene.",
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "integer",
+                    "not": {
+                      "enum": [0]
+                    }
+                  }
+                ]
+              },
+              "color": {
+                "$ref": "#/$defs/color"
+              }
+            },
+            "required": ["step", "color"],
+            "additionalProperties": false
+          }
+        },
+        "takeAudio": {
+          "description": "Plays the take's own sound with the clip.",
+          "type": "boolean"
+        },
+        "captions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/caption"
+          }
+        },
+        "sounds": {
+          "description": "Sound effects, played at normal speed however fast the clip plays.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sound"
+          }
+        },
+        "spotlight": {
+          "$ref": "#/$defs/spotlight-override"
+        },
+        "blurs": {
+          "description": "Blurs over a stretch of the take, for anything private it shows.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/blur"
+          }
+        },
+        "stills": {
+          "description": "Frames of other takes, popped in over the clip.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/still"
+          }
+        },
+        "stillsIn": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "When the first still pops in, the rest following one after another, 0.22 s apart; 0.35 s into the clip when not given."
+        },
+        "stillsOut": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "When the stills pop out, one after another in the order they popped in; they stay to the clip's end when not given."
+        },
+        "stillsBackground": {
+          "$ref": "#/$defs/color-override",
+          "description": "A color filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture."
+        },
+        "card": {
+          "$ref": "#/$defs/card-override"
+        },
+        "devices": {
+          "description": "The device types whose videos play it; every one of the edit's when not given.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["iphone", "ipad"]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "turns": {
+          "description": "How this clip shows the device turning; the edit's turns when not given.",
+          "type": "string",
+          "enum": ["letterboxed", "device"]
+        },
+        "turnBlur": {
+          "$ref": "#/$defs/turn-blur-override"
+        }
+      },
+      "additionalProperties": false
+    },
+    "caption-override": {
+      "description": "Text over the video, from its from to its to.",
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "y": {
+          "description": "Its center, as a share of the video's height: 0 at the top, 1 at the bottom.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "color": {
+          "$ref": "#/$defs/color-override"
+        },
+        "from": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "When it starts; once its clip has faded in when not given."
+        },
+        "to": {
+          "description": "When it ends: an anchor in its clip's take, or, naming a later clip, in that clip's take; as the next clip starts to fade in when not given.",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/anchor-override"
+            },
+            {
+              "$ref": "#/$defs/caption-end-override"
+            }
+          ]
+        },
+        "symbol": {
+          "$ref": "#/$defs/symbol-override"
+        }
+      },
+      "additionalProperties": false
+    },
+    "symbol-override": {
+      "description": "An SF Symbol before the caption's text.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "The symbol's name, such as rotate.right.",
+          "type": "string",
+          "minLength": 1
+        },
+        "animation": {
+          "$ref": "#/$defs/animation-override"
+        }
+      },
+      "additionalProperties": false
+    },
+    "animation-override": {
+      "description": "How the symbol moves, from when the caption appears.",
+      "type": "object",
+      "properties": {
+        "rotate": {
+          "$ref": "#/$defs/rotate-override"
+        }
+      },
+      "additionalProperties": false
+    },
+    "rotate-override": {
+      "description": "Turns the symbol.",
+      "type": "object",
+      "properties": {
+        "degrees": {
+          "description": "Clockwise when positive.",
+          "type": "number"
+        },
+        "duration": {
+          "description": "Seconds it takes.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "card-override": {
+      "description": "A color covering the clip's picture, and everything drawn over it but its captions, for a card between clips: over the whole clip, fading in and out with the cross-fades either side, or from its from to its to.",
+      "type": "object",
+      "properties": {
+        "color": {
+          "$ref": "#/$defs/color-override"
+        },
+        "from": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "When it starts; the clip's from when not given."
+        },
+        "to": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "When it ends; the clip's to when not given."
+        }
+      },
+      "additionalProperties": false
+    },
+    "sound-override": {
+      "description": "A sound effect.",
+      "type": "object",
+      "properties": {
+        "file": {
+          "description": "A sound file, relative to the directory holding retake.json.",
+          "type": "string",
+          "minLength": 1
+        },
+        "at": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "When it starts."
+        },
+        "volume": {
+          "description": "Its level, where 1 is as recorded.",
+          "type": "number",
+          "minimum": 0
+        },
+        "duration": {
+          "description": "Seconds it plays before fading out, for an effect longer than its moment; all of it when not given.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "spotlight-override": {
+      "description": "Dims the rest of the screen around an element or a rectangle, with a pulsing ring.",
+      "type": "object",
+      "properties": {
+        "element": {
+          "$ref": "#/$defs/element-override",
+          "description": "An element, found in the take's step log at the moment."
+        },
+        "part": {
+          "$ref": "#/$defs/part-override"
+        },
+        "rect": {
+          "$ref": "#/$defs/rect-override"
+        },
+        "padding": {
+          "description": "Points of space around it.",
+          "type": "number",
+          "minimum": 0
+        },
+        "color": {
+          "$ref": "#/$defs/color-override",
+          "description": "The ring's color."
+        },
+        "from": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "When it starts; the clip's from when not given."
+        },
+        "to": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "When it ends; the clip's to when not given."
+        }
+      },
+      "additionalProperties": false
+    },
+    "blur-override": {
+      "description": "A blur over an element or a rectangle.",
+      "type": "object",
+      "properties": {
+        "element": {
+          "$ref": "#/$defs/element-override",
+          "description": "An element, found in the take's step log at the moment."
+        },
+        "part": {
+          "$ref": "#/$defs/part-override"
+        },
+        "rect": {
+          "$ref": "#/$defs/rect-override"
+        },
+        "from": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "When it starts; the clip's from when not given."
+        },
+        "to": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "When it ends; the clip's to when not given."
+        },
+        "radius": {
+          "description": "How strong the blur is: the Gaussian blur's radius, its standard deviation, in screen points, scaled to the canvas as the blur's rectangle is.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "still-override": {
+      "description": "A frame of another take, popped in over the clip.",
+      "type": "object",
+      "properties": {
+        "take": {
+          "description": "The scene whose take it's from.",
+          "type": "string",
+          "minLength": 1
+        },
+        "at": {
+          "$ref": "#/$defs/anchor-override",
+          "description": "The moment in that take."
+        }
+      },
+      "additionalProperties": false
+    },
+    "rect-override": {
+      "description": "A rectangle of the screen, each side in screen points or a percentage of the screen as the device faced.",
+      "type": "object",
+      "properties": {
+        "x": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "description": "A percentage of the screen, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
+        },
+        "y": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "description": "A percentage of the screen, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
+        },
+        "width": {
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "description": "A percentage of the screen, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
+        },
+        "height": {
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "description": "A percentage of the screen, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "part-override": {
+      "description": "Part of the element, each side in points from its top-left corner or a percentage of its frame; its whole frame on a side not given, as \"part\": { \"x\": \"62%\", \"width\": \"38%\" } is its right 38%.",
+      "type": "object",
+      "properties": {
+        "x": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "description": "A percentage of the element, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
+        },
+        "y": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "description": "A percentage of the element, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
+        },
+        "width": {
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "description": "A percentage of the element, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
+        },
+        "height": {
+          "oneOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "description": "A percentage of the element, such as 50%.",
+              "type": "string",
+              "pattern": "^(100(\\.0+)?|[0-9]{1,2}(\\.[0-9]+)?)%$"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "music-override": {
+      "description": "Plays under the whole video.",
+      "type": "object",
+      "properties": {
+        "file": {
+          "description": "A sound file, relative to the directory holding retake.json.",
+          "type": "string",
+          "minLength": 1
+        },
+        "volume": {
+          "description": "Its level, where 1 is as recorded.",
+          "type": "number",
+          "minimum": 0
+        },
+        "fadeOut": {
+          "description": "Seconds it fades out over at the end.",
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "tap-sound-override": {
+      "description": "Plays as each touch a clip draws lands: each tap by point, and the start of each drag.",
+      "type": "object",
+      "properties": {
+        "file": {
+          "description": "A sound file, relative to the directory holding retake.json.",
+          "type": "string",
+          "minLength": 1
+        },
+        "volume": {
+          "description": "Its level, where 1 is as recorded.",
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "turn-blur-override": {
+      "description": "Blurs each turn, easing in just before it and out after.",
+      "type": "object",
+      "properties": {
+        "duration": {
+          "description": "Seconds the blur lasts.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "anchor-override": {
+      "description": "A moment in a take: a step and where to go from it, or plain seconds from the take's start.",
+      "oneOf": [
+        {
+          "description": "Seconds from the take's start, which the first `retake cut` turns into a step anchor.",
+          "type": "number",
+          "minimum": 0
+        },
+        {
+          "$ref": "#/$defs/step-anchor-override"
+        }
+      ]
+    },
+    "step-anchor-override": {
+      "description": "A step, and where to go from it.",
+      "type": "object",
+      "properties": {
+        "step": {
+          "description": "A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene.",
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "not": {
+                "enum": [0]
+              }
+            }
+          ]
+        },
+        "offset": {
+          "description": "Seconds from the step's start, or its end with edge end: forward when positive, back when negative; 0 is that edge itself.",
+          "type": "number"
+        },
+        "fraction": {
+          "description": "A share of the way from the step's start, or its end with edge end, to the neighboring step: forward when positive, to the next step's start, back when negative, to the previous step's end.",
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "edge": {
+          "description": "Which of the step's edges the anchor is at, and counts its offset or fraction from: start, the default, or end.",
+          "type": "string",
+          "enum": ["start", "end"]
+        }
+      },
+      "additionalProperties": false,
+      "not": {
+        "required": ["offset", "fraction"]
+      }
+    },
+    "caption-end-override": {
+      "description": "A later clip, by its id, and an anchor in that clip's take; as that clip's next starts to fade in, when it gives no step.",
+      "type": "object",
+      "properties": {
+        "clip": {
+          "description": "The later clip's id.",
+          "type": "string",
+          "minLength": 1
+        },
+        "step": {
+          "description": "A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene.",
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "integer",
+              "not": {
+                "enum": [0]
+              }
+            }
+          ]
+        },
+        "offset": {
+          "description": "Seconds from the step's start, or its end with edge end: forward when positive, back when negative; 0 is that edge itself.",
+          "type": "number"
+        },
+        "fraction": {
+          "description": "A share of the way from the step's start, or its end with edge end, to the neighboring step: forward when positive, to the next step's start, back when negative, to the previous step's end.",
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "edge": {
+          "description": "Which of the step's edges the anchor is at, and counts its offset or fraction from: start, the default, or end.",
+          "type": "string",
+          "enum": ["start", "end"]
+        }
+      },
+      "additionalProperties": false,
+      "not": {
+        "required": ["offset", "fraction"]
+      }
+    },
+    "element-override": {
+      "description": "An element on screen, as VoiceOver knows it: by any of its label, value, identifier, hint and traits.",
+      "type": "object",
+      "properties": {
+        "label": {
+          "description": "Its accessibility label.",
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "description": "Its value: a text field's placeholder, or what's typed in it.",
+          "type": "string"
+        },
+        "identifier": {
+          "description": "The accessibilityIdentifier the app gives it.",
+          "type": "string",
+          "minLength": 1
+        },
+        "hint": {
+          "description": "Its accessibility hint: what VoiceOver says it does.",
+          "type": "string",
+          "minLength": 1
+        },
+        "traits": {
+          "description": "Traits it has, every one, by The Button Heist's names, as `retake compose` prints them.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "adjustable",
+              "alert",
+              "allowsDirectInteraction",
+              "autoCorrectCandidate",
+              "backButton",
+              "button",
+              "causesPageTurn",
+              "deleteKey",
+              "draggable",
+              "footer",
+              "header",
+              "image",
+              "inactive",
+              "isEditing",
+              "keyboardKey",
+              "launchIcon",
+              "link",
+              "map",
+              "menuItem",
+              "notEnabled",
+              "pickerElement",
+              "playsSound",
+              "popupButton",
+              "radioButton",
+              "searchField",
+              "secureTextField",
+              "selected",
+              "selectionDismissesItem",
+              "spacer",
+              "startsMediaSession",
+              "staticText",
+              "statusBarElement",
+              "summaryElement",
+              "switchButton",
+              "tabBar",
+              "tabBarItem",
+              "tableIndex",
+              "textArea",
+              "textEntry",
+              "textOperationsAvailable",
+              "updatesFrequently",
+              "visited",
+              "webContent"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "examples": [
+            ["header"],
+            ["button", "selected"]
+          ]
+        },
+        "occurrence": {
+          "description": "Which of several matching elements, counted from 1 in the order VoiceOver reads the screen. A last resort, since it breaks when the layout changes: name the element closely enough, by its traits, identifier, value or hint, that only it matches.",
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "color-override": {
+      "description": "A color: #RRGGBB, or #RRGGBBAA with its opacity.",
+      "type": "string",
+      "pattern": "^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+      "examples": ["#1F6FEB"]
+    }
+  }
+}
