@@ -4,8 +4,8 @@
 # into apps, and its SHA-256 beside it. `mise use github:justinseanmartin/Retake` installs it. See
 # Documentation/records/2026-10-26-v0.0.1-implementation-plan.md, commit 33.
 #
-# It builds only with the Xcode .xcode-version names, and never against a local clone of The Button
-# Heist. With RETAKE_RELEASE_IDENTITY naming a Developer ID Application identity, it signs retake
+# It builds only with the Xcode .xcode-version names, never against a local clone of The Button
+# Heist, and only once RELEASE.md dates the version's entry and the docs name no other release. With RETAKE_RELEASE_IDENTITY naming a Developer ID Application identity, it signs retake
 # with the hardened runtime; with RETAKE_NOTARY_PROFILE naming a `notarytool store-credentials`
 # profile as well, it has it notarized. Without them, the build is for trying the layout locally.
 #
@@ -43,6 +43,18 @@ if [[ -n "${RETAKE_BUTTONHEIST_PATH:-}" ]]; then
     echo "error: RETAKE_BUTTONHEIST_PATH is set; a release is built against The Button Heist's release, never a clone" >&2
     exit 1
 fi
+# Before anything builds: the version the source names has its release notes, dated, and the docs
+# name no other release. ReferenceTests checks the docs on every pull request; this is the last
+# word, for a version bumped without them.
+SOURCE_VERSION="$(sed -n 's/^ *version: "\([^"]*\)",$/\1/p' "$ROOT/Sources/RetakeCore/RetakeVersion.swift" | head -1)"
+[[ -n "$SOURCE_VERSION" ]] || { echo "error: can't find the version in Sources/RetakeCore/RetakeVersion.swift" >&2; exit 1; }
+grep -q "^## ${SOURCE_VERSION//./\\.} ([0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\})$" "$ROOT/RELEASE.md" \
+    || { echo "error: RELEASE.md has no dated entry for $SOURCE_VERSION; give its heading the release's date, as \"## $SOURCE_VERSION ($(date +%F))\"" >&2; exit 1; }
+STALE="$(cd "$ROOT" && grep -rnoE 'Retake@[0-9]+\.[0-9]+\.[0-9]+|/Retake/schemas/[0-9]+\.[0-9]+\.[0-9]+/|/Retake/(tree|blob)/v[0-9]+\.[0-9]+\.[0-9]+' \
+    README.md CONTRIBUTING.md Example/README.md Documentation --exclude-dir=records \
+    | grep -vE "(@|/|/v)${SOURCE_VERSION//./\\.}(/|$)" || true)"
+[[ -z "$STALE" ]] || { echo "error: the docs name a release other than $SOURCE_VERSION:" >&2; echo "$STALE" >&2; exit 1; }
+
 WANTED="$(tr -d '[:space:]' < "$ROOT/.xcode-version")"
 # The command line tools alone have no xcodebuild to ask, which is no Xcode at all.
 XCODE="$(xcodebuild -version 2>/dev/null | sed -n 's/^Xcode //p' || true)"
@@ -56,6 +68,7 @@ swift build --package-path "$ROOT" --scratch-path "$SCRATCH" -c release --arch a
     || { tail -30 "$OUTPUT/build.log" >&2; exit 1; }
 BINARY="$(swift build --package-path "$ROOT" --scratch-path "$SCRATCH" -c release --arch arm64 --product retake --show-bin-path)/retake"
 VERSION="$("$BINARY" version --json | /usr/bin/python3 -I -c 'import json, sys; print(json.load(sys.stdin)["version"])')"
+[[ "$VERSION" == "$SOURCE_VERSION" ]] || { echo "error: retake reports $VERSION, but its source names $SOURCE_VERSION" >&2; exit 1; }
 
 FRAMEWORK="$("$ROOT/Scripts/fetch-insidejob.sh" | tail -1)"
 SUPPORT="$("$ROOT/Scripts/build-support.sh" | tail -1)"

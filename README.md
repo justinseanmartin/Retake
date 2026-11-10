@@ -56,11 +56,12 @@ checks a project against; and the commands that report something take `--json`.
 resolution, which often isn't a size App Store Connect takes; see
 [Captures](#captures-stills-from-the-same-scenes).
 
-> **Status:** an early release, 0.0.2. Retake is an experiment in generalizing a tool I'd used for
-> two of the apps I've released to the App Store.
+> **Status:** an early release; see [the latest](https://github.com/justinseanmartin/Retake/releases/latest).
+> Retake is an experiment in generalizing a tool I'd used for two of the apps I've released to the
+> App Store.
 >
 > **Stability:** until 1.0, nothing is guaranteed to stay the same between versions. If you'd like to
-> avoid breakage, pin to an exact version, such as `mise use github:justinseanmartin/Retake@0.0.2`.
+> avoid breakage, pin to an exact version: `mise use github:justinseanmartin/Retake@<version>`.
 > Breaking changes will be documented in the [release notes](RELEASE.md) and come with a new minor
 > version, from 0.1 to 0.2. Compatibility guarantees start at 1.0.
 
@@ -874,7 +875,8 @@ Every file Retake reads has a [JSON Schema](https://json-schema.org), released w
 reads every file against its own schema, so a file needn't name one. For an editor, a file can name
 its schema in a `"$schema"` key: the URL its schema is published at, which names Retake's version,
 such as
-`https://justinseanmartin.github.io/Retake/schemas/0.0.2/edit.schema.json`. Editors that read JSON
+`https://justinseanmartin.github.io/Retake/schemas/<version>/edit.schema.json`, for the release
+`retake version` names. Editors that read JSON
 Schema, VS Code among them, fetch it from there, and complete fields as you type, describe them on
 hover, and mark mistakes; nothing is copied into the project. Retake never adds the key, and `retake
 cut` keeps one up to date. `retake schema` prints the schemas, for tools and agents, or writes

@@ -64,6 +64,38 @@ struct ReferenceTests {
         return documents
     }
 
+    /// Where the docs name a release, it's this one, so a release leaves none behind: an install pin
+    /// (`Retake@x.y.z`), a schema URL, a link into the repository at a tag, and a link into The
+    /// Button Heist at the release Retake is built against. And RELEASE.md has this release's entry.
+    @Test func theDocsNameOnlyThisRelease() throws {
+        let version = RetakeVersion.current.schemaVersion
+        var patterns: [(String, String)] = [
+            (#"Retake@(\d+\.\d+\.\d+)"#, version),
+            (#"/Retake/schemas/(\d+\.\d+\.\d+)/"#, version),
+            (#"/Retake/(?:tree|blob)/v(\d+\.\d+\.\d+)"#, version),
+        ]
+        // Built against a clone, The Button Heist's version is the clone's, which links needn't name.
+        if !InsideJobFramework.isBuiltFromClone {
+            let heist = String(RetakeVersion.current.buttonHeist.version.prefix { $0 != "-" })
+            patterns.append((#"/TheButtonHeist/(?:tree|blob)/v(\d+\.\d+\.\d+)"#, heist))
+        }
+        var documents = Self.documents
+        for name in ["CONTRIBUTING.md", "Example/README.md"] {
+            documents.append((Self.repository.appending(path: name), name))
+        }
+        for (url, name) in documents {
+            let text = try String(contentsOf: url, encoding: .utf8)
+            for (pattern, expected) in patterns {
+                for match in text.matches(of: try Regex<(Substring, Substring)>(pattern)) where match.output.1 != expected {
+                    let line = text[..<match.range.lowerBound].count { $0 == "\n" } + 1
+                    Issue.record("\(name):\(line): \(match.output.0) names \(match.output.1), not \(expected)")
+                }
+            }
+        }
+        let notes = try String(contentsOf: Self.repository.appending(path: "RELEASE.md"), encoding: .utf8)
+        #expect(notes.contains("\n## \(version) ("), "RELEASE.md has no entry for \(version), such as ## \(version) (unreleased)")
+    }
+
     @Test func everyJSONBlockInTheDocsFitsItsSchema() throws {
         var count = 0
         for (url, name) in Self.documents {
