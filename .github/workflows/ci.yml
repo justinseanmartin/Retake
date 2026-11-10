@@ -44,17 +44,25 @@ jobs:
       - name: Build
         run: swift build --build-tests
 
-      # The event stream is written as each test starts and ends, so it outlasts a run that hangs.
+      # swift test writes events.jsonl when it finishes. Until then each test product's event stream
+      # is in TMPDIR, written as each test starts and ends, so it outlasts a run that hangs.
       - name: Test
         id: test
         timeout-minutes: 10
+        env:
+          TMPDIR: ${{ runner.temp }}
         run: |
           swift test --skip-build \
             --experimental-event-stream-output "$RUNNER_TEMP/events.jsonl" --experimental-event-stream-version 0
 
       - name: Report test timings
         if: always() && steps.test.outcome != 'skipped'
-        run: Scripts/test-timings.py "$RUNNER_TEMP/events.jsonl"
+        run: |
+          if [[ -f "$RUNNER_TEMP/events.jsonl" ]]; then
+            Scripts/test-timings.py "$RUNNER_TEMP/events.jsonl"
+          else
+            Scripts/test-timings.py "$RUNNER_TEMP"/swiftpm-test-output-*/event-stream-*.jsonl
+          fi
 
       # A run that timed out is still running until the job ends; its stacks show where it's stuck.
       - name: Sample the tests that hung
