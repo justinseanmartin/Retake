@@ -1,6 +1,4 @@
-# Examples
-
-## Notes
+# The Notes example
 
 A small SwiftUI notes app for iPhone and iPad, made to be recorded by Retake: everything a scene
 drives, and nothing that changes between takes. On a device it's called RetakeNotes, so it isn't
@@ -15,12 +13,12 @@ mistaken for the device's own Notes.
 What it starts on is a set's to decide: its notes are in `Documents/notes.json`, and its settings in
 `UserDefaults` (`hasSeenWelcome`, and `sortOrder`, `manual` or `title`).
 
-Its Retake project is in `Notes/Retake/`, as `retake init` makes one: `retake.json`, its sets,
+Its Retake project is in `Retake/`, as `retake init` makes one: `retake.json`, its sets,
 scenes and edits, the files its sets copy, in `data/`, and the music and sound effects its edits
-play, in `audio/`. Run Retake's commands from `Examples/Notes/`, or from inside `Retake/`.
+play, in `audio/`. Run Retake's commands from `Example/`, or from inside `Retake/`.
 
 A `screenshots` scene, for iPhone and iPad, captures stills of the library and of a note, on the
-iPad open beside the library in landscape, into `Notes/Retake/output/captures/`. Its set,
+iPad open beside the library in landscape, into `Retake/output/captures/`. Its set,
 `screenshots`, is `returning-user` with the app filling the screen, as a screenshot wants.
 
 It has two edits:
@@ -36,19 +34,19 @@ It has two edits:
 
 The music and sounds are made by `Retake/audio/generate.py`, so none of them is anyone else's.
 
-### From a clone, in one go
+## From a clone, in one go
 
 You need a Mac with Xcode, an Apple account signed in to Xcode (Settings > Accounts; a free one
 works), and an iPhone or iPad with Developer Mode on, connected by USB and trusted. Then, from the
 repository's root:
 
 ```sh
-Examples/Notes/run.sh
+Example/run.sh
 ```
 
 It does each step below, and finishes with the video's master and App Store files in
-`Notes/Retake/output/cuts/`, and the `screenshots` scene's stills in `Notes/Retake/output/captures/`; once an iPhone's and an iPad's are both cut, it shares the two side by
-side, a small MP4 with sound, in `Notes/Retake/output/share/`. Run it again to record and cut
+`Retake/output/cuts/`, and the `screenshots` scene's stills in `Retake/output/captures/`; once an iPhone's and an iPad's are both cut, it shares the two side by
+side, a small MP4 with sound, in `Retake/output/share/`. Run it again to record and cut
 again. Its options:
 
 | Option | |
@@ -57,14 +55,14 @@ again. Its options:
 | `--device <device>` | The device, by alias, UDID or name, when several are connected. |
 | `--setup` | Only build Retake and sign the example, then say what to run. |
 | `--cut-only` | Cut from the takes already recorded, without a device: after changing an edit. |
-| `--readme` | Say how to make the iPhone's and iPad's side by side the README's video. GitHub plays only video uploaded to it, so the README links to an upload: drag the file from `Notes/Retake/output/share/` into a new issue's description on github.com, copy the link it adds without creating the issue, and put it in the README in place of the old. |
+| `--readme` | Say how to make the iPhone's and iPad's side by side the README's video. GitHub plays only video uploaded to it, so the README links to an upload: drag the file from `Retake/output/share/` into a new issue's description on github.com, copy the link it adds without creating the issue, and put it in the README in place of the old. |
 
 Nothing it writes is checked in: the build is in `.build/` (or
 `RETAKE_SCRATCH_PATH`), the team in `Config/Signing.local.xcconfig`, and the rest in
-`Notes/Retake/output/`, which Git ignores. Your device's alias, and everything else that's only
+`Retake/output/`, which Git ignores. Your device's alias, and everything else that's only
 yours, is in `~/Library/Caches/retake/`.
 
-### Step by step
+## Step by step
 
 From the repository's root:
 
@@ -74,7 +72,7 @@ From the repository's root:
    ```sh
    Scripts/build.sh
    alias retake="$PWD/.build/release/retake"     # the path build.sh printed
-   cd Examples/Notes
+   cd Example
    ```
 
    The alias names the built `retake`; it doesn't build anything. Run `Scripts/build.sh` again

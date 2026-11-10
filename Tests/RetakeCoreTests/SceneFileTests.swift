@@ -198,7 +198,7 @@ struct SceneFileTests {
     }
 
     @Test func theExamplesScenesRead() throws {
-        let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/Notes").standardizedFileURL
+        let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Example").standardizedFileURL
         let files = ProjectFiles(project: try Project.locate(configuration: nil, currentDirectory: example))
         for type in DeviceType.allCases {
             let names = files.names(in: files.project.scenes(for: type))

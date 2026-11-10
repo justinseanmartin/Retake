@@ -162,7 +162,7 @@ struct EditFileTests {
     }
 
     @Test func theExamplesEditsRead() throws {
-        let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/Notes").standardizedFileURL
+        let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Example").standardizedFileURL
         let files = ProjectFiles(project: try Project.locate(configuration: nil, currentDirectory: example))
         #expect(files.names(in: files.project.edits) == ["showcase", "tour"])
         let report = ProjectFiles.Report()

@@ -34,7 +34,7 @@ struct SchemaTests {
     }
 
     @Test func theExamplesFilesFitTheirSchemasAndRead() throws {
-        let project = Self.repository.appending(path: "Examples/Notes/Retake")
+        let project = Self.repository.appending(path: "Example/Retake")
         var files: [(URL, String)] = [(project.appending(path: "retake.json"), "retake")]
         for (folder, kind) in [("sets", "set"), ("scenes/iphone", "scene"), ("scenes/ipad", "scene"), ("edits", "edit")] {
             let url = project.appending(path: folder)
@@ -57,7 +57,7 @@ struct SchemaTests {
             ("the fixture", JSONWriter.write(TakeLogReadingTests.log(failure: "step 2 didn't run").json)),
             ("the timeline's", JSONWriter.write(TakeTimelineTests.timeline().log.json)),
         ]
-        let takes = Self.repository.appending(path: "Examples/Notes/Retake/output/takes")
+        let takes = Self.repository.appending(path: "Example/Retake/output/takes")
         let files = FileManager.default
         for type in DeviceType.allCases {
             let folder = takes.appending(path: type.rawValue)

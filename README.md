@@ -10,9 +10,9 @@ timeline to rebuild, and no guessing which frames you used last time.
 
 https://github.com/user-attachments/assets/416e4ecd-30a8-4cd1-bf05-2343f5dca131
 
-Every frame of the video above is Retake's: [the example app](Examples/Notes),
+Every frame of the video above is Retake's: [the example app](Example),
 recorded on an iPhone and an iPad, and cut for each from the one
-[`showcase`](Examples/Notes/Retake/edits/showcase.json) edit, which turns the iPad and puts a card
+[`showcase`](Example/Retake/edits/showcase.json) edit, which turns the iPad and puts a card
 in the iPhone's place.
 
 Retake's commands and files use five words:
@@ -144,7 +144,7 @@ retake record create-note share-note     # record takes
 retake cut video1                        # render the video, for each device type
 ```
 
-**The way to start is the example**, [`Examples/Notes`](Examples/Notes): a small notes app with no Retake code in
+**The way to start is the example**, [`Example`](Example): a small notes app with no Retake code in
 it, and its `Retake/` project, ready to run. Its sets start the app on a first launch and on a
 returning user's notes; its scenes, for iPhone and iPad, walk through getting started, writing a
 note, syncing and sharing it; and its edits cut them into a preview, `tour`, and into `showcase`,
@@ -152,11 +152,11 @@ the video above. From a fresh clone, with a device connected by USB, one script 
 Retake, signs the example with your team, and records and cuts it:
 
 ```sh
-Examples/Notes/run.sh
+Example/run.sh
 ```
 
-[Examples/README.md](Examples/README.md) says what it does, step by step. By hand, once
-`run.sh --setup` has signed it, from `Examples/Notes`:
+[Example/README.md](Example/README.md) says what it does, step by step. By hand, once
+`run.sh --setup` has signed it, from `Example`:
 
 ```sh
 retake install                           # builds the example, embeds Retake, installs it

@@ -65,7 +65,7 @@ struct TakeTimelineTests {
     }
 
     @Test func theExamplesAnchorsLandWhereTheyDidBeforeTheRuleChanged() throws {
-        let edits = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/Notes/Retake/edits")
+        let edits = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Example/Retake/edits")
         var anchors: [Anchor.StepAnchor] = []
         func collect(_ value: JSONValue) {
             switch value {

@@ -29,7 +29,7 @@ extension OnDevice {
         }
 
         @Test func theExampleGoesFromInstallToACut() throws {
-            let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/Notes").standardizedFileURL
+            let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Example").standardizedFileURL
             let work = FileManager.default.temporaryDirectory.appending(path: "RetakeEndToEnd-\(UUID().uuidString)", directoryHint: .isDirectory)
             defer { try? FileManager.default.removeItem(at: work) }
             let project = work.appending(path: "Retake", directoryHint: .isDirectory)

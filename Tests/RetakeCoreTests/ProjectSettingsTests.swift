@@ -79,7 +79,7 @@ struct ProjectSettingsTests {
     }
 
     @Test func theExamplesConfigurationReadsCleanly() throws {
-        let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/Notes/Retake/retake.json")
+        let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Example/Retake/retake.json")
         let text = try String(contentsOf: example, encoding: .utf8)
         let result = read(text)
         #expect(result.problems.isEmpty)
@@ -262,7 +262,7 @@ struct ProjectInitializerTests {
 
 struct FittingWriterTests {
     @Test func anEditLaidOutByHandIsWrittenBackTheSame() throws {
-        let url = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Examples/Notes/Retake/edits/tour.json")
+        let url = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Example/Retake/edits/tour.json")
         let text = try String(contentsOf: url, encoding: .utf8)
         #expect(JSONWriter.fitting(try JSONParser.parse(text)) == text)
     }

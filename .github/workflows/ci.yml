@@ -75,4 +75,4 @@ jobs:
           done
 
       - name: Check the scripts parse
-        run: for script in Scripts/*.sh Scripts/git-hooks/* Examples/Notes/run.sh; do bash -n "$script"; done
+        run: for script in Scripts/*.sh Scripts/git-hooks/* Example/run.sh; do bash -n "$script"; done

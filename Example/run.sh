@@ -2,12 +2,12 @@
 # Runs the Notes example from a fresh clone of Retake: builds retake and what it installs, signs
 # Notes with your team, installs it on the connected device, records its scenes, cuts its video,
 # and, once both an iPhone's and an iPad's are cut, shares the two side by side, small enough to
-# upload as the README's video. See Examples/README.md.
+# upload as the README's video. See Example/README.md.
 set -euo pipefail
 
 usage() {
     cat <<'EOF'
-Usage: Examples/Notes/run.sh [--team <id>] [--device <device>] [--setup | --cut-only] [--readme]
+Usage: Example/run.sh [--team <id>] [--device <device>] [--setup | --cut-only] [--readme]
 
   --team <id>        The development team to sign Notes with. Without it: the one already in
                      Config/Signing.local.xcconfig, then RETAKE_SIGNING_IDENTITY's, then the only
@@ -40,7 +40,7 @@ while (($#)); do
 done
 
 EXAMPLE="$(cd "$(dirname "$0")" && pwd)"
-ROOT="$(cd "$EXAMPLE/../.." && pwd)"
+ROOT="$(cd "$EXAMPLE/.." && pwd)"
 LOCAL="$EXAMPLE/Config/Signing.local.xcconfig"
 step() { printf '\n==> %s\n' "$*"; }
 fail() { echo "error: $*" >&2; exit 1; }
@@ -111,7 +111,7 @@ cd "$EXAMPLE"
 if $setup; then
     cat <<EOF
 
-Set up. From Examples/Notes, with a device connected by USB:
+Set up. From Example/, with a device connected by USB:
 
   alias retake="$retake"
   retake devices add ipad          # or iphone; names the connected device
