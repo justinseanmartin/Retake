@@ -44,9 +44,27 @@ jobs:
       - name: Build
         run: swift build --build-tests
 
+      # The event stream is written as each test starts and ends, so it outlasts a run that hangs.
       - name: Test
+        id: test
         timeout-minutes: 10
-        run: swift test --skip-build
+        run: |
+          swift test --skip-build \
+            --experimental-event-stream-output "$RUNNER_TEMP/events.jsonl" --experimental-event-stream-version 0
+
+      - name: Report test timings
+        if: always() && steps.test.outcome != 'skipped'
+        run: Scripts/test-timings.py "$RUNNER_TEMP/events.jsonl"
+
+      # A run that timed out is still running until the job ends; its stacks show where it's stuck.
+      - name: Sample the tests that hung
+        if: always() && steps.test.outcome == 'failure'
+        run: |
+          for pid in $(pgrep -f swiftpm-testing-helper); do
+            echo "::group::Stacks of swiftpm-testing-helper $pid"
+            sample "$pid" 3 -file "$RUNNER_TEMP/sample-$pid.txt" > /dev/null && cat "$RUNNER_TEMP/sample-$pid.txt"
+            echo "::endgroup::"
+          done
 
       - name: Check the scripts parse
         run: for script in Scripts/*.sh Scripts/git-hooks/* Examples/Notes/run.sh; do bash -n "$script"; done
