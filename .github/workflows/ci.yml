@@ -1,0 +1,78 @@
+# Builds Retake and runs its tests on every pull request and every push to main, with the Xcode
+# .xcode-version names. The device tests skip themselves, since no device is connected; the
+# reference tests fail when the checked-in schemas or reference drift from the types.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # macOS 26 with Xcode 27, which .xcode-version's 27.2 is among.
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select the Xcode .xcode-version names
+        run: |
+          WANTED="$(tr -d '[:space:]' < .xcode-version)"
+          APP="/Applications/Xcode_$WANTED.app"
+          if [[ ! -d "$APP" ]]; then
+            echo "::error::Xcode $WANTED isn't on this runner; it has: $(ls -d /Applications/Xcode_*.app | xargs -n1 basename | tr '\n' ' ')"
+            exit 1
+          fi
+          sudo xcode-select -s "$APP"
+          xcodebuild -version
+
+      - name: Cache the build
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: build-${{ runner.os }}-${{ hashFiles('.xcode-version', 'Package.resolved') }}-${{ github.sha }}
+          restore-keys: build-${{ runner.os }}-${{ hashFiles('.xcode-version', 'Package.resolved') }}-
+
+      - name: Build
+        run: swift build --build-tests
+
+      # swift test writes events.jsonl when it finishes. Until then each test product's event stream
+      # is in TMPDIR, written as each test starts and ends, so it outlasts a run that hangs.
+      - name: Test
+        id: test
+        timeout-minutes: 10
+        env:
+          TMPDIR: ${{ runner.temp }}
+        run: |
+          swift test --skip-build \
+            --experimental-event-stream-output "$RUNNER_TEMP/events.jsonl" --experimental-event-stream-version 0
+
+      - name: Report test timings
+        if: always() && steps.test.outcome != 'skipped'
+        run: |
+          if [[ -f "$RUNNER_TEMP/events.jsonl" ]]; then
+            Scripts/test-timings.py "$RUNNER_TEMP/events.jsonl"
+          else
+            Scripts/test-timings.py "$RUNNER_TEMP"/swiftpm-test-output-*/event-stream-*.jsonl
+          fi
+
+      # A run that timed out is still running until the job ends; its stacks show where it's stuck.
+      - name: Sample the tests that hung
+        if: always() && steps.test.outcome == 'failure'
+        run: |
+          for pid in $(pgrep -f swiftpm-testing-helper); do
+            echo "::group::Stacks of swiftpm-testing-helper $pid"
+            sample "$pid" 3 -file "$RUNNER_TEMP/sample-$pid.txt" > /dev/null && cat "$RUNNER_TEMP/sample-$pid.txt"
+            echo "::endgroup::"
+          done
+
+      - name: Check the scripts parse
+        run: for script in Scripts/*.sh Scripts/git-hooks/* Examples/Notes/run.sh; do bash -n "$script"; done
