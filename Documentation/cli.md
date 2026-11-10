@@ -616,6 +616,11 @@ such as `Captures of 1170×2532 are App Store Connect's size for iPhone with Fac
 display). App Store Connect requires iPhone with Dynamic Island (medium display) screenshots,
 1179×2556 or 1206×2622, and scales them down for the other displays.`
 
+A capture is only as large as the device's screen, so it's often not a size App Store Connect
+takes. Resized, it can still be framed in a device's chrome for marketing. Retake isn't purpose
+built specifically for App Store screenshots at exact sizes, which a tool made for them, such as
+[Goldie](https://github.com/software-mansion-labs/goldie), serves better.
+
 Since a stutter or a hitch still counts as success, the take a retake replaces is kept as the
 previous one: when the new take came out worse, [`retake takes --restore <scene>`](#retake-takes)
 puts it back.

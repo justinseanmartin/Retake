@@ -1,21 +1,11 @@
 # Retake
 
-Retake makes App Store preview videos and screenshots from your running iOS app, and makes them
-again whenever the app changes.
+**App Store preview videos, recorded on real iOS devices and edited to keep up with your app.**
 
-You write down a walk through your app once, as a **scene**, starting from a known state, its
-**set**. Retake plays the scene on a real device while the Mac records the screen, giving you a
-**take**. You describe the video you want cut from your takes as an **edit**: which stretches to
-keep, how fast they play, and the captions, touches, spotlights, sound and music over them. Retake
-renders the edit into a video ready to upload to App Store Connect.
-
-When the app changes, you record the scenes again and render the same edits. There's no screen
-recording by hand, no editing timeline to rebuild, and no guessing which frames you used last time.
-
-The same scenes take your screenshots: a **`capture`** step saves the screen as a PNG at its own
-resolution, so the screenshots for App Store Connect come
-from the same walk through the app, and are taken again with it. See
-[Captures](#captures-screenshots-from-the-same-scenes).
+Retake records your app on a USB-connected iPhone or iPad and turns the recordings into finished
+videos, for App Store Connect or for sharing, with captions, touches, spotlights, cards,
+transitions, sound and music. When the app changes, it records and renders them again from the
+same files, so a video you've tweaked until it's just right stays right through the next release.
 
 https://github.com/user-attachments/assets/416e4ecd-30a8-4cd1-bf05-2343f5dca131
 
@@ -23,6 +13,58 @@ Every frame of [the showcase](Documentation/media/showcase.mp4) is Retake's: the
 recorded on an iPhone and an iPad, and cut for each from the one
 [`showcase`](Examples/Notes/Retake/edits/showcase.json) edit, which turns the iPad and puts a card
 in the iPhone's place.
+
+A video is made of five things, each a word Retake's commands and files use:
+
+- A **set** defines the app's state before recording: its files, user defaults, launch arguments
+  and environment.
+- A **scene** is a walk through the app, starting from a set, which Retake plays and records on the
+  device.
+- A **take** is a scene's recording: the movie, with a step log of when each step happened, where
+  each touch landed and what was on screen.
+- An **edit** defines how takes are mixed into a finished video: which stretches to keep, how fast
+  they play, and what's laid over them.
+- A **cut** is that finished video, rendered from an edit's takes, ready to upload or share.
+
+**How you use it.** Start your favorite coding agent in your app's repository and ask it to
+integrate Retake. Then describe the flows you want recorded, the state each one starts from, and
+what you want each video to emphasize. The agent writes the sets, composes the scenes on your
+device, records the takes, writes the edits and renders the cuts. Watch what it made, and keep
+asking for changes to the scenes and edits until the video looks just how you want it.
+
+What sets Retake apart:
+
+- **Recorded on real hardware.** Anything that animates renders best on the device itself, and a
+  simulator recording stutters where a preview needs to be smooth. Retake records the device's
+  screen and sound over USB, at the rate the device sends them, and watches the app's main thread
+  for missed frames, warning of the hitches a take or a cut would show.
+- **The same starting state, every take.** Every take of a scene starts from its set, put in place
+  before the app launches, with nothing added to your project, so what changes between takes is
+  the app, not its data.
+- **Edits anchored to steps, not seconds.** An edit cuts on the scene's steps, such as 0.2 s before
+  a sheet appears, rather than on timestamps. When an animation that took 700 ms takes 950 ms in the
+  next build, or on the iPad, the same edit still lines up.
+- **Videos as build artifacts.** Scenes, sets and edits are JSON files kept with your code. When the
+  app changes, record the scenes again and render the same edits: there's no screen recording by
+  hand, no editing timeline to rebuild, and no guessing which frames you used last time.
+
+**Made to be driven by a coding agent.** Everything Retake does is a command or a file an agent can
+work with. `retake compose <scene> --json` builds a scene on the device a step at a time, answering
+each action with what ran, what failed and why, and what's on screen now. Every file has a
+[JSON Schema](#schemas), which `retake schema` prints and `retake validate` checks a project
+against, and the commands that report something take `--json`. A clip's `intent` says what it's
+there to show, so whoever changes the video later, you or an agent, knows what each moment is for.
+
+**The effects are limited, for now.** Captions, touches, spotlights, blurs, cards, turns and
+cross-fades each take a handful of options, not full control of their style, and there are no
+other kinds yet. Pull requests that add capability are welcome, or fork it and go wild.
+
+**Stills, too, though Retake isn't purpose built specifically for App Store screenshots.** A
+**`capture`** step saves the screen as a PNG at the device's own resolution, taken again with the
+scene. That's often not a size App Store Connect takes screenshots in, but a still can be resized
+and framed in a device's chrome for marketing pages; see
+[Captures](#captures-stills-from-the-same-scenes). For App Store screenshots at exact sizes, a tool
+made for them, such as [Goldie](https://github.com/software-mansion-labs/goldie), serves better.
 
 > **Status:** an early release, 0.0.1. Retake is an experiment in making a general tool of
 > something built twice before, for two apps' App Store previews on iPhone and iPad, and it makes
@@ -43,7 +85,7 @@ in the iPhone's place.
 - [Sets: the state a take starts from](#sets-the-state-a-take-starts-from) ([`state`](#state-clean-cloned-or-live))
 - [Scenes: the walk through the app](#scenes-the-walk-through-the-app)
 - [Takes: footage and a step log](#takes-footage-and-a-step-log)
-- [Captures: screenshots from the same scenes](#captures-screenshots-from-the-same-scenes)
+- [Captures: stills from the same scenes](#captures-stills-from-the-same-scenes)
 - [Edits: the video cut from the takes](#edits-the-video-cut-from-the-takes)
 - [What's recorded in each file](#whats-recorded-in-each-file)
 - [Devices](#devices)
@@ -365,7 +407,7 @@ Each step does one thing, led by what it does:
   and in the app, so set it in Retake's environment and in the set's `environment`.
 - **`capture`** saves the screen as a still, by the name it gives, as it is when the step before has
   ended and held; see
-  [captures](#captures-screenshots-from-the-same-scenes). Each capture in a scene has a name of its
+  [captures](#captures-stills-from-the-same-scenes). Each capture in a scene has a name of its
   own, of letters, digits, `-`, `_` and `.`, and none is in `setup`, which isn't recorded.
 
 After what it does, a step can give its `hold`, the pause after it, so the take has room to breathe;
@@ -478,7 +520,7 @@ and the longest, saying whether the longest came while a step was being played, 
 any a clip plays, the lead-in's included. Only hitches as long as `retake.json`'s `hitchWarning`,
 50 ms unless it says otherwise, are warned of.
 
-## Captures: screenshots from the same scenes
+## Captures: stills from the same scenes
 
 A scene's **`capture`** step saves the screen as a still, a PNG named for the step, as `record`
 plays the scene:
@@ -534,6 +576,13 @@ a step like any other in the take, which an edit can anchor to.
 that capture with the device's screen open but not recorded, without their lead-in and tail, and
 leaves their takes alone. With no scene named, it takes the captures of each scene that captures
 and has none yet, or with `--force`, every one.
+
+**A capture may not be the right size for App Store Connect.** A still is only as large as the
+device's screen, and App Store Connect takes screenshots only in exact sizes, which few devices'
+screens match. Resized, a still can still serve for marketing, framed in a device's chrome. Retake
+isn't purpose built specifically for App Store screenshots: for screenshots at exact sizes, a tool
+made for them, such as [Goldie](https://github.com/software-mansion-labs/goldie),
+or snapshot tests of an app staged for them, will serve you better.
 
 `record` says, for each size it captured, whether it's a size App Store Connect takes screenshots
 in, for which display, and when that isn't the display it requires, which that is. App Store
