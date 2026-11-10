@@ -231,7 +231,7 @@
           "description": "An accessibility activation of an element, with no touch, for getting somewhere off camera."
         },
         "orientation": {
-          "description": "Turns the device, with no hand on it; the step ends when the app has turned.",
+          "description": "Turns the device, with no hand on it; the step ends when the app has turned and the device has drawn the rotation.",
           "type": "string",
           "enum": [
             "portrait",

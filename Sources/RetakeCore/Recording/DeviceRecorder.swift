@@ -16,6 +16,13 @@ public final class DeviceRecorder: NSObject, AVCaptureVideoDataOutputSampleBuffe
     /// a second whether or not it changes, so the last is at most a sixtieth of a second old.
     private var latest: CVPixelBuffer?
 
+    /// The last frame's samples, and each recent frame's arrival and difference from the one before,
+    /// for `RotationWatch`; kept only while a turn is watched for.
+    private var samples: [UInt8]?
+    private var motion: [(at: Double, difference: Double)] = []
+    /// When a turn was last asked for, which frames are watched from until it's drawn.
+    private var turnAsked: Double?
+
     /// How long a capture waits for the first frame, when none has come yet.
     public static let firstFrameTimeout = 5.0
 
@@ -125,6 +132,22 @@ public final class DeviceRecorder: NSObject, AVCaptureVideoDataOutputSampleBuffe
         queue.sync {
             self.facing = facing
             writer?.facing = facing
+            turnAsked = ProcessInfo.processInfo.systemUptime
+            motion = []
+        }
+    }
+
+    /// Waits for the rotation of the turn last asked for to finish, as `RotationWatch` decides.
+    public func rotated() async {
+        while true {
+            let (asked, motion) = queue.sync { (turnAsked, motion) }
+            guard let asked, !RotationWatch.isOver(motion, asked: asked, now: ProcessInfo.processInfo.systemUptime) else { break }
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        queue.sync {
+            turnAsked = nil
+            motion = []
+            samples = nil
         }
     }
 
@@ -141,7 +164,14 @@ public final class DeviceRecorder: NSObject, AVCaptureVideoDataOutputSampleBuffe
     }
 
     public func captureOutput(_ output: AVCaptureOutput, didOutput sample: CMSampleBuffer, from _: AVCaptureConnection) {
-        if output === videoOutput, let pixels = sample.imageBuffer { latest = pixels }
+        if output === videoOutput, let pixels = sample.imageBuffer {
+            latest = pixels
+            if turnAsked != nil {
+                let samples = RotationWatch.samples(pixels)
+                motion.append((ProcessInfo.processInfo.systemUptime, self.samples.map { RotationWatch.difference($0, samples) } ?? 0))
+                self.samples = samples
+            }
+        }
         guard let writer else { return }
         if output === videoOutput {
             writer.appendVideo(sample)

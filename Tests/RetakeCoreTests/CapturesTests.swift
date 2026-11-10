@@ -45,6 +45,23 @@ struct CapturesTests {
         #expect(bytes[4] > 240 && bytes[5] < 15 && bytes[6] < 15)
     }
 
+    @Test func aRotationIsOverOnceTheScreenStopsMovingOrIfItNeverStarts() {
+        // As measured on an iPad: still, then the turn from 0.37 s to 0.75 s, then the still screen's noise.
+        var frames = stride(from: 0.0, to: 0.37, by: 1.0 / 60).map { (at: $0, difference: 0.3) }
+        frames.append((0.37, .infinity))
+        frames += stride(from: 0.39, to: 0.75, by: 1.0 / 60).map { (at: $0, difference: 8.0) }
+        frames += stride(from: 0.75, to: 2, by: 1.0 / 60).map { (at: $0, difference: 0.6) }
+        func over(_ now: Double) -> Bool { RotationWatch.isOver(frames.filter { $0.at <= now }, asked: 0, now: now) }
+        #expect(!over(0.3), "not yet started")
+        #expect(!over(0.8), "moved a moment ago")
+        #expect(over(0.92))
+        #expect(RotationWatch.isOver([(0.1, 0.4), (0.5, 0.5)], asked: 0, now: 2.0), "nothing turned on screen")
+        #expect(!RotationWatch.isOver([(0.1, 0.4)], asked: 0, now: 1.9))
+        #expect(RotationWatch.isOver([(2.9, 9.0)], asked: 0, now: 3.0), "an app that keeps moving isn't waited on for ever")
+        #expect(RotationWatch.difference([1, 0, 0, 0, 2, 0, 0, 0, 10, 20], [1, 0, 0, 0, 2, 0, 0, 0, 12, 20]) == 1)
+        #expect(RotationWatch.difference([1, 0, 0, 0, 2, 0, 0, 0, 10, 20], [2, 0, 0, 0, 1, 0, 0, 0, 10, 20]) == .infinity, "a turned frame")
+    }
+
     /// A PNG `width` by `height` with an alpha channel, in Display P3, as an iPhone's screenshot is.
     static func screenshot(width: Int, height: Int) throws -> Data {
         let space = CGColorSpace(name: CGColorSpace.displayP3)!

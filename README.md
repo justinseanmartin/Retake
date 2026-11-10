@@ -355,7 +355,9 @@ Each step does one thing, led by what it does:
 - **`activate`** is an accessibility activation of an element, with no touch, for getting somewhere
   off camera.
 - **`orientation`** turns the device, to `portrait`, `portrait-upside-down`, `landscape-left` or
-  `landscape-right`, with no hand on it, and ends when the app has turned.
+  `landscape-right`, with no hand on it, and ends when the app has turned and the device has drawn
+  the rotation: while `record` has its screen, once the screen stops moving; otherwise, as when
+  composing, a second and a half after the turn.
 - **`waitFor`** waits until an element is on screen, or with `"gone": true` until it isn't, for up
   to `timeout` seconds, 10 unless given. The step fails if it doesn't happen. The Button Heist waits
   at most 60 seconds, so a longer `timeout` is refused when the scene is read, unless
@@ -509,10 +511,9 @@ filmed in instead.
 
 The step takes the screen as the step before left it, once that step has ended and its hold is
 over, without waiting for it to settle, which a screen with a looping animation never does. A step
-ends once The Button Heist sees the app settle, so most need no hold before a capture; one whose
-screen goes on moving after it ends needs a `hold` long enough for it to come to rest, such as a
-turn, which ends once the app has laid itself out, while the device is still drawing the rotation,
-or a timed animation the app starts.
+ends once The Button Heist sees the app settle, and a turn once the device has drawn it, so most
+need no hold before a capture; one whose screen goes on moving after it ends, such as a timed
+animation the app starts, needs a `hold` long enough for it to come to rest.
 
 **A capture takes 1 to 2 seconds**, as long as the device takes to answer `devicectl`, and the app
 waits on that screen for all of it. A take recorded with its captures shows that as a still stretch

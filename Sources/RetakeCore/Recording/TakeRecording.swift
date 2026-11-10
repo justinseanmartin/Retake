@@ -91,6 +91,7 @@ public enum TakeRecording {
             report(event)
         }
         player.turning = { recorder.turning(to: TakeWriter.Facing($0)) }
+        player.rotated = { await recorder.rotated() }
         let captures = project.captures(for: type)
         let hasCaptures = scene.steps.contains { $0.action?.capture != nil }
         CaptureStore.discardRecording(of: target.scene, in: captures)
@@ -225,6 +226,8 @@ public enum TakeRecording {
         )
         var player = player
         player.capturing = { name throws(RetakeError) in try await taker.take(name) { () throws(RetakeError) in try await recorder.frame() } }
+        player.turning = { recorder.turning(to: TakeWriter.Facing($0)) }
+        player.rotated = { await recorder.rotated() }
         defer { recorder.close() }
         try await AppSession.run(name, in: project, set: set, scene: scene, on: device, report: player.report, cleanUp: cleanUp) { driver, _ throws(RetakeError) in
             try await player.play(scene, named: name, on: driver) { () throws(RetakeError) in try await recorder.open() }

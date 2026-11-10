@@ -123,7 +123,7 @@ extension SceneFile {
                 .init("into", .ref("element", "The element to type into; the field already being typed in when not given.")),
             ], required: ["text"])),
             .init("activate", .ref("element", "An accessibility activation of an element, with no touch, for getting somewhere off camera.")),
-            .init("orientation", orientation.described("Turns the device, with no hand on it; the step ends when the app has turned.")),
+            .init("orientation", orientation.described("Turns the device, with no hand on it; the step ends when the app has turned and the device has drawn the rotation.")),
             .init("waitFor", Schema.object(
                 "Waits until an element is on screen, or with gone until it isn't. The step fails if it doesn't happen in time.",
                 elementProperties + [

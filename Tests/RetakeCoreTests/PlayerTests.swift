@@ -315,7 +315,18 @@ struct PlayerTests {
         let time = FakeTime()
         try await time.player().play(SceneFile(steps: [Step(.orientation(.landscapeLeft))]), named: "turn", on: driver)
         #expect(driver.done == ["look", "turn landscape-left", "look", "look", "look", "look"])
-        #expect(time.pauses.count == 3)
+        #expect(time.pauses.count == 4, "three looks, then the rest of the rotation, with no screen to watch it on")
+        #expect(abs(time.pauses[3] - (Player.rotationTime - 3 * Player.turnPollInterval)) < 1e-9 && abs(time.now - Player.rotationTime) < 1e-9)
+    }
+
+    @Test func aTurnWaitsForTheRotationOnTheScreenWhenItsWatched() async throws {
+        let driver = FakeDriver()
+        driver.screens = [screen(width: 834), screen(width: 834), screen(width: 1194), screen(width: 1194)]
+        let time = FakeTime(), watched = Readings()
+        var player = time.player()
+        player.rotated = { watched.names.append("rotated") }
+        try await player.play(SceneFile(steps: [Step(.orientation(.landscapeLeft))]), named: "turn", on: driver)
+        #expect(watched.names == ["rotated"] && time.pauses.count == 2, "only the looks: the screen says when the rotation's over")
     }
 
     @Test func aLoopingAnimationDoesntKeepATurnFromSettlingNorPassForOne() {
