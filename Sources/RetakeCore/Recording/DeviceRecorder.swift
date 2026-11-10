@@ -2,7 +2,8 @@ import AVFoundation
 import Foundation
 
 /// Records a USB-connected device's screen and sound, as QuickTime's "New Movie Recording" does: at
-/// the device's own size and frame rate, with nothing shown on the device. See README.md, "Takes".
+/// the size and frame rate the device sends, which on some iPads is less than its screen's, with
+/// nothing shown on the device. See README.md, "Takes".
 public final class DeviceRecorder: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureAudioDataOutputSampleBufferDelegate, @unchecked Sendable {
     private let session = AVCaptureSession()
     private let videoOutput = AVCaptureVideoDataOutput()

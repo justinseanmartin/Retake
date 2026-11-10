@@ -428,9 +428,11 @@ whatever is on screen, so a system alert that appears unasked is in the take. Th
 ## Takes: footage and a step log
 
 `retake record` records a USB-connected device's screen and sound the way QuickTime's "New Movie
-Recording" does: at the device's own resolution and frame rate, with no prompt or recording
-indicator on the device. The app plays on the device's screen as usual, but its sound comes through
-the Mac while it's recorded, rather than the device's speaker.
+Recording" does: at the resolution and frame rate the device sends its screen in, with no prompt or
+recording indicator on the device. That's the screen's own resolution on an iPhone, but not on every
+iPad: an iPad Pro (11-inch) (3rd generation) sends its 1668×2388 screen as 1200×1718. The app plays
+on the device's screen as usual, but its sound comes through the Mac while it's recorded, rather
+than the device's speaker.
 
 Each take is a movie and a step log: when each step started and ended on the movie's own clock,
 where each touch landed, and the elements on screen after each step, with their labels and frames.
