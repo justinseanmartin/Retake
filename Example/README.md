@@ -116,7 +116,7 @@ From the repository's root:
    Xcode, the device, signing, the installed app, and a launch.
 
 4. Once it's cut on both an iPhone and an iPad, share the two side by side, small enough to post,
-   as `run.sh` does: the iPhone's on the left, with the iPad's sound, on a grey that stands apart
+   as `run.sh` does: the iPhone's on the left, with the iPad's sound, on a gray that stands apart
    from the edit's navy:
 
    ```sh

@@ -154,7 +154,7 @@ fi
 step "Cutting $edit"
 "$retake" cut "$edit" --type "$type"
 
-# Both devices' cuts side by side, the iPhone's on the left, with the iPad's sound, on a grey that
+# Both devices' cuts side by side, the iPhone's on the left, with the iPad's sound, on a gray that
 # stands apart from the edit's own navy, so the montage and the credit don't run into the gutters.
 both="Retake/output/share/$edit-iphone+$edit-ipad.mp4"
 if [[ -f "Retake/output/cuts/iphone/$edit/$edit-iphone-master.mov" && -f "Retake/output/cuts/ipad/$edit/$edit-ipad-master.mov" ]]; then

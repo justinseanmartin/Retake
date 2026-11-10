@@ -205,7 +205,7 @@ public struct ClipFraming: Equatable, Sendable {
         }
     }
 
-    /// The transform that turns a frame of `size` a quarter clockwise (90) or anticlockwise (-90), or
+    /// The transform that turns a frame of `size` a quarter clockwise (90) or counterclockwise (-90), or
     /// not at all, keeping it in the positive quadrant, with y running down, as frames do.
     static func quarterTurn(_ degrees: Int, of size: CGSize) -> CGAffineTransform {
         switch degrees {

@@ -288,7 +288,7 @@ CASES = [
     # The take's start and end need no edge, and keep an "end" they give.
     ('{"a": {"step": "start", "offset": 5}, "b": {"step": "end", "offset": -1, "edge": "start"}, "c": {"step": "end", "edge": "end"}}',
      '{"a": {"step": "start", "offset": 5}, "b": {"step": "end", "offset": -1}, "c": {"step": "end", "edge": "end"}}'),
-    # A step without an offset, as a touch colour names one, is left alone.
+    # A step without an offset, as a touch color names one, is left alone.
     ('{"touchColors": [{"step": 2, "color": "#FFFFFF"}]}', '{"touchColors": [{"step": 2, "color": "#FFFFFF"}]}'),
 ]
 

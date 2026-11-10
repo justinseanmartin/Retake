@@ -21,10 +21,10 @@ the one it overrides key by key; a list, or a single value, replaces it. At the 
 | `music` | [music](#music) |  |  |
 | `tapSound` | [tap-sound](#tap-sound) |  |  |
 | `takeAudioVolume` | number ≥ 0 | `1` | The level of the take's own sound, where a clip plays it. |
-| `background` | [color](#color) | `"#000000"` | The colour of letterbox bands, and of the corners a turn uncovers. |
+| `background` | [color](#color) | `"#000000"` | The color of letterbox bands, and of the corners a turn uncovers. |
 | `turns` | `"letterboxed"` or `"device"` | `"letterboxed"` | How the video shows the device turning. letterboxed: the app stays upright, landscape letterboxed on the canvas. device: the video stays in the device's frame. |
 | `turnBlur` | [turn-blur](#turn-blur) |  |  |
-| `touchColor` | [color](#color) | `"#FFFFFF"` | The colour touches are drawn in: a filled ring, its fill at 45% of the colour's opacity and its rim at 90%. |
+| `touchColor` | [color](#color) | `"#FFFFFF"` | The color touches are drawn in: a filled ring, its fill at 45% of the color's opacity and its rim at 90%. |
 | `clips` | list of [clip](#clip), at least 1 | required |  |
 
 ## Definitions
@@ -44,8 +44,8 @@ A stretch of a take, played in order.
 | `crossfade` | number ≥ 0 | `0` | Seconds it cross-fades in over the clip before. |
 | `audioCrossfade` | number ≥ 0 |  | Seconds the sound cross-fades over, when longer than crossfade, which the picture still cross-fades over: the clip before's take sound fades out over this long before that clip ends, and this clip's starts as it does, this minus crossfade ahead of the picture and from as far before `from` in the take, fading in until the clip before ends. Each side fades so even when the other plays no take sound. The clip's sound starts no earlier than its take, or the clip before, does. |
 | `touches` | boolean | `true` | Draws the take's touches, from the step log. |
-| `touchColor` | [color](#color) |  | The colour of the clip's touches; the edit's touchColor when not given. |
-| `touchColors` | list of [object](#cliptouchcolors) |  | Colours for single touches, over the clip's or the edit's. |
+| `touchColor` | [color](#color) |  | The color of the clip's touches; the edit's touchColor when not given. |
+| `touchColors` | list of [object](#cliptouchcolors) |  | Colors for single touches, over the clip's or the edit's. |
 | `takeAudio` | boolean | `false` | Plays the take's own sound with the clip. |
 | `captions` | list of [caption](#caption) |  |  |
 | `sounds` | list of [sound](#sound) |  | Sound effects, played at normal speed however fast the clip plays. |
@@ -54,7 +54,7 @@ A stretch of a take, played in order.
 | `stills` | list of [still](#still) |  | Frames of other takes, popped in over the clip. |
 | `stillsIn` | [anchor](#anchor) |  | When the first still pops in, the rest following one after another, 0.22 s apart; 0.35 s into the clip when not given. |
 | `stillsOut` | [anchor](#anchor) |  | When the stills pop out, one after another in the order they popped in; they stay to the clip's end when not given. |
-| `stillsBackground` | [color](#color) |  | A colour filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture. |
+| `stillsBackground` | [color](#color) |  | A color filling the canvas behind the stills, fading in as the first pops in, so they stand on it rather than on the clip's picture. |
 | `card` | [card](#card) |  |  |
 | `devices` | list of `"iphone"` or `"ipad"`, at least 1, each once |  | The device types whose videos play it; every one of the edit's when not given. |
 | `turns` | `"letterboxed"` or `"device"` |  | How this clip shows the device turning; the edit's turns when not given. |
@@ -74,7 +74,7 @@ Text over the video, from its from to its to.
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `text` | string, not empty | required |  |
-| `y` | number from 0 to 1 | required | Its centre, as a share of the video's height: 0 at the top, 1 at the bottom. |
+| `y` | number from 0 to 1 | required | Its center, as a share of the video's height: 0 at the top, 1 at the bottom. |
 | `color` | [color](#color) | required |  |
 | `from` | [anchor](#anchor) |  | When it starts; once its clip has faded in when not given. |
 | `to` | [anchor](#anchor), or [caption-end](#caption-end) |  | When it ends: an anchor in its clip's take, or, naming a later clip, in that clip's take; as the next clip starts to fade in when not given. |
@@ -108,7 +108,7 @@ Turns the symbol.
 
 ### card
 
-A colour covering the clip's picture, and everything drawn over it but its captions, for a card between clips: over the whole clip, fading in and out with the cross-fades either side, or from its from to its to.
+A color covering the clip's picture, and everything drawn over it but its captions, for a card between clips: over the whole clip, fading in and out with the cross-fades either side, or from its from to its to.
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -137,7 +137,7 @@ Dims the rest of the screen around an element or a rectangle, with a pulsing rin
 | `part` | [part](#part) |  |  |
 | `rect` | [rect](#rect) |  |  |
 | `padding` | number ≥ 0 | `8` | Points of space around it. |
-| `color` | [color](#color) | `"#FFFFFF"` | The ring's colour. |
+| `color` | [color](#color) | `"#FFFFFF"` | The ring's color. |
 | `from` | [anchor](#anchor) |  | When it starts; the clip's from when not given. |
 | `to` | [anchor](#anchor) |  | When it ends; the clip's to when not given. |
 
@@ -230,7 +230,7 @@ A step, and where to go from it.
 | --- | --- | --- | --- |
 | `step` | string, not empty, or integer, not 0 | required | A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene. |
 | `offset` | number |  | Seconds from the step's start, or its end with edge end: forward when positive, back when negative; 0 is that edge itself. |
-| `fraction` | number from -1 to 1 |  | A share of the way from the step's start, or its end with edge end, to the neighbouring step: forward when positive, to the next step's start, back when negative, to the previous step's end. |
+| `fraction` | number from -1 to 1 |  | A share of the way from the step's start, or its end with edge end, to the neighboring step: forward when positive, to the next step's start, back when negative, to the previous step's end. |
 | `edge` | `"start"` or `"end"` |  | Which of the step's edges the anchor is at, and counts its offset or fraction from: start, the default, or end. |
 
 ### caption-end
@@ -242,7 +242,7 @@ A later clip, by its id, and an anchor in that clip's take; as that clip's next 
 | `clip` | string, not empty | required | The later clip's id. |
 | `step` | string, not empty, or integer, not 0 |  | A step's id, its number counted from 1, a negative number counting back from the last (-1 is the last), or start or end, the take's own first and last frames. Prefer the id, which survives steps being added to the scene. |
 | `offset` | number |  | Seconds from the step's start, or its end with edge end: forward when positive, back when negative; 0 is that edge itself. |
-| `fraction` | number from -1 to 1 |  | A share of the way from the step's start, or its end with edge end, to the neighbouring step: forward when positive, to the next step's start, back when negative, to the previous step's end. |
+| `fraction` | number from -1 to 1 |  | A share of the way from the step's start, or its end with edge end, to the neighboring step: forward when positive, to the next step's start, back when negative, to the previous step's end. |
 | `edge` | `"start"` or `"end"` |  | Which of the step's edges the anchor is at, and counts its offset or fraction from: start, the default, or end. |
 
 ### element
@@ -262,6 +262,6 @@ Gives at least one of `label`, `value`, `identifier`, `hint` and `traits`.
 
 ### color
 
-A colour: #RRGGBB, or #RRGGBBAA with its opacity.
+A color: #RRGGBB, or #RRGGBBAA with its opacity.
 
 Type: string matching `^#([0-9A-Fa-f]{6}\|[0-9A-Fa-f]{8})$`.

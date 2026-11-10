@@ -40,11 +40,11 @@ public struct Edit: Equatable, Sendable {
     public var tapSound: Sound?
     /// The level of the take's own sound, where a clip plays it.
     public var takeAudioVolume: Double
-    /// The colour of letterbox bands and of the corners a turn uncovers.
+    /// The color of letterbox bands and of the corners a turn uncovers.
     public var background: Color
     public var turns: Turns
     public var turnBlur: TurnBlur?
-    /// The colour touches are drawn in, unless a clip or a touch gives its own.
+    /// The color touches are drawn in, unless a clip or a touch gives its own.
     public var touchColor: Color
     public var clips: [Clip]
 
@@ -120,9 +120,9 @@ public struct Edit: Equatable, Sendable {
         /// cross-fade: this clip's take sound starts the difference ahead of its picture.
         public var audioCrossfade: Double?
         public var touches: Bool
-        /// The colour of this clip's touches; the edit's when nil.
+        /// The color of this clip's touches; the edit's when nil.
         public var touchColor: Color? = nil
-        /// Colours for single touches, by the step that made them, over the clip's or the edit's.
+        /// Colors for single touches, by the step that made them, over the clip's or the edit's.
         public var touchColors: [TouchColor] = []
         public var takeAudio: Bool
         public var captions: [Caption]
@@ -130,13 +130,13 @@ public struct Edit: Equatable, Sendable {
         public var spotlight: Spotlight?
         public var blurs: [Blur]
         public var stills: [Still]
-        /// A colour filling the canvas behind the stills, over the clip's picture; none when nil.
+        /// A color filling the canvas behind the stills, over the clip's picture; none when nil.
         public var stillsBackground: Color? = nil
         /// When the first still pops in, the rest one after another; a moment into the clip when nil.
         public var stillsIn: Anchor? = nil
         /// When the stills pop out, one after another; they stay to the clip's end when nil.
         public var stillsOut: Anchor? = nil
-        /// A colour covering the picture, for a card between clips; none when nil.
+        /// A color covering the picture, for a card between clips; none when nil.
         public var card: Card? = nil
         /// The edit's when nil.
         public var turns: Turns?
@@ -148,7 +148,7 @@ public struct Edit: Equatable, Sendable {
         public static let defaultTakeAudio = false
     }
 
-    /// A colour covering the clip's picture, and what's drawn over it but its captions: a card,
+    /// A color covering the clip's picture, and what's drawn over it but its captions: a card,
     /// fading in and out with the cross-fades either side, or over its own stretch.
     public struct Card: Equatable, Sendable {
         public var color: Color
@@ -165,7 +165,7 @@ public struct Edit: Equatable, Sendable {
 
     public struct Caption: Equatable, Sendable {
         public var text: String
-        /// The caption's centre, as a share of the video's height from the top.
+        /// The caption's center, as a share of the video's height from the top.
         public var y: Double
         public var color: Color
         /// The clip's `from` when nil.
@@ -269,7 +269,7 @@ public struct Edit: Equatable, Sendable {
     }
 }
 
-/// A colour, from `#RRGGBB` or `#RRGGBBAA`.
+/// A color, from `#RRGGBB` or `#RRGGBBAA`.
 public struct Color: Equatable, Sendable, CustomStringConvertible {
     public var red, green, blue, alpha: Double
 

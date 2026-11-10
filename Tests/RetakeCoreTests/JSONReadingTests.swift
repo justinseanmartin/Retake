@@ -144,7 +144,7 @@ struct JSONReaderTests {
         (#"{"clips": {"take": "a"}}"#, "edits/video1.json: clips: expected a list, found an object"),
         (#"{"clips": [{"take": "a", "spead": 1}]}"#, #"edits/video1.json: clips[0]: unknown key "spead"; did you mean "speed"?"#),
         (#"{"clips": [{"take": "a", "Speed": 1}]}"#, #"edits/video1.json: clips[0]: unknown key "Speed"; did you mean "speed"?"#),
-        (#"{"clips": [{"take": "a", "colour": 1}]}"#, #"edits/video1.json: clips[0]: unknown key "colour""#),
+        (#"{"clips": [{"take": "a", "color": 1}]}"#, #"edits/video1.json: clips[0]: unknown key "color""#),
         (#"{"clips": [{"take": "a", "take": "b"}]}"#, #"edits/video1.json: clips[0]: "take" is given more than once"#),
         (#"{"clips": [], "clips": []}"#, #"edits/video1.json: "clips" is given more than once"#),
         (#"{"clips": [{"take": "a"}],}"#, "edits/video1.json: isn't valid JSON: line 1, column 27: expected a key after \",\"; JSON has no trailing commas"),

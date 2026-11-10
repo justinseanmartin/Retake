@@ -121,7 +121,7 @@ public enum MovieInfo: Equatable, Sendable {
         return spans
     }
 
-    /// What `info` prints for people: a heading, then a labelled line for each part of the record.
+    /// What `info` prints for people: a heading, then a labeled line for each part of the record.
     public var lines: [String] {
         let record = json
         func string(_ keys: String...) -> String? { record[path: keys]?.stringValue }

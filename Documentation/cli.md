@@ -364,7 +364,7 @@ builds, and finds the `.app` from the build's settings. Signing is the project's
 configuration works, so long as it's development-signed for the device; `Debug` is the default
 because it usually is.
 
-It builds with the compiler's optimisation on, whatever the configuration says (Swift at `-O`, C and
+It builds with the compiler's optimization on, whatever the configuration says (Swift at `-O`, C and
 Objective-C at `-Os`), since a preview should show the app running as fast as it does for its users,
 and a Debug build at `-Onone` can stutter where a release wouldn't. The configuration is otherwise
 the same, so `#if DEBUG` code, and the launch flags a set turns on, still work. `--no-optimize` (or
@@ -823,7 +823,7 @@ second, with AAC stereo sound, at about 1.2 Mbps for two clips:
 
 - One clip alone is 720 pixels wide.
 - Clips side by side are each 960 pixels tall, with 24-pixel gutters around and between them in
-  `--background`'s colour, `#RRGGBB`, black unless given; all of it shrunk to fit 1920 pixels wide.
+  `--background`'s color, `#RRGGBB`, black unless given; all of it shrunk to fit 1920 pixels wide.
   At most 4 clips are joined, past which each is too small to make out on a phone.
 
 A video plays as long as its longest clip, and a clip that ends sooner holds its last frame. Its

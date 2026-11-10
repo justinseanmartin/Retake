@@ -245,7 +245,7 @@
             "maxItems": 2
           },
           "turn": {
-            "description": "Degrees clockwise the frames are turned to fit the movie's size: 0, 90, or -90 for a quarter anticlockwise.",
+            "description": "Degrees clockwise the frames are turned to fit the movie's size: 0, 90, or -90 for a quarter counterclockwise.",
             "type": "integer"
           }
         },

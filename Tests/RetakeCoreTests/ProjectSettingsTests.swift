@@ -60,13 +60,13 @@ struct ProjectSettingsTests {
         #expect(text.hasPrefix(#"{\#n  "bundleID""#), "with no \"$schema\", which Retake never adds")
     }
 
-    @Test func aSchemeBuildOptimisesUnlessToldNotTo() {
-        guard case .scheme(let optimised)? = read(#"{"build": {"scheme": "Notes"}}"#).settings?.build,
+    @Test func aSchemeBuildOptimizesUnlessToldNotTo() {
+        guard case .scheme(let optimized)? = read(#"{"build": {"scheme": "Notes"}}"#).settings?.build,
               case .scheme(let asConfigured)? = read(#"{"build": {"scheme": "Notes", "optimize": false}}"#).settings?.build else {
             Issue.record("didn't read the builds")
             return
         }
-        #expect(optimised.optimize && !asConfigured.optimize)
+        #expect(optimized.optimize && !asConfigured.optimize)
         #expect(read(#"{"build": {"command": "make", "app": "a.app", "optimize": false}}"#).problems.count == 1, "a build command is the project's own")
     }
 

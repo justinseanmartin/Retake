@@ -123,7 +123,7 @@ struct Share: AsyncParsableCommand {
     ))
     var audio: Int?
 
-    @Option(help: ArgumentHelp("The colour around and between clips side by side, as #RRGGBB (default: black).", valueName: "color"))
+    @Option(help: ArgumentHelp("The color around and between clips side by side, as #RRGGBB (default: black).", valueName: "color"))
     var background: String?
 
     @Flag(help: "Open the results.")
@@ -139,7 +139,7 @@ struct Share: AsyncParsableCommand {
             throw ValidationError("--audio counts a video's clips from 1.")
         }
         if let background, Color(hex: background).map({ $0.alpha < 1 }) ?? true {
-            throw ValidationError("--background is a colour as #RRGGBB, not \"\(background)\".")
+            throw ValidationError("--background is a color as #RRGGBB, not \"\(background)\".")
         }
     }
 

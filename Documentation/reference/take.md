@@ -98,7 +98,7 @@ What was on screen once the lead-in was over, read just before the first step: w
 | --- | --- | --- | --- |
 | `at` | number ≥ 0 | required | When the frames took this shape, in seconds into the movie, to the millisecond. |
 | `size` | list of integer ≥ 0, exactly 2 | required | The frames' size as the device sent them, [width, height], in capture pixels. |
-| `turn` | integer | required | Degrees clockwise the frames are turned to fit the movie's size: 0, 90, or -90 for a quarter anticlockwise. |
+| `turn` | integer | required | Degrees clockwise the frames are turned to fit the movie's size: 0, 90, or -90 for a quarter counterclockwise. |
 
 ### `hitches`
 

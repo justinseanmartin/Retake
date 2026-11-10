@@ -489,7 +489,7 @@ struct Install: AsyncParsableCommand {
     @Flag(help: "Let xcodebuild register the device and update profiles on your team.")
     var allowProvisioningUpdates = false
 
-    @Flag(help: "Build as the configuration says, rather than with the compiler's optimisation on.")
+    @Flag(help: "Build as the configuration says, rather than with the compiler's optimization on.")
     var noOptimize = false
 
     @OptionGroup var device: DeviceOptions

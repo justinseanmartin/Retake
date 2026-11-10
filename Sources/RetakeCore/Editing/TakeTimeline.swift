@@ -66,7 +66,7 @@ public struct TakeTimeline: Sendable {
 
     /// The moment `anchor` names, in seconds from the take's first frame: from its step's start, or
     /// its end with `edge` `end`, its offset in seconds, or its fraction of the way to the
-    /// neighbouring step, forward to the next step's start or back to the previous step's end.
+    /// neighboring step, forward to the next step's start or back to the previous step's end.
     public func time(of anchor: Anchor) throws(Unresolved) -> Double {
         guard case .step(let anchor) = anchor else {
             if case .seconds(let seconds) = anchor { return seconds }

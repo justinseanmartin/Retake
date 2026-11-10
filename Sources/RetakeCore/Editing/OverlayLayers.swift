@@ -147,7 +147,7 @@ public struct OverlayLayers: @unchecked Sendable {
     /// How long a clip's stillsBackground takes to fade in.
     static let stillsBackgroundFade = 0.25
 
-    /// The canvas filled with a colour, fading in, under the stills and what's drawn over them.
+    /// The canvas filled with a color, fading in, under the stills and what's drawn over them.
     static func stillsBackground(_ background: Overlays.StillsBackground, canvas: CGSize) -> CALayer {
         let layer = CALayer()
         layer.frame = CGRect(origin: .zero, size: canvas)
@@ -161,7 +161,7 @@ public struct OverlayLayers: @unchecked Sendable {
 
     // MARK: Cards
 
-    /// The canvas filled with a colour, fading in and out, over everything but the captions.
+    /// The canvas filled with a color, fading in and out, over everything but the captions.
     static func card(_ card: Overlays.Card, canvas: CGSize) -> CALayer {
         let layer = CALayer()
         layer.frame = CGRect(origin: .zero, size: canvas)
@@ -177,7 +177,7 @@ public struct OverlayLayers: @unchecked Sendable {
 
     /// Where each of `count` stills of `aspect` (height over width) goes on `canvas`: as big as
     /// they fit with at least `stillsSpacing` around and between them, and what's left over shared
-    /// equally above, between and below them, and likewise across. A short last row is centred.
+    /// equally above, between and below them, and likewise across. A short last row is centered.
     static func stillsGrid(count: Int, aspect: Double, canvas: CGSize) -> [CGRect] {
         let columns = count > 4 ? 3 : min(count, 2)
         let rows = (count + columns - 1) / columns
@@ -259,7 +259,7 @@ public struct OverlayLayers: @unchecked Sendable {
     /// The least space each side of a caption.
     static let captionMargin = 48.0
 
-    /// The caption's text on a pill of its colour, across the canvas's centre at its `y`, with its
+    /// The caption's text on a pill of its color, across the canvas's center at its `y`, with its
     /// symbol before the text, turning as its animation says.
     static func caption(_ caption: Overlays.Caption, canvas: CGSize) -> CALayer {
         // A caption too wide for the canvas, with `captionMargin` each side, is set smaller.

@@ -124,7 +124,7 @@ struct EditFileTests {
         (#"{"take": "a", "from": {"step": "x", "fraction": 1.4}, "to": 1}"#, "edits/video1.json: clips[0].from.fraction: 1.4 is outside -1 to 1"),
         (#"{"take": "a", "from": -1, "to": 1}"#, "edits/video1.json: clips[0].from: -1 must be at least 0"),
         (#"{"take": "a", "from": 0, "to": 1, "crossfade": 0.5}"#, "edits/video1.json: clips[0].crossfade: has no clip before it to cross-fade from"),
-        (#"{"take": "a", "from": 0, "to": 1, "captions": [{"text": "a", "y": 0.1, "color": "blue"}]}"#, #"edits/video1.json: clips[0].captions[0].color: "blue" isn't a colour: #RRGGBB, or #RRGGBBAA with its opacity, such as #1F6FEB"#),
+        (#"{"take": "a", "from": 0, "to": 1, "captions": [{"text": "a", "y": 0.1, "color": "blue"}]}"#, #"edits/video1.json: clips[0].captions[0].color: "blue" isn't a color: #RRGGBB, or #RRGGBBAA with its opacity, such as #1F6FEB"#),
         (##"{"take": "a", "from": 0, "to": 1, "captions": [{"text": "a", "y": 0.1, "color": "#000000", "to": {"clip": "later"}}]}"##, ##"edits/video1.json: clips[0].captions[0].to.clip: there's no clip with the id "later""##),
         (#"{"take": "a", "from": 0, "to": 1, "spotlight": {"padding": 4}}"#, #"edits/video1.json: clips[0].spotlight: needs an "element" to find in the step log, or a "rect" in screen points"#),
         (#"{"take": "a", "from": 0, "to": 1, "blurs": [{"element": {"label": "Name"}, "rect": {"x": 0, "y": 0, "width": 1, "height": 1}}]}"#, #"edits/video1.json: clips[0].blurs[0]: names an "element" or a "rect", not both"#),
@@ -173,7 +173,7 @@ struct EditFileTests {
         #expect(edit?.videos[.ipad]?.clips[0].captions[0].y == 0.08 && edit?.videos[.iphone]?.clips[0].captions[0].y == 0.1, "the iPad's override")
     }
 
-    @Test func coloursReadAndPrintAsWritten() {
+    @Test func colorsReadAndPrintAsWritten() {
         #expect(Color(hex: "#1F6FEB")?.description == "#1F6FEB")
         #expect(Color(hex: "#00000080")?.alpha == Double(0x80) / 255)
         #expect(Color(hex: "1F6FEB") == nil && Color(hex: "#12345") == nil && Color(hex: "#GGGGGG") == nil)
