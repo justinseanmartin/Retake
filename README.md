@@ -298,11 +298,12 @@ and turns light as the app's first frame comes up.
 
 A scene is a set and the steps played on it. The way to write one is **`retake compose`**, on the
 device: it launches the app on the set, shows what's on screen, and takes each step as an action
-with named options, such as `tap --label "New Note"`, running it at once and adding it to the scene
-when it runs, so a scene is only ever made of steps that worked. `undo` takes the last one back. An
-agent can drive it just as well: `retake compose <scene> --json` reads actions a line each from
-standard input and answers each with a line of JSON, saying what ran, what failed and why, and
-what's on screen now. See [`retake compose`](Documentation/cli.md#retake-compose).
+with named options, such as `tap --label "New Note"`, running it at once, waiting out its hold as
+`record` does, and adding it to the scene when it runs, so a scene is only ever made of steps that
+worked. `undo` takes the last one back. An agent can drive it just as well: `retake compose
+<scene> --json` reads actions a line each from standard input and answers each with a line of JSON,
+saying what ran, what failed and why, and what's on screen now. See
+[`retake compose`](Documentation/cli.md#retake-compose).
 
 Scenes are JSON files, so they can be written or changed by hand too. A scene's `set` is the
 project's `defaultSet` unless it names one:

@@ -20,8 +20,8 @@ public enum Composer {
         /// The elements `inspect` was asked for, in the order VoiceOver reads them, each with the
         /// shortest name that picks it out on screen (`ElementTarget.naming`).
         case matches([Match])
-        /// A step that ran and was added, its number, and the screen after it; and, for a tap at a
-        /// point on an element a step could name, that step.
+        /// A step that ran and was added, its number, and the screen once its hold is over; and, for
+        /// a tap at a point on an element a step could name, that step.
         case added(Step, number: Int, [ScreenElement], suggestion: Step? = nil)
         /// The last step, changed by `set`.
         case changed(Step, number: Int)
@@ -117,8 +117,8 @@ public enum Composer {
         player: Player = Player(),
         reply: @escaping @Sendable (Reply) -> Void,
     ) async throws(RetakeError) -> Ending {
-        // A replay waits out each step's hold, as a take does, since a step can need the app to have
-        // settled after the one before. A step given now runs as soon as it's given.
+        // Each step waits out its hold, as a take does, both replayed and given now, since a step
+        // can need the app to have settled after the one before.
         var orientation = state.scene.orientation
         if !state.document.steps.isEmpty {
             var replay = state.scene
@@ -151,11 +151,11 @@ public enum Composer {
                     continue
                 }
                 let number = state.document.steps.count + 1
-                let played = Player.Played(isSetup: false, number: number, count: number, step: step)
+                let played = Player.Played(number: number, count: number, step: step, of: state.scene)
                 let before: [ScreenElement]
                 if case .tapPoint = step.action { before = try await driver.elements() } else { before = [] }
                 do throws(RetakeError) {
-                    try await player.play(played, in: name, orientation: &orientation, holding: false, on: driver)
+                    try await player.play(played, in: name, orientation: &orientation, on: driver)
                 } catch {
                     // The scene is the one being composed, so its name says nothing here.
                     reply(.failed(error.message.hasPrefix("\(name): ") ? String(error.message.dropFirst(name.count + 2)) : error.message))

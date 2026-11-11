@@ -479,11 +479,14 @@ its options:
 > inspect
 ```
 
-A step runs as soon as it's given. One that runs is added to `scenes/<type>/<scene>.json`, and
-what's on screen after it is printed; one that doesn't is left out, saying why, and the scene
-carries on from wherever the app is. Each step's action is named as its step is in a scene file, and
-takes the options its step does there; every one but `hold` also takes `--id <name>` and `--hold
-<seconds>`, both optional, and `hold` takes `--id`:
+A step runs as soon as it's given, and `compose` waits out its hold before answering, as `record`
+does: a tap's from when the tap is sent, any other step's from when it ends, and the scene's
+`defaultHold` for a step that gives none. So the next step finds the app as it will in a take, and
+what's printed is the screen once the hold is over. One that runs is added to
+`scenes/<type>/<scene>.json`, and that screen is printed; one that doesn't is left out, saying why,
+and the scene carries on from wherever the app is. Each step's action is named as its step is in a
+scene file, and takes the options its step does there; every one but `hold` also takes `--id
+<name>` and `--hold <seconds>`, both optional, and `hold` takes `--id`:
 
 | Action | Required | Optional |
 | --- | --- | --- |
@@ -552,8 +555,8 @@ an error. A step is written as the scene file writes it, and an element as the s
   its `name`, the element as a step names it, such as `{"label": "Delete", "traits": ["header"]}`,
   left out for an element with nothing to name it by.
 - **A step added**: `{"ok": true, "number": 3, "step": {…}, "screen": […]}`, its number among the
-  scene's steps, from 1, and what's on screen after it; for a tap at a point that lands on an
-  element, with `"suggestion": {…}`, the step that names the element instead.
+  scene's steps, from 1, and what's on screen once its hold is over; for a tap at a point that
+  lands on an element, with `"suggestion": {…}`, the step that names the element instead.
 - **`set`**: `{"ok": true, "number": 3, "step": {…}}`, the last step as changed.
 - **`steps`**: `{"ok": true, "steps": […]}`.
 - **`help`**: `{"ok": true, "help": "…"}`, the text `help` prints.

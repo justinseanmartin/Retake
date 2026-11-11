@@ -111,21 +111,20 @@ public struct Player: Sendable {
         var orientation = scene.orientation
         for (index, step) in scene.setup.enumerated() {
             let played = Played(isSetup: true, number: index + 1, count: scene.setup.count, step: step)
-            try await play(played, in: name, orientation: &orientation, holding: true, on: driver)
+            try await play(played, in: name, orientation: &orientation, on: driver)
         }
         try await beforeSteps()
         if let readBeforeSteps, let elements = try? await driver.elements() { readBeforeSteps(elements, Date()) }
         for (index, step) in scene.steps.enumerated() {
-            // A step that gives no hold of its own holds for the scene's `defaultHold`.
-            var step = step
-            step.hold = step.hold ?? scene.defaultHold
-            let played = Played(isSetup: false, number: index + 1, count: scene.steps.count, step: step)
-            try await play(played, in: name, orientation: &orientation, holding: true, on: driver)
+            let played = Played(number: index + 1, count: scene.steps.count, step: step, of: scene)
+            try await play(played, in: name, orientation: &orientation, on: driver)
         }
     }
 
+    /// Plays one step, then waits out its hold: a tap's from when it was sent, any other step's
+    /// from when it ended.
     @ButtonHeistActor
-    func play(_ played: Played, in scene: String, orientation: inout SceneFile.Orientation, holding: Bool, on driver: some AppDriver) async throws(RetakeError) {
+    func play(_ played: Played, in scene: String, orientation: inout SceneFile.Orientation, on driver: some AppDriver) async throws(RetakeError) {
         // What typing is checked against: whether anything on screen changes. Only returns aren't
         // checked, since a field that doesn't handle return ignores it, harmlessly, changing nothing.
         var before: [ScreenElement]?
@@ -173,7 +172,7 @@ public struct Player: Sendable {
             )
         }
         report(.finished(played, Timing(sent: sent, received: Date(), evidence: evidence)))
-        if holding, let hold = played.step.hold {
+        if let hold = played.step.hold {
             // A tap's hold runs from when it was sent, as the touch lands then: The Button Heist's
             // reply waits for the screen to settle, which would otherwise stretch every gap between
             // taps by however long the app animates.
@@ -354,5 +353,15 @@ public struct Player: Sendable {
 
     static func frames(_ elements: [ScreenElement]) -> [ScreenElement.Rect?] {
         elements.map(\.frame)
+    }
+}
+
+extension Player.Played {
+    /// One of `scene`'s steps, not its setup, as it's played: a step that gives no hold of its own
+    /// holds for the scene's `defaultHold`.
+    init(number: Int, count: Int, step: Step, of scene: SceneFile) {
+        var step = step
+        step.hold = step.hold ?? scene.defaultHold
+        self.init(isSetup: false, number: number, count: count, step: step)
     }
 }

@@ -6,6 +6,14 @@ to what's there without breaking it. Pin a version with `mise use github:justins
 
 ## 0.0.3 (unreleased)
 
+**Fixes**
+
+- **`retake compose` waits out each step's hold** before answering, as `record` does, rather than
+  only writing it into the scene: a tap's from when it's sent, any other step's from when it ends,
+  and the scene's `defaultHold` for a step that gives none. The next step no longer runs while the
+  app is still moving from the last, landing where it wouldn't in a take, and the screen `compose`
+  prints after a step, with its `suggestion`, is the one once the hold is over. Nothing breaks.
+
 ## 0.0.2 (2026-11-10)
 
 Stills from the same scenes as the videos, and turns that wait for the device.
