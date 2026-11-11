@@ -331,7 +331,7 @@ public enum TakeStore {
             return projectFiles.readScene(scene, for: type, into: ProjectFiles.Report()).map { $0.steps.contains { $0.action?.capture != nil } }
         }
         let unusedScenes = types.flatMap { type in
-            projectFiles.names(in: project.scenes(for: type)).filter { needed[type]?.contains($0) != true && captures($0, for: type) == false }
+            projectFiles.sceneNames(for: type).filter { needed[type]?.contains($0) != true && captures($0, for: type) == false }
                 .map { projectFiles.sceneURL($0, for: type) }
         }
         let unusedCaptures = types.flatMap { type in

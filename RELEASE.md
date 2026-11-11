@@ -6,6 +6,14 @@ to what's there without breaking it. Pin a version with `mise use github:justins
 
 ## 0.0.3 (unreleased)
 
+**Scenes**
+
+- **A scene in `scenes/` is every device type's**, unless a type has its own of the same name in
+  `scenes/<type>/`. Anything at its top or in a step can be given again under `iphone` or `ipad`, as
+  in an edit, and a step's **`devices`** names the types it plays on: on another it's skipped but
+  keeps its number, so the steps after it are numbered alike, and an anchor to it fails there.
+  `compose` reads a shared scene but doesn't write one. Nothing breaks.
+
 **Drags**
 
 - **A drag's end on an element can be moved off it**, by `offset` in points and `offsetPercent` in

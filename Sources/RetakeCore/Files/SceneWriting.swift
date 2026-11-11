@@ -89,6 +89,8 @@ public struct SceneDocument: Sendable {
     /// The file's top-level fields, `steps` among them.
     var fields: JSONObject
     public var steps: [Step]
+    /// Whether the scene is in `scenes/`, every device type's, which compose reads but doesn't write.
+    public var isShared = false
 
     /// The scene in `url`, or a new one on `set` when there's no file yet.
     public init(url: URL, scene: SceneFile?, text: String?, newOn set: String) {
@@ -120,6 +122,12 @@ public struct SceneDocument: Sendable {
     }
 
     public func write() throws(RetakeError) {
+        if isShared {
+            throw RetakeError(
+                .usage,
+                "\(url.lastPathComponent) is shared by every device type, and compose writes one type's steps: change it by hand, or copy it into scenes/<type>/ to compose that type's own.",
+            )
+        }
         do {
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try Data(text.utf8).write(to: url)

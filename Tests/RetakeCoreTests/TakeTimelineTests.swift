@@ -32,6 +32,19 @@ struct TakeTimelineTests {
         #expect(try Self.timeline().time(of: .seconds(2.5)) == 2.5)
     }
 
+    @Test func aStepTheTakeSkippedKeepsItsNumberButCantBeAnchoredTo() throws {
+        var log = TakeLogReadingTests.log()
+        log.duration = 6
+        log.steps = [
+            TakeLog.Entry(number: 1, id: "a", action: "tap", start: 1, end: 1.5, timedByDevice: true, touch: nil, touchEnd: nil, elements: nil),
+            TakeLog.Entry(number: 3, id: "c", action: "tap", start: 2, end: 2.5, timedByDevice: true, touch: nil, touchEnd: nil, elements: nil),
+        ]
+        let timeline = TakeTimeline(log)
+        #expect(try timeline.time(of: .step(.init(step: .number(3)))) == 2, "numbered as the scene numbers it")
+        #expect(try timeline.time(of: .step(.init(step: .number(-1)))) == 2, "counting back from the last step")
+        #expect(throws: TakeTimeline.Unresolved.self) { try timeline.time(of: .step(.init(step: .number(2)))) }
+    }
+
     @Test func aFractionIsAShareOfTheWayFromThereToTheNeighboringStep() throws {
         #expect(try time(.id("b"), fraction: 0.5) == 3, "from its start to step 3's start")
         #expect(try time(.id("b"), fraction: -0.5) == 1.75, "from its start back to step 1's end")

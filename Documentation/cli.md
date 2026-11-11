@@ -106,12 +106,12 @@ the configuration file because devices belong to people, and the file is shared:
 spent on one device.
 
 The device's **type** — `iphone` or `ipad`, asked of the device itself — picks the folders a command
-works in: `scenes/<type>/` and `output/takes/<type>/`.
+works in: `scenes/<type>/`, beside the shared `scenes/`, and `output/takes/<type>/`.
 
 ### Names
 
 Scenes, sets and edits are named by their file name without `.json`: `create-note` is
-`scenes/<type>/create-note.json`, and `video1` is `edits/video1.json`. Takes are named by their
+`scenes/<type>/create-note.json` or the shared `scenes/create-note.json`, and `video1` is `edits/video1.json`. Takes are named by their
 scene: for each device type, a scene has its take, `create-note.mov`, the take that one replaced,
 `create-note.previous.mov`, and its latest failure, `create-note.failed.mov`, each with its step
 log beside it. A video's record names each take it was cut from by its scene, device type and when
@@ -588,8 +588,8 @@ Records each scene chosen again:
 
 | Form | Records |
 | --- | --- |
-| `retake record` | Every scene in `scenes/<type>/` with no take yet. |
-| `retake record --force` | Every scene in `scenes/<type>/`. |
+| `retake record` | Every scene the type has, in `scenes/<type>/` or `scenes/`, with no take yet. |
+| `retake record --force` | Every scene the type has. |
 | `retake record --for <edit>` | Every scene the edit uses that has no take yet. |
 | `retake record --for <edit> --force` | Every scene the edit uses. |
 | `retake record <scene>...` | The scenes named, whether or not they have takes. |

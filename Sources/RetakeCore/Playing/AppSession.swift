@@ -28,7 +28,7 @@ public enum AppSession {
         let files = ProjectFiles(project: project)
         let url = files.sceneURL(name, for: type)
         guard FileManager.default.fileExists(atPath: url.path) else {
-            let others = files.names(in: project.scenes(for: type))
+            let others = files.sceneNames(for: type)
             throw RetakeError(
                 .usage,
                 "There's no \(type.rawValue) scene \"\(name)\" (\(project.displayPath(url)))\(files.whyMissing(url))"

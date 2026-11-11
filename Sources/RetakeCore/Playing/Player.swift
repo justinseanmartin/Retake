@@ -109,13 +109,13 @@ public struct Player: Sendable {
         beforeSteps: @ButtonHeistActor () async throws(RetakeError) -> Void = {},
     ) async throws(RetakeError) {
         var orientation = scene.orientation
-        for (index, step) in scene.setup.enumerated() {
+        for (index, step) in scene.setup.enumerated() where !step.isSkipped {
             let played = Played(isSetup: true, number: index + 1, count: scene.setup.count, step: step)
             try await play(played, in: name, orientation: &orientation, on: driver)
         }
         try await beforeSteps()
         if let readBeforeSteps, let elements = try? await driver.elements() { readBeforeSteps(elements, Date()) }
-        for (index, step) in scene.steps.enumerated() {
+        for (index, step) in scene.steps.enumerated() where !step.isSkipped {
             let played = Played(number: index + 1, count: scene.steps.count, step: step, of: scene)
             try await play(played, in: name, orientation: &orientation, on: driver)
         }

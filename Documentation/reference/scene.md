@@ -2,9 +2,14 @@
 
 # A scene
 
-A scene: a set, and the steps played on it.
+A scene: a set, and the steps played on it. In scenes/<type>/, one device type's; in scenes/, every type's but one with its own of the same name. Anything at the top or in a step can be given again under a device type, and applies only on that type.
 
 Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.3/scene.schema.json>, and `retake schema scene` prints it.
+
+Every object in an edit, at the top and in each of the definitions below, can be given again under `iphone` or
+`ipad`, with any of its fields, and applies only to that device type's video. An object in an override is laid over
+the one it overrides key by key; a list, or a single value, replaces it. At the top, an override can't give
+`devices`.
 
 ## Fields
 
@@ -37,6 +42,7 @@ One thing the scene does, led by what it does, and the pause after it. A step ca
 | `capture` | string matching `^[A-Za-z0-9][A-Za-z0-9._-]*$` |  | Saves the screen as a still, as it is when the step before has ended and its hold is over, as a PNG named for it in the output directory's captures/<type>/<scene>/, when the scene is recorded. Unique in the scene. Not in setup. |
 | `hold` | number ≥ 0 |  | Seconds to pause after the step, or for a tap, from when it's sent; the scene's defaultHold when not given. |
 | `id` | string, not empty |  | The name edits anchor to. Unique in the scene; it can't look like a number, which anchors count steps by, nor be start or end. |
+| `devices` | list of `"iphone"` or `"ipad"`, at least 1, each once |  | The device types it plays on; every one when not given. On another, it's skipped but keeps its number, so the steps after it are numbered alike on every type, and nothing can anchor to it there. |
 
 Gives exactly one of `tap`, `drag`, `type`, `activate`, `orientation`, `waitFor` or `capture`, or only `hold`.
 

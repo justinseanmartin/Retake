@@ -38,6 +38,32 @@ struct ProjectValidatorTests {
         #expect(try validate() == [])
     }
 
+    @Test func aSharedSceneIsEveryTypesButOneWithItsOwn() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.removeItem(at: root.appending(path: "scenes/iphone/walk.json"))
+        try write("scenes/walk.json", #"{"set": "base", "steps": [{"id": "open", "tap": {"label": "a"}, "ipad": {"hold": 2}}, {"id": "turn", "orientation": "landscape-left", "devices": ["ipad"]}, {"id": "done", "waitFor": {"label": "b"}}]}"#)
+        let files = ProjectFiles(project: try Project.locate(configuration: nil, currentDirectory: root))
+        #expect(files.isShared(files.sceneURL("walk", for: .iphone)) && !files.isShared(files.sceneURL("walk", for: .ipad)))
+        try FileManager.default.removeItem(at: root.appending(path: "scenes/ipad/walk.json"))
+        let report = ProjectFiles.Report()
+        #expect(files.readScene("walk", for: .ipad, into: report)?.steps.map(\.hold) == [2, nil, nil], "the ipad override")
+        #expect(files.readScene("walk", for: .iphone, into: report)?.steps.map(\.hold) == [nil, nil, nil])
+        #expect(files.readScene("walk", for: .iphone, into: report)?.steps.map(\.isSkipped) == [false, true, false], "skipped, but still step 2")
+        #expect(report.problems.isEmpty)
+        try edit(#"{"take": "walk", "from": {"step": "open"}, "to": {"step": "done"}}"#)
+        #expect(try validate() == [])
+    }
+
+    @Test func anAnchorToAStepATypeSkipsIsRefusedThere() throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try write("scenes/iphone/walk.json", #"{"set": "base", "steps": [{"id": "open", "tap": {"label": "a"}}, {"id": "turn", "orientation": "landscape-left", "devices": ["ipad"]}, {"id": "done", "waitFor": {"label": "b"}}]}"#)
+        try edit(#"{"take": "walk", "from": {"step": "turn"}, "to": {"step": 2, "edge": "end"}}"#, devices: #"["iphone"]"#)
+        #expect(try validate() == [
+            #"edits/video.json: clips[0].from.step: scenes/iphone/walk.json's step "turn" doesn't play on iphone, so nothing can anchor to it there"#,
+            #"edits/video.json: clips[0].to.step: scenes/iphone/walk.json's step 2 doesn't play on iphone, so nothing can anchor to it there"#,
+        ])
+    }
+
     @Test func everyFilesOwnProblemsAreReported() throws {
         try write("sets/broken.json", #"{"state": "fresh"}"#)
         try write("scenes/ipad/bad.json", #"{"steps": [{"tapp": {}}]}"#)

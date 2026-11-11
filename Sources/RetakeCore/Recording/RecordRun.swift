@@ -16,7 +16,7 @@ public enum RecordRun {
     ) throws(RetakeError) -> (chosen: [String], alreadyTaken: [String]) {
         try TakeStore.refuseOldLayout(for: [type], in: project)
         let files = ProjectFiles(project: project)
-        let available = files.names(in: project.scenes(for: type))
+        let available = files.sceneNames(for: type)
         if available.isEmpty, let misnamed = files.misnamedFolder(project.scenes(for: type)) {
             throw RetakeError(.failed, "There are no \(type.rawValue) scenes in \(project.displayPath(project.scenes(for: type))): \(misnamed).")
         }

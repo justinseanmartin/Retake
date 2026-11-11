@@ -42,6 +42,9 @@ public struct Project: Sendable, Equatable {
         root.appending(path: "scenes/\(type.rawValue)", directoryHint: .isDirectory)
     }
 
+    /// `scenes/`, whose scenes are every device type's but where a type has its own of the same name.
+    public var sharedScenes: URL { root.appending(path: "scenes", directoryHint: .isDirectory) }
+
     public func takes(for type: DeviceType) -> URL {
         output.appending(path: "takes/\(type.rawValue)", directoryHint: .isDirectory)
     }

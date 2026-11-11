@@ -56,7 +56,7 @@ struct Validate: AsyncParsableCommand {
                 guard let target = validator.target(for: url) else {
                     throw RetakeError(
                         .usage,
-                        "\(file) isn't one of the project's files: its configuration file, or a file in sets/, scenes/iphone/, scenes/ipad/ or edits/.",
+                        "\(file) isn't one of the project's files: its configuration file, or a file in sets/, scenes/, scenes/iphone/, scenes/ipad/ or edits/.",
                     )
                 }
                 guard FileManager.default.fileExists(atPath: url.path) else {

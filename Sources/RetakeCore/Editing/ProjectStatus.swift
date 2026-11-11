@@ -66,7 +66,7 @@ public struct ProjectStatus: Sendable {
             var section = Section(type: type)
             let takes = Dictionary(grouping: TakeStore.takes(for: [type], in: project), by: \.scene)
             func take(_ scene: String, _ kind: TakeStore.Kind) -> TakeStore.Take? { takes[scene]?.first { $0.kind == kind } }
-            section.scenes = files.names(in: project.scenes(for: type)).map { Scene(name: $0, take: take($0, .take), previous: take($0, .previous), failed: take($0, .failed)) }
+            section.scenes = files.sceneNames(for: type).map { Scene(name: $0, take: take($0, .take), previous: take($0, .previous), failed: take($0, .failed)) }
 
             for name in (edits.keys.filter { edits[$0]!.devices.contains(type) } + unreadable.keys).sorted() {
                 guard let edit = edits[name] else {

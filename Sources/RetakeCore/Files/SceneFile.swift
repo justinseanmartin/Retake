@@ -1,8 +1,8 @@
 import Foundation
 import ThePlans
 
-/// A scene, as its file in `scenes/<type>/` says it: a set and the steps played on it. See
-/// README.md, "Scenes: the walk through the app".
+/// A scene, as its file in `scenes/<type>/`, or in `scenes/` for every device type, says it for one
+/// type: a set and the steps played on it. See README.md, "Scenes: the walk through the app".
 public struct SceneFile: Equatable, Sendable {
     public enum Orientation: String, CaseIterable, Sendable {
         case portrait
@@ -65,11 +65,15 @@ public struct Step: Equatable, Sendable {
     public var action: Action?
     /// Seconds to pause after it; the scene's `defaultHold` when nil.
     public var hold: Double?
+    /// Whether the scene was read for a device type the step's `devices` leave out. It isn't played,
+    /// but keeps its number, so the steps after it are numbered alike on every type.
+    public var isSkipped: Bool
 
-    public init(id: String? = nil, _ action: Action?, hold: Double? = nil) {
+    public init(id: String? = nil, _ action: Action?, hold: Double? = nil, isSkipped: Bool = false) {
         self.id = id
         self.action = action
         self.hold = hold
+        self.isSkipped = isSkipped
     }
 
     public enum Action: Equatable, Sendable {
@@ -261,12 +265,29 @@ public struct ElementTarget: Equatable, Sendable {
 
 extension SceneFile {
     /// The scene in a file's text, or nil with problems in `reader`.
-    public static func read(_ text: String, with reader: JSONReader) -> SceneFile? {
-        guard let value = reader.parse(text), var object = reader.root(value, kind: "scene") else { return nil }
+    /// The scene `text` says, for `type`: with each of its `iphone` or `ipad` overrides laid over
+    /// what they override, as an edit's are, and its steps for other types skipped. Read for no type,
+    /// as a file is checked on its own, an override is refused.
+    public static func read(_ text: String, with reader: JSONReader, for type: DeviceType? = nil) -> SceneFile? {
+        guard let value = reader.parse(text) else { return nil }
+        guard let type, case .object(let object) = value else { return read(value, with: reader, for: type) }
+        var origins = Origins()
+        let merged = Overrides.merge(object, for: type, at: .root, into: .root, origins: &origins, reader: reader)
+        let typeReader = JSONReader(file: reader.file)
+        let scene = read(.object(merged), with: typeReader, for: type)
+        for problem in typeReader.problems {
+            let path = problem.about.map { JSONPath(origins.source(of: $0).components.dropLast()) } ?? origins.source(of: problem.path)
+            reader.problem(problem.message, at: path)
+        }
+        return typeReader.problems.isEmpty ? scene : nil
+    }
+
+    static func read(_ value: JSONValue, with reader: JSONReader, for type: DeviceType?) -> SceneFile? {
+        guard var object = reader.root(value, kind: "scene") else { return nil }
         let problemsBefore = reader.problems.count
         let set = object.optional("set", reader.nonEmptyString)
-        let setup = object.optional("setup") { readSteps($0, $1, reader, isSetup: true) } ?? []
-        let steps = object.required("steps") { readSteps($0, $1, reader, isSetup: false) }
+        let setup = object.optional("setup") { readSteps($0, $1, reader, isSetup: true, for: type) } ?? []
+        let steps = object.required("steps") { readSteps($0, $1, reader, isSetup: false, for: type) }
         let leadIn = object.optional("leadIn") { reader.number($0, at: $1, .atLeast(0)) } ?? defaultLeadIn
         let tail = object.optional("tail") { reader.number($0, at: $1, .atLeast(0)) } ?? defaultTail
         let recordsLaunch = object.optional("recordsLaunch", reader.bool) ?? defaultRecordsLaunch
@@ -288,8 +309,8 @@ extension SceneFile {
         )
     }
 
-    static func readSteps(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader, isSetup: Bool) -> [Step]? {
-        reader.array(value, at: path) { readStep($0, $1, reader, isSetup: isSetup) }
+    static func readSteps(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader, isSetup: Bool, for type: DeviceType? = nil) -> [Step]? {
+        reader.array(value, at: path) { readStep($0, $1, reader, isSetup: isSetup, for: type) }
     }
 
     /// Ids are unique, can't look like numbers, which anchors count steps by, and can't be `start`
@@ -326,10 +347,20 @@ extension SceneFile {
         Double(id) != nil || id.allSatisfy(\.isNumber)
     }
 
-    static func readStep(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader, isSetup: Bool) -> Step? {
+    static func readStep(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader, isSetup: Bool, for type: DeviceType? = nil) -> Step? {
         guard var object = reader.object(value, at: path) else { return nil }
         defer { object.finish() }
         let problemsBefore = reader.problems.count
+        let devices = object.optional("devices") { value, path in
+            reader.array(value, at: path) { reader.choice($0, at: $1, as: DeviceType.self) }.flatMap { devices -> [DeviceType]? in
+                guard !devices.isEmpty else {
+                    reader.problem("names at least one device type the step plays on", at: path)
+                    return nil
+                }
+                return devices
+            }
+        }
+        let isSkipped = type.map { type in devices.map { !$0.contains(type) } ?? false } ?? false
         let id: String? = object.optional("id") { value, path in
             guard let id = reader.nonEmptyString(value, at: path) else { return nil }
             if isSetup {
@@ -350,12 +381,12 @@ extension SceneFile {
         }
         guard let key = given.first else {
             // A misspelled action is reported as an unknown key, which says more than this would.
-            let unknown = object.object.keys.filter { !["id", "hold"].contains($0) }
+            let unknown = object.object.keys.filter { !["id", "hold", "devices"].contains($0) }
             if hold == nil, !object.has("hold"), unknown.isEmpty {
                 reader.problem("has nothing to do: give an action (\(Step.Action.keys.joined(separator: ", "))) or a hold", at: path)
                 return nil
             }
-            return reader.problems.count == problemsBefore ? Step(id: id, nil, hold: hold ?? 0) : nil
+            return reader.problems.count == problemsBefore ? Step(id: id, nil, hold: hold ?? 0, isSkipped: isSkipped) : nil
         }
         if isSetup, key == "capture" {
             reader.problem("setup steps aren't recorded, so nothing is captured in them; move it into the steps", at: path.appending(key))
@@ -363,7 +394,7 @@ extension SceneFile {
         }
         let action = object.required(key) { readAction(key, $0, $1, reader) }
         guard let action, reader.problems.count == problemsBefore else { return nil }
-        return Step(id: id, action, hold: hold)
+        return Step(id: id, action, hold: hold, isSkipped: isSkipped)
     }
 
     static func readAction(_ key: String, _ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> Step.Action? {
