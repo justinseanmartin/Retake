@@ -140,6 +140,33 @@ public struct Step: Equatable, Sendable {
     }
 }
 
+/// How far a drag's end is from its element's activation point: `points`, plus `percent` of the
+/// element's width and height, either of them negative for up or left. For an end that isn't on the
+/// element itself but placed by it, such as a game piece dropped a piece's height below the cell it
+/// lands in.
+public struct SpotOffset: Equatable, Sendable {
+    public var points: Point
+    /// Percentages: 50 is half the element's width or height.
+    public var percent: Point
+
+    public init(points: Point = Point(x: 0, y: 0), percent: Point = Point(x: 0, y: 0)) {
+        self.points = points
+        self.percent = percent
+    }
+
+    public static let none = SpotOffset()
+
+    public var isNone: Bool { self == .none }
+
+    /// `point` moved by the offset, its percentages of `size`, the element's width and height.
+    public func moving(_ point: Point, size: (width: Double, height: Double)) -> Point {
+        Point(
+            x: point.x + points.x + percent.x / 100 * size.width,
+            y: point.y + points.y + percent.y / 100 * size.height,
+        )
+    }
+}
+
 /// A point on the screen, in its points.
 public struct Point: Equatable, Sendable {
     public var x: Double
@@ -195,10 +222,10 @@ public struct Position: Equatable, Sendable {
 }
 
 /// Where a finger comes down or lifts: a position on the screen, or an element, at its activation
-/// point as the screen has it then.
+/// point as the screen has it then, moved by `offset`.
 public enum Spot: Equatable, Sendable {
     case position(Position)
-    case element(ElementTarget)
+    case element(ElementTarget, offset: SpotOffset = .none)
 
     /// A point in screen points.
     public static func point(x: Double, y: Double) -> Spot { .position(Position(Point(x: x, y: y))) }
@@ -424,21 +451,44 @@ extension SceneFile {
         return .share(percent / 100)
     }
 
-    /// A drag's end: a point, `x` and `y`, or an element, not both.
+    /// A drag's end: a point, `x` and `y`, or an element, not both, with an element's `offset` and
+    /// `offsetPercent`.
     static func readSpot(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> Spot? {
         guard var object = reader.object(value, at: path) else { return nil }
         defer { object.finish() }
         object.know("x", "y", "occurrence")
         object.know(ElementTarget.keys[0], ElementTarget.keys[1], ElementTarget.keys[2])
         object.know(ElementTarget.keys[3], ElementTarget.keys[4])
+        object.know("offset", "offsetPercent")
         let hasPoint = object.object["x"] != nil || object.object["y"] != nil
         let hasElement = (ElementTarget.keys + ["occurrence"]).contains { object.object[$0] != nil }
+        let hasOffset = object.object["offset"] != nil || object.object["offsetPercent"] != nil
         if hasPoint, hasElement {
             reader.problem("is a point (\"x\" and \"y\") or an element, not both", at: path)
             return nil
         }
-        if hasPoint { return readPosition(&object, reader).map(Spot.position) }
-        return readElement(&object, reader).map(Spot.element)
+        if hasPoint {
+            if hasOffset {
+                reader.problem("offset and offsetPercent move an element's activation point; a point is given where it's meant", at: path)
+                return nil
+            }
+            return readPosition(&object, reader).map(Spot.position)
+        }
+        let problems = reader.problems.count
+        let points = object.optional("offset") { readOffset($0, $1, reader) }
+        let percent = object.optional("offsetPercent") { readOffset($0, $1, reader) }
+        guard let element = readElement(&object, reader), reader.problems.count == problems else { return nil }
+        return .element(element, offset: SpotOffset(points: points ?? Point(x: 0, y: 0), percent: percent ?? Point(x: 0, y: 0)))
+    }
+
+    /// `x` and `y`, numbers of either sign.
+    static func readOffset(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> Point? {
+        guard var object = reader.object(value, at: path) else { return nil }
+        defer { object.finish() }
+        let x = object.required("x") { reader.number($0, at: $1) }
+        let y = object.required("y") { reader.number($0, at: $1) }
+        guard let x, let y else { return nil }
+        return Point(x: x, y: y)
     }
 
     /// An element named by any of `label`, `value`, `identifier`, `hint` and `traits`, at least one.

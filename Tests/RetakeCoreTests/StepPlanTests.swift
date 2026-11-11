@@ -42,6 +42,24 @@ struct StepPlanTests {
         #expect(throws: RetakeError.self, "an element end needs the player to have found it") { try StepPlay.make(for: step) }
     }
 
+    @Test func aDragFromAnElementWithAnOffsetStartsWhereThePlayerFoundIt() throws {
+        let from = Spot.element(ElementTarget(label: "O piece"), offset: SpotOffset(percent: Point(x: 0, y: -50)))
+        let step = Step(.drag(from: from, to: .point(x: 400, y: 800), duration: 0.6))
+        guard case .direct(.drag(let target)) = try StepPlay.make(for: step, touch: Point(x: 160, y: 270)) else {
+            Issue.record("not a timed drag")
+            return
+        }
+        #expect(target.start == .coordinate(ScreenPoint(x: 160, y: 270)), "The Button Heist would touch the element itself, not the offset")
+        #expect(throws: RetakeError.self, "an offset start needs the player to have found it") { try StepPlay.make(for: step) }
+    }
+
+    @Test func anOffsetMovesTheActivationPointByPointsAndShareOfTheElementsSize() throws {
+        let cell = ScreenElement(label: "Row 2, column 3", frame: .init(x: 356.5, y: 631.5, width: 60, height: 60), activationPoint: Point(x: 386.5, y: 661.5))
+        let offset = SpotOffset(points: Point(x: 1, y: -1), percent: Point(x: 50, y: 150))
+        #expect(try Player.point(of: ElementTarget(label: "Row 2, column 3"), in: [cell], movedBy: offset) == Point(x: 417.5, y: 750.5))
+        #expect(try Player.point(of: ElementTarget(label: "Row 2, column 3"), in: [cell]) == Point(x: 386.5, y: 661.5))
+    }
+
     @Test func aWaitWaitsForTheElementOrItsGoingForItsTimeout() throws {
         let element = ElementTarget(label: "Done")
         guard case .heist(let plan) = try StepPlay.make(for: Step(.waitFor(element, gone: true, timeout: 4))),

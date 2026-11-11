@@ -32,14 +32,17 @@ public enum StepPlay: Equatable, Sendable {
             case .drag(let fromSpot, let toSpot, let duration):
                 let start: GesturePointSelection
                 switch fromSpot {
-                case .element(let element): start = .element(target(element))
+                case .element(let element, let offset) where offset.isNone: start = .element(target(element))
+                case .element(let element, _):
+                    guard let touch else { throw RetakeError(.failed, "where it starts, \(element) moved by its offset, wasn't looked for on the screen") }
+                    start = .coordinate(try screenPoint(touch))
                 case .position(let position):
                     guard let point = touch ?? position.point(on: nil) else { throw RetakeError(.failed, "where it starts is a share of a screen whose size isn't known") }
                     start = .coordinate(try screenPoint(point))
                 }
                 let to: Point
                 switch toSpot {
-                case .element(let element):
+                case .element(let element, _):
                     guard let end else { throw RetakeError(.failed, "where it ends, \(element), wasn't looked for on the screen") }
                     to = end
                 case .position(let position):
@@ -140,11 +143,21 @@ extension Length: CustomStringConvertible {
     }
 }
 
+extension SpotOffset: CustomStringConvertible {
+    public var description: String {
+        var parts: [String] = []
+        if points != SpotOffset.none.points { parts.append("(\(Point.number(points.x)), \(Point.number(points.y))) points") }
+        if percent != SpotOffset.none.percent { parts.append("(\(Point.number(percent.x))%, \(Point.number(percent.y))%) of its size") }
+        return parts.isEmpty ? "nothing" : parts.joined(separator: " and ")
+    }
+}
+
 extension Spot: CustomStringConvertible {
     public var description: String {
         switch self {
         case .position(let position): position.description
-        case .element(let element): element.description
+        case .element(let element, let offset) where offset.isNone: element.description
+        case .element(let element, let offset): "\(element) moved by \(offset)"
         }
     }
 }

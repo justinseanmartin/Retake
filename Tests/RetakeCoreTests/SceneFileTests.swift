@@ -135,6 +135,24 @@ struct SceneFileTests {
         #expect(steps(step).problems == [expected])
     }
 
+    @Test func aDragsElementEndCanBeMovedByPointsAndByShareOfItsSize() {
+        let step = #"{"drag": {"from": {"label": "O piece"}, "to": {"label": "Row 2, column 3", "offset": {"x": -4, "y": 2}, "offsetPercent": {"x": 50, "y": 150}}, "duration": 0.55}}"#
+        let scene = steps(step).scene
+        let offset = SpotOffset(points: Point(x: -4, y: 2), percent: Point(x: 50, y: 150))
+        #expect(scene?.steps.map(\.action) == [
+            .drag(from: .element(ElementTarget(label: "O piece")), to: .element(ElementTarget(label: "Row 2, column 3"), offset: offset), duration: 0.55),
+        ])
+        #expect(scene?.steps.map(\.json) == [try! JSONParser.parse(step)], "written back as given")
+    }
+
+    @Test(arguments: [
+        (#"{"drag": {"from": {"x": 1, "y": 2, "offset": {"x": 1, "y": 1}}, "to": {"x": 3, "y": 4}}}"#, #"scenes/ipad/create-note.json: steps[0].drag.from: offset and offsetPercent move an element's activation point; a point is given where it's meant"#),
+        (#"{"drag": {"from": {"label": "A"}, "to": {"label": "B", "offsetPercent": {"x": 50}}}}"#, #"scenes/ipad/create-note.json: steps[0].drag.to.offsetPercent: is missing "y""#),
+    ])
+    func aDragOffsetThatIsntOneSaysWhy(_ step: String, _ expected: String) {
+        #expect(steps(step).problems == [expected])
+    }
+
     @Test func elementsCanBeNamedEveryWayTogether() {
         let scene = steps(#"{"tap": {"label": "Delete", "identifier": "row.delete", "occurrence": 2}}, {"type": {"text": "a"}}, {"orientation": "landscape-left"}"#).scene
         #expect(scene?.steps.map(\.action) == [

@@ -183,8 +183,8 @@ public struct Player: Sendable {
 
     /// Where a tap at a point, or a drag, touches and lifts, in points: a share of the screen as the
     /// device faces, and a drag's end on an element where the screen has it now, read just before
-    /// the drag. A drag that starts on an element is touched where The Button Heist finds it, but its
-    /// start is found here too, for the step log.
+    /// the drag, moved by its offset. A drag that starts on an element with no offset is touched where
+    /// The Button Heist finds it, but its start is found here too, for the step log.
     @ButtonHeistActor
     func points(for action: Step.Action?, facing orientation: SceneFile.Orientation, on driver: some AppDriver) async throws(RetakeError) -> (touch: Point?, end: Point?) {
         let facing = screen.map { orientation.isLandscape ? CGSize(width: $0.height, height: $0.width) : $0 }
@@ -202,9 +202,9 @@ public struct Player: Sendable {
             func find(_ spot: Spot) async throws(RetakeError) -> Point {
                 switch spot {
                 case .position(let position): return try onScreen(position)
-                case .element(let target):
+                case .element(let target, let offset):
                     if elements == nil { elements = try await driver.elements() }
-                    return try Self.point(of: target, in: elements!)
+                    return try Self.point(of: target, in: elements!, movedBy: offset)
                 }
             }
             return (try await find(from), try await find(to))
@@ -240,7 +240,7 @@ public struct Player: Sendable {
         return before.map(key).sorted() != after.map(key).sorted()
     }
 
-    static func point(of target: ElementTarget, in elements: [ScreenElement]) throws(RetakeError) -> Point {
+    static func point(of target: ElementTarget, in elements: [ScreenElement], movedBy offset: SpotOffset = .none) throws(RetakeError) -> Point {
         let matches = elements.filter { target.matches($0) && $0.frame != nil }
         let found: ScreenElement
         if let occurrence = target.occurrence {
@@ -255,9 +255,9 @@ public struct Player: Sendable {
             }
             found = matches[0]
         }
-        if let point = found.activationPoint { return point }
         let frame = found.frame!
-        return Point(x: frame.x + frame.width / 2, y: frame.y + frame.height / 2)
+        let point = found.activationPoint ?? Point(x: frame.x + frame.width / 2, y: frame.y + frame.height / 2)
+        return offset.moving(point, size: (frame.width, frame.height))
     }
 
     /// The Button Heist's failure for an element that matches several, said in a scene's terms, or
@@ -292,7 +292,7 @@ public struct Player: Sendable {
     static func heistTarget(of action: Step.Action?) -> ElementTarget? {
         switch action {
         case .tapElement(let target)?, .activate(let target)?, .waitFor(let target, _, _)?, .type(_, let target?)?: target
-        case .drag(.element(let target), _, _)?: target
+        case .drag(.element(let target, let offset), _, _)? where offset.isNone: target
         default: nil
         }
     }

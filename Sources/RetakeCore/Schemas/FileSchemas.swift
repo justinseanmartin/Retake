@@ -113,9 +113,9 @@ extension SceneFile {
         ], required: ["x", "y"])
         let actions: [Schema.Property] = [
             .init("tap", .oneOf("Touches a point, x and y, or an element. An element is touched at its activation point, which the step log records, so either is drawn in the video.", [point, .ref("element")])),
-            .init("drag", .object("A straight one-finger drag from one point or element to another. An element is touched at its activation point, as the screen has it just before the drag.", [
-                .init("from", .oneOf("Where the finger comes down: a point, x and y, or an element.", [point, .ref("element")])),
-                .init("to", .oneOf("Where it lifts: a point, x and y, or an element.", [point, .ref("element")])),
+            .init("drag", .object("A straight one-finger drag from one point or element to another. An element is touched at its activation point, as the screen has it just before the drag, moved by its offset and offsetPercent.", [
+                .init("from", .oneOf("Where the finger comes down: a point, x and y, or an element.", [point, .ref("dragElement")])),
+                .init("to", .oneOf("Where it lifts: a point, x and y, or an element.", [point, .ref("dragElement")])),
                 .init("duration", .number("Seconds the drag takes.", above: 0).defaulting(to: Step.defaultDragDuration)),
             ], required: ["from", "to"])),
             .init("type", .object("Types text key by key on the on-screen keyboard.", [
@@ -171,7 +171,7 @@ extension SceneFile {
             ],
             required: ["steps"],
         )
-        return FileSchema(kind: "scene", title: "A scene", root: root, definitions: [.init("step", step), .init("element", element)])
+        return FileSchema(kind: "scene", title: "A scene", root: root, definitions: [.init("step", step), .init("element", element), .init("dragElement", dragElement)])
     }
 
     /// An element's properties, as a step, a spotlight or a blur names it.
@@ -187,6 +187,23 @@ extension SceneFile {
             ).example(["header"], ["button", "selected"])),
             .init("occurrence", .integer("Which of several matching elements, counted from 1 in the order VoiceOver reads the screen. A last resort, since it breaks when the layout changes: name the element closely enough, by its traits, identifier, value or hint, that only it matches.", atLeast: 1)),
         ]
+    }
+
+    /// A drag's end on an element, at its activation point moved by an offset.
+    static var dragElement: Schema {
+        func offset(_ description: String, _ unit: String) -> Schema {
+            .object(description, [
+                .init("x", .number("\(unit) to the right; negative for left.")),
+                .init("y", .number("\(unit) down; negative for up.")),
+            ], required: ["x", "y"])
+        }
+        return Schema.object(
+            "An element on screen, as VoiceOver knows it, touched at its activation point moved by offset and offsetPercent, which add up when both are given: for an end placed by the element rather than on it, such as a game piece dropped below the cell it lands in.",
+            elementProperties + [
+                .init("offset", offset("Screen points from the element's activation point.", "Points")),
+                .init("offsetPercent", offset("Percentages of the element's width and height from its activation point: 50 is half its width or height, 250 two and a half.", "Percent of its width or height")),
+            ],
+        ).atLeastOne(of: ElementTarget.keys)
     }
 
     /// An element on screen, as VoiceOver knows it: by any of these, together.
