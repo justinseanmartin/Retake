@@ -170,7 +170,7 @@ struct ProjectInitializerTests {
         try folder("Notes.xcodeproj")
         let result = try initialize(schemes: ["Notes"])
         #expect(result.notes.isEmpty)
-        for folder in ["sets", "scenes/iphone", "scenes/ipad", "edits"] {
+        for folder in ["sets", "scenes", "edits"] {
             var isDirectory: ObjCBool = false
             #expect(FileManager.default.fileExists(atPath: directory.appending(path: "Retake/\(folder)").path, isDirectory: &isDirectory) && isDirectory.boolValue)
         }
@@ -184,7 +184,7 @@ struct ProjectInitializerTests {
 
     @Test func aFreshProjectsStartersValidate() throws {
         let result = try initialize(scheme: "Notes")
-        #expect(result.starters == ["sets/base.json", "scenes/iphone/launch.json", "scenes/ipad/launch.json", "edits/preview.json"])
+        #expect(result.starters == ["sets/base.json", "scenes/launch.json", "edits/preview.json"])
         let project = try Project.locate(configuration: nil, currentDirectory: directory)
         #expect(project.settings.defaultSet == ProjectInitializer.Starter.setName)
         let offline = ProjectValidator(files: ProjectFiles(project: project)).validate()
@@ -198,7 +198,7 @@ struct ProjectInitializerTests {
 
     @Test func theStarterTakeIsLongEnoughToCut() throws {
         try initialize(scheme: "Notes")
-        let text = try #require(file("Retake/scenes/iphone/\(ProjectInitializer.Starter.sceneName).json"))
+        let text = try #require(file("Retake/scenes/\(ProjectInitializer.Starter.sceneName).json"))
         let scene = try #require(SceneFile.read(text, with: JSONReader(file: "launch.json")))
         let holds = scene.steps.map { $0.hold ?? scene.defaultHold }.reduce(0, +)
         let length = scene.leadIn + holds + scene.tail

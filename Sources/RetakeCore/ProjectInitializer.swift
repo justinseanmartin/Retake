@@ -37,8 +37,8 @@ public enum ProjectInitializer {
         public var starters: [String] = []
     }
 
-    /// The files a fresh project starts with: a set, a scene for each device type that records the
-    /// app launching and holds it, and an edit that cuts the scene's whole take for both, with a
+    /// The files a fresh project starts with: a set, a scene that records the app launching and holds
+    /// it, on every device type, and an edit that cuts the scene's whole take for each, with a
     /// caption. Together they validate, record and cut.
     public enum Starter {
         /// The set's name, which the project names as its `defaultSet`.
@@ -49,8 +49,7 @@ public enum ProjectInitializer {
         /// Each file by its path in the project's folder, in the order they're written.
         public static let files: KeyValuePairs<String, String> = [
             "sets/\(setName).json": set,
-            "scenes/iphone/\(sceneName).json": scene,
-            "scenes/ipad/\(sceneName).json": scene,
+            "scenes/\(sceneName).json": scene,
             "edits/\(editName).json": edit,
         ]
 
@@ -75,7 +74,6 @@ public enum ProjectInitializer {
         static let edit = """
             {
               "intent": "A starting point: the app launching, held. Replace it with the flows the preview shows.",
-              "devices": ["iphone", "ipad"],
               "clips": [
                 {
                   "intent": "The whole take, from the launch screen on.",
@@ -92,7 +90,7 @@ public enum ProjectInitializer {
             """
     }
 
-    /// Creates `configuration`, and beside it `sets/`, `scenes/iphone/`, `scenes/ipad/` and
+    /// Creates `configuration`, and beside it `sets/`, `scenes/` and
     /// `edits/`, with the `Starter.files` in them unless they already hold JSON files, as
     /// Documentation/cli.md, "retake init", says. `output`, when given, is written as the
     /// project's `output`. The output directory is added to the project's `.gitignore`, or one
@@ -172,7 +170,7 @@ public enum ProjectInitializer {
         let outputSetting = outputDirectory.map { directory in
             isInside(directory, current) || isInside(directory, root) ? relativePath(of: directory, from: root) : directory.path
         }
-        let folders = ["sets", "scenes/iphone", "scenes/ipad", "edits"]
+        let folders = ["sets", "scenes", "edits"]
         // Starters only for a fresh project: beside files of its own, a starter would be clutter,
         // and could name what isn't there.
         let fresh = folders.allSatisfy { folder in

@@ -36,7 +36,7 @@ struct SchemaTests {
     @Test func theExamplesFilesFitTheirSchemasAndRead() throws {
         let project = Self.repository.appending(path: "Example/Retake")
         var files: [(URL, String)] = [(project.appending(path: "retake.json"), "retake")]
-        for (folder, kind) in [("sets", "set"), ("scenes/iphone", "scene"), ("scenes/ipad", "scene"), ("edits", "edit")] {
+        for (folder, kind) in [("sets", "set"), ("scenes", "scene"), ("edits", "edit")] {
             let url = project.appending(path: folder)
             for name in try FileManager.default.contentsOfDirectory(atPath: url.path).sorted() where name.hasSuffix(".json") {
                 files.append((url.appending(path: name), kind))

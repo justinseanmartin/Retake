@@ -22,9 +22,8 @@ public struct ProjectValidator {
     public enum Target: Equatable, Sendable {
         case configuration
         case set(String)
-        case scene(String, DeviceType)
-        /// A scene in `scenes/`, checked as each device type without one of its own reads it.
-        case sharedScene(String)
+        /// Checked for each device type it plays on.
+        case scene(String)
         case edit(String)
     }
 
@@ -37,10 +36,7 @@ public struct ProjectValidator {
         let folder = url.standardizedFileURL.deletingLastPathComponent().path
         if folder == project.sets.standardizedFileURL.path.trimmingSlash { return .set(name) }
         if folder == project.edits.standardizedFileURL.path.trimmingSlash { return .edit(name) }
-        for type in DeviceType.allCases where folder == project.scenes(for: type).standardizedFileURL.path.trimmingSlash {
-            return .scene(name, type)
-        }
-        if folder == project.sharedScenes.standardizedFileURL.path.trimmingSlash { return .sharedScene(name) }
+        if folder == project.scenes.standardizedFileURL.path.trimmingSlash { return .scene(name) }
         return nil
     }
 
@@ -54,8 +50,7 @@ public struct ProjectValidator {
         let edits = targets?.compactMap { if case .edit(let name) = $0 { name } else { nil } } ?? files.names(in: project.edits)
         var scenes: [(String, DeviceType)] = targets?.flatMap { target -> [(String, DeviceType)] in
             switch target {
-            case .scene(let name, let type): [(name, type)]
-            case .sharedScene(let name): DeviceType.allCases.filter { files.isShared(files.sceneURL(name, for: $0)) }.map { (name, $0) }
+            case .scene(let name): files.devices(ofScene: name).map { (name, $0) }
             default: []
             }
         } ?? []
@@ -91,16 +86,20 @@ public struct ProjectValidator {
                 switch target {
                 case .configuration: nil
                 case .set: project.sets
-                case .scene(_, let type): project.scenes(for: type)
-                case .sharedScene: project.sharedScenes
+                case .scene: project.scenes
                 case .edit: project.edits
                 }
             }
-        } ?? [project.sets] + DeviceType.allCases.map(project.scenes(for:)) + [project.sharedScenes, project.edits]
+        } ?? [project.sets, project.scenes, project.edits]
         var named: Set<String> = []
         for folder in folders {
             guard let misnamed = files.misnamedFolder(folder), named.insert(misnamed.found).inserted else { continue }
             report.problem(FileProblem(file: "\(misnamed.found)/", path: .root, message: misnamed.message))
+        }
+        if targets == nil || folders.contains(project.scenes) {
+            for old in files.oldSceneFolders() {
+                report.problem(FileProblem(file: "\(project.displayPath(old.folder))/", path: .root, message: old.message))
+            }
         }
     }
 
@@ -109,8 +108,9 @@ public struct ProjectValidator {
     func checkNames(scenes: [(String, DeviceType)], edits: [String], _ report: ProjectFiles.Report) {
         // A clash is reported on the edit, or on the scene when only the scene is being checked.
         let editNames = Set(files.names(in: project.edits)).subtracting(edits)
-        for (name, type) in scenes {
-            let file = project.displayPath(files.sceneURL(name, for: type))
+        // A scene's name is its file's, whichever types it's checked for.
+        for name in Set(scenes.map(\.0)).sorted() {
+            let file = project.displayPath(files.sceneURL(name))
             if let problem = ProjectFiles.nameProblem(name, kind: "scene") {
                 report.problem(FileProblem(file: file, path: .root, message: problem))
             }
@@ -168,7 +168,7 @@ public struct ProjectValidator {
 
     func checkScene(_ name: String, _ type: DeviceType, _ report: ProjectFiles.Report) {
         guard let scene = files.readScene(name, for: type, into: report) else { return }
-        let file = project.displayPath(files.sceneURL(name, for: type))
+        let file = project.displayPath(files.sceneURL(name))
         if let set = scene.set {
             if !exists(files.setURL(set)) {
                 report.problem(FileProblem(file: file, path: JSONPath.root.appending("set"), message: noSet(set)))
@@ -192,20 +192,24 @@ public struct ProjectValidator {
         func loadScene(_ name: String, _ type: DeviceType) -> SceneFile? {
             if let scene = scenes[type]?[name] { return scene }
             let quiet = ProjectFiles.Report()
-            guard exists(files.sceneURL(name, for: type)), let scene = files.readScene(name, for: type, into: quiet) else { return nil }
+            guard exists(files.sceneURL(name)), let scene = files.readScene(name, for: type, into: quiet) else { return nil }
             scenes[type, default: [:]][name] = scene
             return scene
         }
         func checkScene(_ name: String, _ type: DeviceType, at path: JSONPath) -> SceneFile? {
-            guard exists(files.sceneURL(name, for: type)) else {
-                problem(path, "there's no scene \"\(name)\" for \(type.rawValue) (\(project.displayPath(files.sceneURL(name, for: type))))", for: type)
+            guard exists(files.sceneURL(name)) else {
+                problem(path, "there's no scene \"\(name)\" (\(project.displayPath(files.sceneURL(name))))", for: type)
+                return nil
+            }
+            guard files.devices(ofScene: name).contains(type) else {
+                problem(path, "\(project.displayPath(files.sceneURL(name))) doesn't play on \(type.rawValue), which isn't one of its devices", for: type)
                 return nil
             }
             return loadScene(name, type)
         }
         func checkAnchor(_ anchor: Anchor?, in scene: SceneFile?, sceneName: String, _ type: DeviceType, at path: JSONPath) {
             guard let scene, case .step(let step)? = anchor else { return }
-            let sceneFile = project.displayPath(files.sceneURL(sceneName, for: type))
+            let sceneFile = project.displayPath(files.sceneURL(sceneName))
             switch step.step {
             case .id(let id) where !scene.steps.contains(where: { $0.id == id }):
                 problem(path.appending("step"), "\(sceneFile) has no step \"\(id)\"", for: type)

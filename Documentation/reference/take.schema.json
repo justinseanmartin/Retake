@@ -11,7 +11,7 @@
       "enum": [1]
     },
     "scene": {
-      "description": "The scene recorded, as its file in `scenes/<type>/` is named, without `.json`.",
+      "description": "The scene recorded, as its file in `scenes/` is named, without `.json`.",
       "type": "string",
       "minLength": 1
     },

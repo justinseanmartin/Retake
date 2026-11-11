@@ -6,13 +6,30 @@ to what's there without breaking it. Pin a version with `mise use github:justins
 
 ## 0.0.3 (unreleased)
 
+**Breaking: scenes pick their device types as edits do.** A project's scenes move out of
+`scenes/iphone/` and `scenes/ipad/`, which aren't read any more, into `scenes/`. Retake names any
+scene left behind, in `validate` and `record`, and records nothing until it's moved.
+
+- **To move a project**, put each scene in `scenes/`. Where a type's scene and the other's say the
+  same, keep one. Where they differ, keep one and give the other's differences under `"iphone": {
+  … }` or `"ipad": { … }`, in a step or at the top, as in an edit; give a step only one type plays
+  `"devices": ["ipad"]`. A scene for only one type names it: `"devices": ["iphone"]`.
+- An edit that anchored by step number to a scene that now has a step for one type only should
+  anchor by the step's `id`: the step keeps its number on both types, so the numbers after it don't
+  move, but nothing can anchor to it on the type that skips it.
+
 **Scenes**
 
-- **A scene in `scenes/` is every device type's**, unless a type has its own of the same name in
-  `scenes/<type>/`. Anything at its top or in a step can be given again under `iphone` or `ipad`, as
-  in an edit, and a step's **`devices`** names the types it plays on: on another it's skipped but
-  keeps its number, so the steps after it are numbered alike, and an anchor to it fails there.
-  `compose` reads a shared scene but doesn't write one. Nothing breaks.
+- **A scene names the device types it plays on**, `devices`, every one unless it says, and a
+  step's own `devices` the types among those it plays on: on another it's skipped but keeps its
+  number, so the steps after it are numbered alike, and an anchor to it fails there. Anything at a
+  scene's top or in a step can be given again under `iphone` or `ipad`, laid over what it overrides,
+  as in an edit; an override or a step's `devices` naming a type the scene doesn't play on is
+  refused.
+- **`compose` writes the scene for the device it's on**, keeping each step it doesn't change as the
+  file has it, its overrides and `devices` with it.
+- **`retake init`** starts a project with `scenes/` and one `launch` scene for every type.
+- **An edit's `devices`** is every type unless it names some, as a scene's is.
 
 **Drags**
 

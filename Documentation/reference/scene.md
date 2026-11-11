@@ -2,7 +2,7 @@
 
 # A scene
 
-A scene: a set, and the steps played on it. In scenes/<type>/, one device type's; in scenes/, every type's but one with its own of the same name. Anything at the top or in a step can be given again under a device type, and applies only on that type.
+A scene: a set, and the steps played on it, on each of its device types. Anything at the top or in a step can be given again under a device type, and applies only on that type.
 
 Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.3/scene.schema.json>, and `retake schema scene` prints it.
 
@@ -16,6 +16,7 @@ the one it overrides key by key; a list, or a single value, replaces it. At the 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `$schema` | string |  | The URL of the schema the file is written against, for editors. Optional; a file is read against this Retake's schema whatever it names. |
+| `devices` | list of `"iphone"` or `"ipad"`, at least 1, each once |  | The device types it plays on; every one when not given. |
 | `set` | string, not empty |  | The set the scene starts on; the project's defaultSet when not given. |
 | `setup` | list of [step](#step) |  | Steps played before recording starts. Nothing anchors to them, so they have no id. |
 | `leadIn` | number ≥ 0 | `1` | Seconds recorded before the first step. For a scene that records its launch, they start once the app is reachable, after the launch is recorded. |

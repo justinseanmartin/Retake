@@ -98,7 +98,7 @@ public struct ProjectFiles {
         "\(edit ? "a scene" : "an edit") is named \"\(name)\" too, so `retake share \(name)` can't tell a cut from a take; rename one of them"
     }
 
-    /// The names of the files of a kind in a folder: `create-note` for `scenes/iphone/create-note.json`.
+    /// The names of the files of a kind in a folder: `create-note` for `scenes/create-note.json`.
     public func names(in folder: URL) -> [String] {
         let entries = (try? fileManager.contentsOfDirectory(atPath: folder.path)) ?? []
         return entries.filter { $0.hasSuffix(".json") && !$0.hasPrefix(".") }.map { String($0.dropLast(5)) }.sorted()
@@ -120,30 +120,43 @@ public struct ProjectFiles {
         return text
     }
 
-    /// The file a device type's scene is read from: its own in `scenes/<type>/`, or else the shared
-    /// one in `scenes/`; its own, where neither exists, for saying where it was looked for.
-    public func sceneURL(_ name: String, for type: DeviceType) -> URL {
-        let own = project.scenes(for: type).appending(path: "\(name).json")
-        let shared = project.sharedScenes.appending(path: "\(name).json")
-        return !fileManager.fileExists(atPath: own.path) && fileManager.fileExists(atPath: shared.path) ? shared : own
+    public func sceneURL(_ name: String) -> URL { project.scenes.appending(path: "\(name).json") }
+
+    /// The device types a scene's file says it plays on: every one unless it names some, or when the
+    /// file can't be read, so that reading it for each says what's wrong.
+    public func devices(ofScene name: String) -> [DeviceType] {
+        guard let data = fileManager.contents(atPath: sceneURL(name).path), let text = String(data: data, encoding: .utf8),
+              case .object(let object)? = try? JSONParser.parse(text), case .array(let values)? = object["devices"] else { return DeviceType.allCases }
+        let named = Set(values.compactMap { if case .string(let name) = $0 { DeviceType(rawValue: name) } else { nil } })
+        return named.isEmpty ? DeviceType.allCases : DeviceType.allCases.filter(named.contains)
     }
 
-    /// Whether `url` is a scene every device type shares.
-    public func isShared(_ url: URL) -> Bool {
-        url.deletingLastPathComponent().standardizedFileURL.path == project.sharedScenes.standardizedFileURL.path
+    /// Why scenes in `scenes/<type>/`, where an earlier Retake kept one type's, aren't read, for each
+    /// such folder holding any; empty when there are none.
+    public func oldSceneFolders() -> [(folder: URL, message: String)] {
+        DeviceType.allCases.compactMap { type in
+            let folder = project.oldScenes(for: type)
+            guard !names(in: folder).isEmpty else { return nil }
+            return (folder, "isn't read: scenes are in scenes/ now, each naming the device types it plays on; move each one there, giving it \"devices\": [\"\(type.rawValue)\"], or merge it with the other type's as one scene, with \"\(type.rawValue)\" overrides where they differ")
+        }
     }
 
-    /// The scenes a device type has: its own and the shared ones.
+    /// The scenes a device type plays.
     public func sceneNames(for type: DeviceType) -> [String] {
-        Set(names(in: project.scenes(for: type)) + names(in: project.sharedScenes)).sorted()
+        names(in: project.scenes).filter { devices(ofScene: $0).contains(type) }
     }
 
     /// A scene for a device type, or nil with problems in `report`.
     public func readScene(_ name: String, for type: DeviceType, into report: Report) -> SceneFile? {
-        let url = sceneURL(name, for: type)
+        let url = sceneURL(name)
         guard let text = text(of: url, into: report) else { return nil }
         let reader = JSONReader(file: project.displayPath(url))
         let scene = SceneFile.read(text, with: reader, for: type)
+        if let scene, !scene.devices.contains(type) {
+            reader.problem("doesn't play on \(type.rawValue), which isn't one of its devices", at: JSONPath.root.appending("devices"))
+            report.add(reader)
+            return nil
+        }
         report.add(reader)
         return scene
     }

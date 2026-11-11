@@ -59,4 +59,8 @@ jobs:
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --title "Retake ${GITHUB_REF_NAME#v}" --generate-notes "$RUNNER_TEMP"/release/retake-*.tar.gz*
+        # The version's section of RELEASE.md, which says what it breaks, rather than notes made
+        # from the commits.
+        run: |
+          Scripts/release-notes.sh "${GITHUB_REF_NAME#v}" > "$RUNNER_TEMP/notes.md"
+          gh release create "$GITHUB_REF_NAME" --title "Retake ${GITHUB_REF_NAME#v}" --notes-file "$RUNNER_TEMP/notes.md" "$RUNNER_TEMP"/release/retake-*.tar.gz*

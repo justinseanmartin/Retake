@@ -1,0 +1,12 @@
+{
+  "set": "screenshots",
+  "steps": [
+    { "waitFor": { "label": "Book club" }, "iphone": { "waitFor": { "label": "Reading list" } } },
+    { "capture": "library" },
+    { "tap": { "label": "Book club" }, "iphone": { "tap": { "label": "Reading list" } } },
+    { "waitFor": { "label": "Share" } },
+    { "capture": "note", "devices": ["iphone"] },
+    { "orientation": "landscape-left", "devices": ["ipad"] },
+    { "capture": "side-by-side", "devices": ["ipad"] }
+  ]
+}

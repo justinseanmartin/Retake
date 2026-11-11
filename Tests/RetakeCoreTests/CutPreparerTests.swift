@@ -12,7 +12,7 @@ struct CutPreparerTests {
         project = Project(configuration: root.appending(path: "retake.json"))
         try write("retake.json", "{}")
         try write("sets/base.json", "{}")
-        try write("scenes/ipad/walk.json", #"{"set": "base", "steps": [{"tap": {"label": "a"}, "id": "a"}, {"waitFor": {"label": "b"}, "id": "b"}]}"#)
+        try write("scenes/walk.json", #"{"devices": ["ipad"], "set": "base", "steps": [{"tap": {"label": "a"}, "id": "a"}, {"waitFor": {"label": "b"}, "id": "b"}]}"#)
     }
 
     func write(_ path: String, _ text: String) throws {

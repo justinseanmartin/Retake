@@ -79,7 +79,7 @@ struct ProjectTests {
 
     @Test func foldersFollowTheDeviceType() {
         let project = Project(configuration: root.appending(path: "retake.json"))
-        #expect(project.scenes(for: .ipad).path == root.appending(path: "scenes/ipad").path)
+        #expect(project.scenes.path == root.appending(path: "scenes").path)
         #expect(project.takes(for: .iphone).path == root.appending(path: "output/takes/iphone").path)
     }
 
@@ -88,7 +88,7 @@ struct ProjectTests {
         let scratch = root.appending(path: "scratch/run-1", directoryHint: .isDirectory)
         let project = try Project.locate(configuration: nil, output: scratch, currentDirectory: root)
         #expect(project.cuts(for: .ipad).path == scratch.appending(path: "cuts/ipad").path)
-        #expect(project.scenes(for: .ipad).path == root.appending(path: "scenes/ipad").path)
+        #expect(project.scenes.path == root.appending(path: "scenes").path)
     }
 
     @Test func theWorstStatusWins() {

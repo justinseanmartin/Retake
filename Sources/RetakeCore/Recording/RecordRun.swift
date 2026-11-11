@@ -3,11 +3,12 @@ import Foundation
 /// `retake record`: choosing the scenes, then recording a take of each, or with `--dry-run`, playing
 /// each without recording it. See Documentation/cli.md, "retake record".
 public enum RecordRun {
-    /// The scenes to record, in order, as Documentation/cli.md's table says: those named; or every scene in
-    /// `scenes/<type>/`, or every one `edit` uses, either way only those with no take yet unless
+    /// The scenes to record, in order, as Documentation/cli.md's table says: those named; or every scene that
+    /// plays on `type`, or every one `edit` uses, either way only those with no take yet unless
     /// `force`. A failure is never cut from, so it isn't a take for this. Misuse (2) for a scene or
     /// edit that doesn't exist, or an edit not cut for this device type; a failure (1) when
-    /// `scenes/<type>/` lists nothing because it's named in another case, or when the takes folder
+    /// `scenes/` lists nothing because it's named in another case, when an earlier Retake's
+    /// `scenes/<type>/` still holds scenes, or when the takes folder
     /// holds an earlier Retake's numbered takes. With `stillsOnly`, the scenes are those with
     /// `capture` steps, and those that have their captures are already taken: misuse (2) for a
     /// scene named that captures nothing.
@@ -17,15 +18,18 @@ public enum RecordRun {
         try TakeStore.refuseOldLayout(for: [type], in: project)
         let files = ProjectFiles(project: project)
         let available = files.sceneNames(for: type)
-        if available.isEmpty, let misnamed = files.misnamedFolder(project.scenes(for: type)) {
-            throw RetakeError(.failed, "There are no \(type.rawValue) scenes in \(project.displayPath(project.scenes(for: type))): \(misnamed).")
+        if let old = files.oldSceneFolders().first {
+            throw RetakeError(.failed, "\(project.displayPath(old.folder))/ \(old.message).")
+        }
+        if available.isEmpty, let misnamed = files.misnamedFolder(project.scenes) {
+            throw RetakeError(.failed, "There are no \(type.rawValue) scenes in \(project.displayPath(project.scenes)): \(misnamed).")
         }
         if !named.isEmpty {
             if let missing = named.first(where: { !available.contains($0) }) {
                 throw RetakeError(
                     .usage,
-                    "There's no \(type.rawValue) scene \"\(missing)\" (\(project.displayPath(files.sceneURL(missing, for: type))))"
-                        + files.whyMissing(files.sceneURL(missing, for: type))
+                    "There's no \(type.rawValue) scene \"\(missing)\" (\(project.displayPath(files.sceneURL(missing))))"
+                        + files.whyMissing(files.sceneURL(missing))
                         + (available.isEmpty ? "." : "; there's \(available.joined(separator: ", ")).")
                 )
             }
@@ -54,7 +58,7 @@ public enum RecordRun {
             var seen = Set<String>()
             candidates = video.clips.flatMap { [$0.take] + $0.stills.map(\.take) }.filter { seen.insert($0).inserted }
             if let missing = candidates.first(where: { !available.contains($0) }) {
-                throw RetakeError(.usage, "\(edit) uses the scene \"\(missing)\", which has no \(project.displayPath(files.sceneURL(missing, for: type))).")
+                throw RetakeError(.usage, "\(edit) uses the scene \"\(missing)\", which has no \(project.displayPath(files.sceneURL(missing))).")
             }
         }
         if force { return (candidates, []) }

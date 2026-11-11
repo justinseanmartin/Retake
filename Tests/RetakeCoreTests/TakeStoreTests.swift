@@ -20,8 +20,8 @@ struct TakeStoreTests {
         try record("b", .failed, at: 1, failure: "step 2 didn't run")
         try record("c", at: 1, movie: false)
         try record("a", at: 1, type: .iphone)
-        for scene in ["a", "b", "c", "d"] { try write("scenes/ipad/\(scene).json", Self.scene) }
-        try write("scenes/iphone/a.json", Self.scene)
+        for scene in ["b", "c", "d"] { try write("scenes/\(scene).json", #"{ "devices": ["ipad"], "steps": [{ "hold": 1 }] }"#) }
+        try write("scenes/a.json", Self.scene)
         try write("edits/video1.json", #"{ "devices": ["ipad"], "clips": [{ "take": "a", "from": { "step": "start" }, "to": { "step": "end" }, "stills": [{ "take": "c", "at": 0 }] }] }"#)
         try write("output/cuts/ipad/video1/video1-ipad.mp4", "")
         try write("output/cuts/ipad/video2/video2-ipad.mp4", "")
@@ -175,8 +175,8 @@ struct TakeStoreTests {
 
     @Test func unusedKeepsAScenesThatCaptureButNotTheCapturesOfOnesThatNoLongerDo() throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        try write("scenes/ipad/d.json", #"{ "steps": [{ "capture": "home" }] }"#)
-        try write("scenes/ipad/e.json", "not a scene")
+        try write("scenes/d.json", #"{ "devices": ["ipad"], "steps": [{ "capture": "home" }] }"#)
+        try write("scenes/e.json", "not a scene")
         try write("output/captures/ipad/d/home.png", "")
         try write("output/captures/ipad/b/home.png", "")
         try write("output/captures/ipad/gone/home.png", "")

@@ -5,7 +5,7 @@ import ThePlans
 
 struct SceneFileTests {
     func read(_ text: String) -> (scene: SceneFile?, problems: [String]) {
-        let reader = JSONReader(file: "scenes/ipad/create-note.json")
+        let reader = JSONReader(file: "scenes/create-note.json")
         let scene = SceneFile.read(text, with: reader)
         return (scene, reader.problems.map(\.description))
     }
@@ -19,7 +19,7 @@ struct SceneFileTests {
         let long = #"{"waitFor": {"label": "Synced", "timeout": 61}}"#
         Step.$environment.withValue([:]) {
             #expect(steps(long).problems == [
-                "scenes/ipad/create-note.json: steps[0].waitFor.timeout: 61 s is longer than The Button Heist waits, at most 60 s; BUTTONHEIST_MAX_WAIT_TIMEOUT raises that, set where Retake runs and in the set's environment, for the app",
+                "scenes/create-note.json: steps[0].waitFor.timeout: 61 s is longer than The Button Heist waits, at most 60 s; BUTTONHEIST_MAX_WAIT_TIMEOUT raises that, set where Retake runs and in the set's environment, for the app",
             ])
             #expect(steps(#"{"waitFor": {"label": "Synced", "timeout": 60}}"#).problems.isEmpty)
         }
@@ -76,26 +76,26 @@ struct SceneFileTests {
             Step(.capture("home.1_a-b")), Step(id: "list", .capture("list"), hold: 1),
         ])
         #expect(steps(#"{"capture": "home"}, {"tap": {"label": "Add"}}, {"capture": "home"}"#).problems == [
-            #"scenes/ipad/create-note.json: steps[2].capture: "home" is already steps[0]'s capture; each capture names a still of its own"#,
+            #"scenes/create-note.json: steps[2].capture: "home" is already steps[0]'s capture; each capture names a still of its own"#,
         ])
         #expect(steps(#"{"capture": "home"}, {"capture": "Home"}"#).problems == [
-            #"scenes/ipad/create-note.json: steps[1].capture: "Home" is already steps[0]'s capture ("home", in another case, names the same file); each capture names a still of its own"#,
+            #"scenes/create-note.json: steps[1].capture: "Home" is already steps[0]'s capture ("home", in another case, names the same file); each capture names a still of its own"#,
         ])
         for bad in ["../home", ".home", "home screen", "home/1"] {
             #expect(steps(#"{"capture": "\#(bad)"}"#).problems == [
-                #"scenes/ipad/create-note.json: steps[0].capture: "\#(bad)" names the still's file, so it's letters, digits, -, _ and ., starting with a letter or digit"#,
+                #"scenes/create-note.json: steps[0].capture: "\#(bad)" names the still's file, so it's letters, digits, -, _ and ., starting with a letter or digit"#,
             ])
         }
         #expect(read(#"{"setup": [{"capture": "home"}], "steps": [{"hold": 1}]}"#).problems == [
-            "scenes/ipad/create-note.json: setup[0].capture: setup steps aren't recorded, so nothing is captured in them; move it into the steps",
+            "scenes/create-note.json: setup[0].capture: setup steps aren't recorded, so nothing is captured in them; move it into the steps",
         ])
         #expect(steps(#"{"capture": "home", "tap": {"label": "Add"}}"#).problems.first?.contains(#""tap" and "capture" can't be given together"#) == true)
     }
 
     @Test func aScenesLaunchIsItsSetsAlone() {
-        let reader = JSONReader(file: "scenes/ipad/create-note.json")
+        let reader = JSONReader(file: "scenes/create-note.json")
         #expect(SceneFile.read(#"{"environment": {"FLAG": "1"}, "steps": [{"hold": 1}]}"#, with: reader) == nil)
-        #expect(reader.problems.map(\.description) == [#"scenes/ipad/create-note.json: unknown key "environment""#])
+        #expect(reader.problems.map(\.description) == [#"scenes/create-note.json: unknown key "environment""#])
     }
 
     @Test func whatsLeftOutHasItsDefault() {
@@ -127,9 +127,9 @@ struct SceneFileTests {
     }
 
     @Test(arguments: [
-        (#"{"tap": {"x": "150%", "y": 1}}"#, #"scenes/ipad/create-note.json: steps[0].tap.x: is a number of points, or a percentage of the screen up to 100%, such as "50%""#),
-        (#"{"tap": {"x": "half", "y": 1}}"#, #"scenes/ipad/create-note.json: steps[0].tap.x: is a number of points, or a percentage of the screen up to 100%, such as "50%""#),
-        (#"{"drag": {"from": {"x": 1, "y": 2, "label": "A"}, "to": {"x": 3, "y": 4}}}"#, #"scenes/ipad/create-note.json: steps[0].drag.from: is a point ("x" and "y") or an element, not both"#),
+        (#"{"tap": {"x": "150%", "y": 1}}"#, #"scenes/create-note.json: steps[0].tap.x: is a number of points, or a percentage of the screen up to 100%, such as "50%""#),
+        (#"{"tap": {"x": "half", "y": 1}}"#, #"scenes/create-note.json: steps[0].tap.x: is a number of points, or a percentage of the screen up to 100%, such as "50%""#),
+        (#"{"drag": {"from": {"x": 1, "y": 2, "label": "A"}, "to": {"x": 3, "y": 4}}}"#, #"scenes/create-note.json: steps[0].drag.from: is a point ("x" and "y") or an element, not both"#),
     ])
     func aPointThatIsntOneSaysWhy(_ step: String, _ expected: String) {
         #expect(steps(step).problems == [expected])
@@ -146,8 +146,8 @@ struct SceneFileTests {
     }
 
     @Test(arguments: [
-        (#"{"drag": {"from": {"x": 1, "y": 2, "offset": {"x": 1, "y": 1}}, "to": {"x": 3, "y": 4}}}"#, #"scenes/ipad/create-note.json: steps[0].drag.from: offset and offsetPercent move an element's activation point; a point is given where it's meant"#),
-        (#"{"drag": {"from": {"label": "A"}, "to": {"label": "B", "offsetPercent": {"x": 50}}}}"#, #"scenes/ipad/create-note.json: steps[0].drag.to.offsetPercent: is missing "y""#),
+        (#"{"drag": {"from": {"x": 1, "y": 2, "offset": {"x": 1, "y": 1}}, "to": {"x": 3, "y": 4}}}"#, #"scenes/create-note.json: steps[0].drag.from: offset and offsetPercent move an element's activation point; a point is given where it's meant"#),
+        (#"{"drag": {"from": {"label": "A"}, "to": {"label": "B", "offsetPercent": {"x": 50}}}}"#, #"scenes/create-note.json: steps[0].drag.to.offsetPercent: is missing "y""#),
     ])
     func aDragOffsetThatIsntOneSaysWhy(_ step: String, _ expected: String) {
         #expect(steps(step).problems == [expected])
@@ -168,35 +168,35 @@ struct SceneFileTests {
     }
 
     @Test(arguments: [
-        (#"{"tap": {"traits": ["heading"]}}"#, #"scenes/ipad/create-note.json: steps[0].tap.traits[0]: "heading" isn't a trait The Button Heist knows; `retake compose` shows each element's"#),
-        (#"{"tap": {"traits": []}}"#, "scenes/ipad/create-note.json: steps[0].tap.traits: needs at least one trait"),
-        (#"{"tap": {"traits": ["button", "button"]}}"#, #"scenes/ipad/create-note.json: steps[0].tap.traits: names "button" more than once"#),
-        (#"{"tap": {"label": "a", "hint": ""}}"#, "scenes/ipad/create-note.json: steps[0].tap.hint: can't be empty"),
+        (#"{"tap": {"traits": ["heading"]}}"#, #"scenes/create-note.json: steps[0].tap.traits[0]: "heading" isn't a trait The Button Heist knows; `retake compose` shows each element's"#),
+        (#"{"tap": {"traits": []}}"#, "scenes/create-note.json: steps[0].tap.traits: needs at least one trait"),
+        (#"{"tap": {"traits": ["button", "button"]}}"#, #"scenes/create-note.json: steps[0].tap.traits: names "button" more than once"#),
+        (#"{"tap": {"label": "a", "hint": ""}}"#, "scenes/create-note.json: steps[0].tap.hint: can't be empty"),
     ])
     func traitsAndHintsMistakesAreNamed(_ step: String, _ expected: String) {
         #expect(steps(step).problems == [expected])
     }
 
     @Test(arguments: [
-        (#"{"tapp": {"label": "a"}}"#, #"scenes/ipad/create-note.json: steps[0]: unknown key "tapp"; did you mean "tap"?"#),
-        (#"{"tap": {"label": "a"}, "drag": {"from": {"x": 1, "y": 1}, "to": {"x": 2, "y": 2}}}"#, #"scenes/ipad/create-note.json: steps[0]: does one thing, so "tap" and "drag" can't be given together"#),
-        (#"{"id": "pause"}"#, "scenes/ipad/create-note.json: steps[0]: has nothing to do: give an action (tap, drag, type, activate, orientation, waitFor, capture) or a hold"),
-        (#"{"tap": {"x": 10, "y": 10, "label": "a"}}"#, #"scenes/ipad/create-note.json: steps[0].tap: taps a point ("x" and "y") or an element, not both"#),
-        (#"{"tap": {"x": 10}}"#, #"scenes/ipad/create-note.json: steps[0].tap: is missing "y""#),
-        (#"{"tap": {"occurrence": 2}}"#, #"scenes/ipad/create-note.json: steps[0].tap: needs an element to name: its "label", "value", "identifier", "hint" or "traits""#),
-        (#"{"tap": {"label": "a", "occurrence": 0}}"#, "scenes/ipad/create-note.json: steps[0].tap.occurrence: 0 must be at least 1"),
-        (#"{"waitFor": {"label": "a", "timeout": 0}}"#, "scenes/ipad/create-note.json: steps[0].waitFor.timeout: 0 must be more than 0"),
-        (#"{"type": {"text": ""}}"#, "scenes/ipad/create-note.json: steps[0].type.text: can't be empty"),
-        (#"{"type": {"text": "a", "into": {}}}"#, #"scenes/ipad/create-note.json: steps[0].type.into: needs an element to name: its "label", "value", "identifier", "hint" or "traits""#),
-        (#"{"orientation": "sideways"}"#, #"scenes/ipad/create-note.json: steps[0].orientation: "sideways" isn't one of portrait, portrait-upside-down, landscape-left or landscape-right"#),
-        (#"{"inspect": true}"#, "scenes/ipad/create-note.json: steps[0]: unknown key \"inspect\""),
-        (#"{"hold": -1}"#, "scenes/ipad/create-note.json: steps[0].hold: -1 must be at least 0"),
-        (#"{"id": "3", "hold": 1}"#, #"scenes/ipad/create-note.json: steps[0].id: "3" looks like a number, which anchors count steps by; give it a name"#),
-        (#"{"id": "-1", "hold": 1}"#, #"scenes/ipad/create-note.json: steps[0].id: "-1" looks like a number, which anchors count steps by; give it a name"#),
-        (#"{"id": "end", "hold": 1}"#, #"scenes/ipad/create-note.json: steps[0].id: "end" names the take's own end, so a step can't have it"#),
-        (#"{"id": "a", "hold": 1}, {"id": "a", "hold": 1}"#, #"scenes/ipad/create-note.json: steps[1].id: "a" is already steps[0]'s id; ids are unique in a scene"#),
-        (#"{"drag": {"from": {"x": 1, "y": 1}, "to": {"x": 2, "y": 2}, "duration": 0}}"#, "scenes/ipad/create-note.json: steps[0].drag.duration: 0 must be more than 0"),
-        (#"{"tap": {"x": -5, "y": 1}}"#, "scenes/ipad/create-note.json: steps[0].tap.x: -5 must be at least 0"),
+        (#"{"tapp": {"label": "a"}}"#, #"scenes/create-note.json: steps[0]: unknown key "tapp"; did you mean "tap"?"#),
+        (#"{"tap": {"label": "a"}, "drag": {"from": {"x": 1, "y": 1}, "to": {"x": 2, "y": 2}}}"#, #"scenes/create-note.json: steps[0]: does one thing, so "tap" and "drag" can't be given together"#),
+        (#"{"id": "pause"}"#, "scenes/create-note.json: steps[0]: has nothing to do: give an action (tap, drag, type, activate, orientation, waitFor, capture) or a hold"),
+        (#"{"tap": {"x": 10, "y": 10, "label": "a"}}"#, #"scenes/create-note.json: steps[0].tap: taps a point ("x" and "y") or an element, not both"#),
+        (#"{"tap": {"x": 10}}"#, #"scenes/create-note.json: steps[0].tap: is missing "y""#),
+        (#"{"tap": {"occurrence": 2}}"#, #"scenes/create-note.json: steps[0].tap: needs an element to name: its "label", "value", "identifier", "hint" or "traits""#),
+        (#"{"tap": {"label": "a", "occurrence": 0}}"#, "scenes/create-note.json: steps[0].tap.occurrence: 0 must be at least 1"),
+        (#"{"waitFor": {"label": "a", "timeout": 0}}"#, "scenes/create-note.json: steps[0].waitFor.timeout: 0 must be more than 0"),
+        (#"{"type": {"text": ""}}"#, "scenes/create-note.json: steps[0].type.text: can't be empty"),
+        (#"{"type": {"text": "a", "into": {}}}"#, #"scenes/create-note.json: steps[0].type.into: needs an element to name: its "label", "value", "identifier", "hint" or "traits""#),
+        (#"{"orientation": "sideways"}"#, #"scenes/create-note.json: steps[0].orientation: "sideways" isn't one of portrait, portrait-upside-down, landscape-left or landscape-right"#),
+        (#"{"inspect": true}"#, "scenes/create-note.json: steps[0]: unknown key \"inspect\""),
+        (#"{"hold": -1}"#, "scenes/create-note.json: steps[0].hold: -1 must be at least 0"),
+        (#"{"id": "3", "hold": 1}"#, #"scenes/create-note.json: steps[0].id: "3" looks like a number, which anchors count steps by; give it a name"#),
+        (#"{"id": "-1", "hold": 1}"#, #"scenes/create-note.json: steps[0].id: "-1" looks like a number, which anchors count steps by; give it a name"#),
+        (#"{"id": "end", "hold": 1}"#, #"scenes/create-note.json: steps[0].id: "end" names the take's own end, so a step can't have it"#),
+        (#"{"id": "a", "hold": 1}, {"id": "a", "hold": 1}"#, #"scenes/create-note.json: steps[1].id: "a" is already steps[0]'s id; ids are unique in a scene"#),
+        (#"{"drag": {"from": {"x": 1, "y": 1}, "to": {"x": 2, "y": 2}, "duration": 0}}"#, "scenes/create-note.json: steps[0].drag.duration: 0 must be more than 0"),
+        (#"{"tap": {"x": -5, "y": 1}}"#, "scenes/create-note.json: steps[0].tap.x: -5 must be at least 0"),
     ])
     func stepMistakesAreNamed(_ step: String, _ expected: String) {
         let result = steps(step)
@@ -205,11 +205,11 @@ struct SceneFileTests {
     }
 
     @Test(arguments: [
-        (#"{}"#, #"scenes/ipad/create-note.json: is missing "steps""#),
-        (#"{"steps": []}"#, "scenes/ipad/create-note.json: steps: needs at least one step"),
-        (#"{"steps": [{"hold": 1}], "setup": [{"id": "go", "tap": {"label": "a"}}]}"#, "scenes/ipad/create-note.json: setup[0].id: setup steps aren't recorded, so nothing can anchor to them; leave the id out"),
-        (#"{"steps": [{"hold": 1}], "orientation": "upside-down"}"#, #"scenes/ipad/create-note.json: orientation: "upside-down" isn't one of portrait, portrait-upside-down, landscape-left or landscape-right"#),
-        (#"{"steps": [{"hold": 1}], "leadIn": -0.5}"#, "scenes/ipad/create-note.json: leadIn: -0.5 must be at least 0"),
+        (#"{}"#, #"scenes/create-note.json: is missing "steps""#),
+        (#"{"steps": []}"#, "scenes/create-note.json: steps: needs at least one step"),
+        (#"{"steps": [{"hold": 1}], "setup": [{"id": "go", "tap": {"label": "a"}}]}"#, "scenes/create-note.json: setup[0].id: setup steps aren't recorded, so nothing can anchor to them; leave the id out"),
+        (#"{"steps": [{"hold": 1}], "orientation": "upside-down"}"#, #"scenes/create-note.json: orientation: "upside-down" isn't one of portrait, portrait-upside-down, landscape-left or landscape-right"#),
+        (#"{"steps": [{"hold": 1}], "leadIn": -0.5}"#, "scenes/create-note.json: leadIn: -0.5 must be at least 0"),
     ])
     func sceneMistakesAreNamed(_ text: String, _ expected: String) {
         #expect(read(text).problems == [expected])
@@ -219,7 +219,7 @@ struct SceneFileTests {
         let example = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "../../Example").standardizedFileURL
         let files = ProjectFiles(project: try Project.locate(configuration: nil, currentDirectory: example))
         for type in DeviceType.allCases {
-            let names = files.names(in: files.project.scenes(for: type))
+            let names = files.sceneNames(for: type)
             #expect(names.starts(with: ["create-note", "first-launch"]), "each type has at least these")
             for name in names {
                 let report = ProjectFiles.Report()
@@ -231,6 +231,6 @@ struct SceneFileTests {
 
     @Test func aStepThatCantBeReadDoesntShiftTheIDChecks() {
         let read = steps(#"{"tap": {}}, {"hold": 1, "id": "a"}, {"hold": 1, "id": "a"}"#)
-        #expect(read.problems.count == 1 && read.problems[0].hasPrefix("scenes/ipad/create-note.json: steps[0].tap:"))
+        #expect(read.problems.count == 1 && read.problems[0].hasPrefix("scenes/create-note.json: steps[0].tap:"))
     }
 }

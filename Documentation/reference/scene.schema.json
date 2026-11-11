@@ -2,12 +2,22 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.3/scene.schema.json",
   "title": "A scene",
-  "description": "A scene: a set, and the steps played on it. In scenes/<type>/, one device type's; in scenes/, every type's but one with its own of the same name. Anything at the top or in a step can be given again under a device type, and applies only on that type.",
+  "description": "A scene: a set, and the steps played on it, on each of its device types. Anything at the top or in a step can be given again under a device type, and applies only on that type.",
   "type": "object",
   "properties": {
     "$schema": {
       "description": "The URL of the schema the file is written against, for editors. Optional; a file is read against this Retake's schema whatever it names.",
       "type": "string"
+    },
+    "devices": {
+      "description": "The device types it plays on; every one when not given.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["iphone", "ipad"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
     },
     "set": {
       "description": "The set the scene starts on; the project's defaultSet when not given.",

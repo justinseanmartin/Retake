@@ -9,17 +9,8 @@ extension EditFile {
         guard let value = reader.parse(text), var root = reader.root(value, kind: "edit") else { return nil }
         let problemsBefore = reader.problems.count
         let intent = root.optional("intent", reader.string)
-        let devices = root.required("devices") { value, path -> [DeviceType]? in
-            guard let devices = reader.array(value, at: path, element: { reader.choice($0, at: $1, as: DeviceType.self) }) else { return nil }
-            if case .array(let values) = value, values.isEmpty {
-                reader.problem("needs at least one device type: iphone, ipad", at: path)
-            }
-            var seen = Set<DeviceType>()
-            for (index, device) in devices.enumerated() where !seen.insert(device).inserted {
-                reader.problem("\"\(device.rawValue)\" is given more than once", at: path.appending(index))
-            }
-            return devices
-        }
+        // Every device type unless the edit names some, as a scene's are.
+        let devices = root.has("devices") ? root.optional("devices") { DeviceType.readList($0, at: $1, reader) } : DeviceType.allCases
         if root.value("takes") != nil {
             reader.problem("an edit doesn't name its takes: cut uses each scene's take, and `retake takes --restore` puts back the one before it; delete \"takes\"", at: root.path("takes"))
         }

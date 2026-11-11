@@ -59,7 +59,7 @@ struct SharerTests {
         root = FileManager.default.temporaryDirectory.appending(path: "RetakeSharerTests-\(UUID().uuidString)", directoryHint: .isDirectory)
         project = Project(configuration: root.appending(path: "retake.json"))
         try write("retake.json", "{}")
-        try write("scenes/ipad/walk.json", #"{"steps": [{"hold": 1}]}"#)
+        try write("scenes/walk.json", #"{"devices": ["ipad"], "steps": [{"hold": 1}]}"#)
         try write("edits/video.json", #"{"devices": ["ipad"], "clips": []}"#)
     }
 
@@ -83,7 +83,7 @@ struct SharerTests {
         #expect(await failure("video") == "1: video/ipad: there's no ipad cut of video to share (output/cuts/ipad/video/video-ipad-master.mov); cut it with `retake cut video --type ipad`.")
         #expect(await failure("walk") == "1: walk/ipad: there's no successful ipad take of walk to share; record it.")
         #expect(await failure("nothing") == #"2: nothing/ipad: there's no edit or scene "nothing"."#)
-        try write("scenes/iphone/video.json", #"{"steps": [{"hold": 1}]}"#)
+        try write("scenes/video.json", #"{"devices": ["iphone"], "steps": [{"hold": 1}]}"#)
         #expect(await failure("video") == #"1: video/ipad: a scene is named "video" too, so `retake share video` can't tell a cut from a take; rename one of them."#)
     }
 

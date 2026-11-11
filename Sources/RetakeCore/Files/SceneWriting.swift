@@ -83,14 +83,15 @@ extension ElementTarget {
 }
 
 /// A scene's file as `compose` edits it: its other fields kept as they were, and its steps written
-/// back after each change.
+/// back after each change, each one it read as its file wrote it, with its overrides and `devices`,
+/// since compose reads the scene for one device type.
 public struct SceneDocument: Sendable {
     public var url: URL
     /// The file's top-level fields, `steps` among them.
     var fields: JSONObject
     public var steps: [Step]
-    /// Whether the scene is in `scenes/`, every device type's, which compose reads but doesn't write.
-    public var isShared = false
+    /// The steps the file had, as read and as written, which a step left as it was is written back as.
+    var read: [(step: Step, json: JSONValue)]
 
     /// The scene in `url`, or a new one on `set` when there's no file yet.
     public init(url: URL, scene: SceneFile?, text: String?, newOn set: String) {
@@ -104,6 +105,33 @@ public struct SceneDocument: Sendable {
             ])
         }
         steps = scene?.steps ?? []
+        if case .array(let written)? = fields["steps"], written.count == steps.count {
+            read = Array(zip(steps, written))
+        } else {
+            read = []
+        }
+    }
+
+    /// The step at `index` as it's written: as the file wrote it when compose read it and only its
+    /// hold or id has changed since, those written over; as Retake writes a step otherwise.
+    func written(_ index: Int) -> JSONValue {
+        let step = steps[index]
+        guard read.indices.contains(index), read[index].step.action == step.action, case .object(var object) = read[index].json else {
+            return step.json
+        }
+        if read[index].step == step { return .object(object) }
+        func set(_ key: String, _ value: JSONValue?) {
+            let at = object.entries.firstIndex { $0.key == key }
+            switch (at, value) {
+            case (let at?, let value?): object.entries[at].value = value
+            case (nil, let value?): object.entries.append(.init(key: key, value: value))
+            case (let at?, nil): object.entries.remove(at: at)
+            case (nil, nil): break
+            }
+        }
+        set("hold", step.hold.map(JSONValue.number))
+        set("id", step.id.map(JSONValue.string))
+        return .object(object)
     }
 
     /// The file's text with its steps as they are now, a step to a line, as scenes are written by
@@ -117,17 +145,11 @@ public struct SceneDocument: Sendable {
         } else {
             fields.entries.append(.init(key: "steps", value: .string(marker)))
         }
-        let steps = self.steps.isEmpty ? "[]" : "[\n" + self.steps.map { "    " + JSONWriter.compact($0.json) }.joined(separator: ",\n") + "\n  ]"
+        let steps = self.steps.isEmpty ? "[]" : "[\n" + self.steps.indices.map { "    " + JSONWriter.compact(written($0)) }.joined(separator: ",\n") + "\n  ]"
         return JSONWriter.write(.object(fields)).replacingOccurrences(of: "\"\(marker)\"", with: steps)
     }
 
     public func write() throws(RetakeError) {
-        if isShared {
-            throw RetakeError(
-                .usage,
-                "\(url.lastPathComponent) is shared by every device type, and compose writes one type's steps: change it by hand, or copy it into scenes/<type>/ to compose that type's own.",
-            )
-        }
         do {
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try Data(text.utf8).write(to: url)
