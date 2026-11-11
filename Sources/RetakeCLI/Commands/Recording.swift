@@ -186,7 +186,8 @@ struct Record: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Records takes, or with --stills-only, only their captures, or with --dry-run, plays scenes without recording them.",
         discussion: """
-            With no scenes named, records every scene in scenes/<type>/ with no take yet, or every one \
+            With no scenes named, records every scene the device's type has, in scenes/<type>/ or \
+            scenes/, with no take yet, or every one \
             with --force. With --for, the scenes an edit uses. Scenes named are recorded whether or not \
             they have takes. A take that succeeds replaces the scene's take, which is kept as its \
             previous one, replacing that; one that fails is kept as the scene's latest failure, and \

@@ -152,12 +152,16 @@ extension SceneFile {
             actions + [
                 .init("hold", .number("Seconds to pause after the step, or for a tap, from when it's sent; the scene's defaultHold when not given.", atLeast: 0)),
                 .init("id", id),
+                .init("devices", .array(
+                    "The device types it plays on; every one when not given. On another, it's skipped but keeps its number, so the steps after it are numbered alike on every type, and nothing can anchor to it there.",
+                    of: .choice(nil, DeviceType.allCases.map(\.rawValue)), minItems: 1, unique: true,
+                )),
             ],
         )
         step.oneOf = Step.Action.keys.map { key in var branch = Schema(); branch.required = [key]; return branch } + [holdOnly]
 
         let root = Schema.object(
-            "A scene: a set, and the steps played on it.",
+            "A scene: a set, and the steps played on it. In scenes/<type>/, one device type's; in scenes/, every type's but one with its own of the same name. Anything at the top or in a step can be given again under a device type, and applies only on that type.",
             [
                 FileSchema.schemaKey,
                 .init("set", .string("The set the scene starts on; the project's defaultSet when not given.", nonEmpty: true)),
@@ -171,7 +175,14 @@ extension SceneFile {
             ],
             required: ["steps"],
         )
-        return FileSchema(kind: "scene", title: "A scene", root: root, definitions: [.init("step", step), .init("element", element), .init("dragElement", dragElement)])
+        let devices = DeviceType.allCases.map(\.rawValue)
+        let definitions: [Schema.Property] = [.init("step", step), .init("element", element), .init("dragElement", dragElement)]
+        return FileSchema(
+            kind: "scene", title: "A scene",
+            root: root.overridden(by: devices, excluding: ["$schema"]),
+            definitions: definitions.map { .init($0.name, $0.schema.overridden(by: devices, as: .ref("\($0.name)-override"))) }
+                + definitions.map { .init("\($0.name)-override", $0.schema.partial) },
+        )
     }
 
     /// An element's properties, as a step, a spotlight or a blur names it.

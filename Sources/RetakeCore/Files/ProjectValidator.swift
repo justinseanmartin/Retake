@@ -23,6 +23,8 @@ public struct ProjectValidator {
         case configuration
         case set(String)
         case scene(String, DeviceType)
+        /// A scene in `scenes/`, checked as each device type without one of its own reads it.
+        case sharedScene(String)
         case edit(String)
     }
 
@@ -38,6 +40,7 @@ public struct ProjectValidator {
         for type in DeviceType.allCases where folder == project.scenes(for: type).standardizedFileURL.path.trimmingSlash {
             return .scene(name, type)
         }
+        if folder == project.sharedScenes.standardizedFileURL.path.trimmingSlash { return .sharedScene(name) }
         return nil
     }
 
@@ -49,9 +52,15 @@ public struct ProjectValidator {
         let all = targets == nil
         let sets = targets?.compactMap { if case .set(let name) = $0 { name } else { nil } } ?? files.names(in: project.sets)
         let edits = targets?.compactMap { if case .edit(let name) = $0 { name } else { nil } } ?? files.names(in: project.edits)
-        var scenes: [(String, DeviceType)] = targets?.compactMap { if case .scene(let name, let type) = $0 { (name, type) } else { nil } } ?? []
+        var scenes: [(String, DeviceType)] = targets?.flatMap { target -> [(String, DeviceType)] in
+            switch target {
+            case .scene(let name, let type): [(name, type)]
+            case .sharedScene(let name): DeviceType.allCases.filter { files.isShared(files.sceneURL(name, for: $0)) }.map { (name, $0) }
+            default: []
+            }
+        } ?? []
         if all {
-            for type in DeviceType.allCases { scenes += files.names(in: project.scenes(for: type)).map { ($0, type) } }
+            for type in DeviceType.allCases { scenes += files.sceneNames(for: type).map { ($0, type) } }
         }
 
         checkFolders(targets, report)
@@ -83,10 +92,11 @@ public struct ProjectValidator {
                 case .configuration: nil
                 case .set: project.sets
                 case .scene(_, let type): project.scenes(for: type)
+                case .sharedScene: project.sharedScenes
                 case .edit: project.edits
                 }
             }
-        } ?? [project.sets] + DeviceType.allCases.map(project.scenes(for:)) + [project.edits]
+        } ?? [project.sets] + DeviceType.allCases.map(project.scenes(for:)) + [project.sharedScenes, project.edits]
         var named: Set<String> = []
         for folder in folders {
             guard let misnamed = files.misnamedFolder(folder), named.insert(misnamed.found).inserted else { continue }
@@ -108,7 +118,7 @@ public struct ProjectValidator {
                 report.problem(FileProblem(file: file, path: .root, message: ProjectFiles.sharedName(name, edit: false)))
             }
         }
-        let sceneNames = Set(DeviceType.allCases.flatMap { files.names(in: project.scenes(for: $0)) })
+        let sceneNames = Set(DeviceType.allCases.flatMap { files.sceneNames(for: $0) })
         for name in edits {
             let file = project.displayPath(files.editURL(name))
             if let problem = ProjectFiles.nameProblem(name, kind: "edit") {
@@ -199,8 +209,12 @@ public struct ProjectValidator {
             switch step.step {
             case .id(let id) where !scene.steps.contains(where: { $0.id == id }):
                 problem(path.appending("step"), "\(sceneFile) has no step \"\(id)\"", for: type)
+            case .id(let id) where scene.steps.contains(where: { $0.id == id && $0.isSkipped }):
+                problem(path.appending("step"), "\(sceneFile)'s step \"\(id)\" doesn't play on \(type.rawValue), so nothing can anchor to it there", for: type)
             case .number(let number) where abs(number) > scene.steps.count:
                 problem(path.appending("step"), "\(sceneFile) has \(scene.steps.count) step\(scene.steps.count == 1 ? "" : "s"), so there's no step \(number)", for: type)
+            case .number(let number) where number != 0 && scene.steps[number > 0 ? number - 1 : scene.steps.count + number].isSkipped:
+                problem(path.appending("step"), "\(sceneFile)'s step \(number) doesn't play on \(type.rawValue), so nothing can anchor to it there", for: type)
             default:
                 break
             }

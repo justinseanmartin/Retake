@@ -51,9 +51,14 @@ public struct TakeTimeline: Sendable {
             guard let found = steps.firstIndex(where: { $0.id == id }) else { throw Unresolved("the take has no step \"\(id)\"") }
             index = found
         case .number(let number):
-            let found = number > 0 ? number - 1 : steps.count + number
-            guard number != 0, steps.indices.contains(found) else {
-                throw Unresolved("the take has \(steps.count) step\(steps.count == 1 ? "" : "s"), so there's no step \(number)")
+            // A step the take's device type doesn't play has no entry, but keeps its number.
+            let last = steps.last?.number ?? 0
+            let wanted = number > 0 ? number : last + 1 + number
+            guard number != 0, (1 ... max(last, 1)).contains(wanted) else {
+                throw Unresolved("the take has \(last) step\(last == 1 ? "" : "s"), so there's no step \(number)")
+            }
+            guard let found = steps.firstIndex(where: { $0.number == wanted }) else {
+                throw Unresolved("the take didn't play step \(wanted), which its scene leaves out for this device type")
             }
             index = found
         }

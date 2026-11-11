@@ -120,8 +120,22 @@ public struct ProjectFiles {
         return text
     }
 
+    /// The file a device type's scene is read from: its own in `scenes/<type>/`, or else the shared
+    /// one in `scenes/`; its own, where neither exists, for saying where it was looked for.
     public func sceneURL(_ name: String, for type: DeviceType) -> URL {
-        project.scenes(for: type).appending(path: "\(name).json")
+        let own = project.scenes(for: type).appending(path: "\(name).json")
+        let shared = project.sharedScenes.appending(path: "\(name).json")
+        return !fileManager.fileExists(atPath: own.path) && fileManager.fileExists(atPath: shared.path) ? shared : own
+    }
+
+    /// Whether `url` is a scene every device type shares.
+    public func isShared(_ url: URL) -> Bool {
+        url.deletingLastPathComponent().standardizedFileURL.path == project.sharedScenes.standardizedFileURL.path
+    }
+
+    /// The scenes a device type has: its own and the shared ones.
+    public func sceneNames(for type: DeviceType) -> [String] {
+        Set(names(in: project.scenes(for: type)) + names(in: project.sharedScenes)).sorted()
     }
 
     /// A scene for a device type, or nil with problems in `report`.
@@ -129,7 +143,7 @@ public struct ProjectFiles {
         let url = sceneURL(name, for: type)
         guard let text = text(of: url, into: report) else { return nil }
         let reader = JSONReader(file: project.displayPath(url))
-        let scene = SceneFile.read(text, with: reader)
+        let scene = SceneFile.read(text, with: reader, for: type)
         report.add(reader)
         return scene
     }

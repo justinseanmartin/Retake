@@ -71,7 +71,9 @@ public enum Composer {
             throw RetakeError(.usage, "Give --set, or a defaultSet in \(project.configuration.lastPathComponent), for the new scene \(name) to start on.")
         }
         let set = try AppSession.set(setFor, in: project, namedBy: scene == nil && setName != nil ? "--set" : project.displayPath(url))
-        let state = State(document: SceneDocument(url: url, scene: scene, text: text, newOn: setFor), scene: scene ?? SceneFile(set: setFor, steps: []))
+        var document = SceneDocument(url: url, scene: scene, text: text, newOn: setFor)
+        document.isShared = files.isShared(url)
+        let state = State(document: document, scene: scene ?? SceneFile(set: setFor, steps: []))
         var player = Player()
         player.screen = Devicectl().screenPoints(of: device)
 
