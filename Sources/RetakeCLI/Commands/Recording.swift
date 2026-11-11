@@ -186,8 +186,8 @@ struct Record: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Records takes, or with --stills-only, only their captures, or with --dry-run, plays scenes without recording them.",
         discussion: """
-            With no scenes named, records every scene the device's type has, in scenes/<type>/ or \
-            scenes/, with no take yet, or every one \
+            With no scenes named, records every scene that plays on the device's type, with no take \
+            yet, or every one \
             with --force. With --for, the scenes an edit uses. Scenes named are recorded whether or not \
             they have takes. A take that succeeds replaces the scene's take, which is kept as its \
             previous one, replacing that; one that fails is kept as the scene's latest failure, and \
@@ -244,11 +244,11 @@ struct Record: AsyncParsableCommand {
         guard !chosen.isEmpty else {
             if stillsOnly {
                 print(taken.isEmpty
-                    ? "No \(type.rawValue) scene in \(located.displayPath(located.scenes(for: type))) has a capture step."
+                    ? "No \(type.rawValue) scene in \(located.displayPath(located.scenes)) has a capture step."
                     : "Every scene chosen already has its captures: \(taken.joined(separator: ", ")). Give --force to take them again.")
             } else {
                 print(taken.isEmpty
-                    ? "There are no \(type.rawValue) scenes in \(located.displayPath(located.scenes(for: type)))."
+                    ? "There are no \(type.rawValue) scenes in \(located.displayPath(located.scenes))."
                     : "Every scene chosen already has a take: \(taken.joined(separator: ", ")). Give --force to record them again.")
             }
             return
@@ -374,11 +374,11 @@ struct Takes: AsyncParsableCommand {
         let takes = TakeStore.takes(of: scene, for: types, in: located)
         if let scene, takes.isEmpty {
             let files = ProjectFiles(project: located)
-            guard types.contains(where: { FileManager.default.fileExists(atPath: files.sceneURL(scene, for: $0).path) }) else {
+            guard FileManager.default.fileExists(atPath: files.sceneURL(scene).path) else {
                 throw RetakeError(
                     .usage,
                     "There's no scene \"\(scene)\" for \(types.map(\.rawValue).joined(separator: " or "))"
-                        + "\(types.lazy.compactMap { files.misnamedFolder(located.scenes(for: $0)) }.first.map { ": \($0)" } ?? "").",
+                        + "\(files.misnamedFolder(located.scenes).map { ": \($0)" } ?? "").",
                 )
             }
         }

@@ -12,9 +12,9 @@ struct CutterTests {
         project = Project(configuration: root.appending(path: "retake.json"))
         try write("retake.json", "{}")
         try write("sets/base.json", "{}")
-        let scene = #"{"set": "base", "steps": [{"tap": {"label": "a"}, "id": "a"}, {"waitFor": {"label": "b"}, "id": "b"}]}"#
-        try write("scenes/ipad/walk.json", scene)
-        try write("scenes/ipad/other.json", scene)
+        let scene = #"{"devices": ["ipad"], "set": "base", "steps": [{"tap": {"label": "a"}, "id": "a"}, {"waitFor": {"label": "b"}, "id": "b"}]}"#
+        try write("scenes/walk.json", scene)
+        try write("scenes/other.json", scene)
     }
 
     func write(_ path: String, _ text: String) throws {
@@ -81,7 +81,7 @@ struct CutterTests {
     @Test func everyTypeCanBePreparedBeforeAnyIsRendered() throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let scene = #"{"set": "base", "steps": [{"tap": {"label": "a"}, "id": "a"}, {"waitFor": {"label": "b"}, "id": "b"}]}"#
-        try write("scenes/iphone/walk.json", scene)
+        try write("scenes/walk.json", scene)
         try record("walk", for: .iphone)
         try record("walk", for: .ipad)
         try write("edits/video.json", #"{"devices": ["iphone", "ipad"], "clips": [{"take": "walk", "from": 1.25, "to": {"step": "end"}}]}"#)

@@ -26,7 +26,7 @@ public enum AppSession {
     /// doesn't exist, and a failure (1) when either file is wrong.
     public static func scene(_ name: String, in project: Project, for type: DeviceType) throws(RetakeError) -> (scene: SceneFile, set: ResolvedSet) {
         let files = ProjectFiles(project: project)
-        let url = files.sceneURL(name, for: type)
+        let url = files.sceneURL(name)
         guard FileManager.default.fileExists(atPath: url.path) else {
             let others = files.sceneNames(for: type)
             throw RetakeError(

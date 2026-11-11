@@ -14,7 +14,7 @@
       "type": "string"
     },
     "devices": {
-      "description": "The device types it makes a video for.",
+      "description": "The device types it makes a video for; every one when not given.",
       "type": "array",
       "items": {
         "type": "string",
@@ -152,7 +152,7 @@
       "additionalProperties": false
     }
   },
-  "required": ["devices", "clips"],
+  "required": ["clips"],
   "additionalProperties": false,
   "$defs": {
     "clip": {

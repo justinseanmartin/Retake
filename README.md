@@ -409,17 +409,17 @@ step and after the last, 1 second each unless given, so the edit has frames to c
 lead-in then starts once the app is up and reachable, so the first step waits for its first screen
 to settle, as it would without the launch.
 
-A scene in `scenes/` is every device type's; one in `scenes/iphone/` or `scenes/ipad/` is that type's
-own, and wins over a shared one of the same name. A scene that names elements rather than points
-usually plays the same on both, so it can be written once. Where the types differ, anything at the
-top of a scene or in a step can be given again under a device type, as in an edit, such as
-`"ipad": { "hold": 1.0 }`, or `"iphone": { "drag": { "duration": 0.8 } }`, an object laid over what it
-overrides key by key; and a step can name the `devices` it plays on, such as a turn only the iPad
-makes. A step another type skips keeps its number there, so the steps after it are numbered alike on
-every type, and an anchor to it is refused for the type that skips it. `compose` reads a shared
-scene but doesn't write one, since it writes the steps of one type: change it by hand, or copy it
-into the type's folder. A scene of the same name on each type, with every step id an edit
-references, is what lets one edit cut both.
+Scenes are in `scenes/`, and pick their device types as edits do: a scene plays on each of its
+`devices`, every type unless it names some, such as `"devices": ["ipad"]`. A scene that names
+elements rather than points usually plays the same on each, so it's written once; where the types
+differ, anything at the top of a scene or in a step can be given again under a device type, as in an
+edit, such as `"ipad": { "hold": 1.0 }`, or `"iphone": { "drag": { "duration": 0.8 } }`, an object laid
+over what it overrides key by key. A step names the `devices` it plays on as a clip does, such as a
+turn only the iPad makes, among the scene's own. A step another type skips keeps its number there,
+so the steps after it are numbered alike on every type, and an anchor to it is refused for the type
+that skips it. `compose` writes the scene for the device it's on, keeping every step it doesn't
+change as the file has it, overrides and all. One scene with every step id an edit references is
+what lets one edit cut each type.
 
 A scene sees and touches only what the app itself draws, not the system's alerts or share sheets;
 see [what a scene can't reach](#what-a-scene-cant-reach).
@@ -860,8 +860,7 @@ the root or from inside `Retake/`:
 Retake/
   retake.json        # the app, its build, the default device, and paths
   sets/*.json        # starting states, and the files they copy
-  scenes/iphone/*.json
-  scenes/ipad/*.json
+  scenes/*.json      # the walks through the app, each on the device types it names
   edits/*.json
   output/            # takes, captures and videos; gitignored, and movable with --output-dir
 ```

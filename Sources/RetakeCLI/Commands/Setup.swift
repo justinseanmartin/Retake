@@ -6,7 +6,7 @@ struct Init: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Creates a project.",
         discussion: """
-            Creates retake.json and beside it the folders sets/, scenes/iphone/, scenes/ipad/ and \
+            Creates retake.json and beside it the folders sets/, scenes/ and \
             edits/, in Retake/ unless --config or RETAKE_CONFIG names the file to create, and \
             gitignores the output directory. At a terminal, offers to name each device \
             connected, then any others connected while it waits. Fails (2) if the configuration file already exists.
@@ -57,7 +57,7 @@ struct Init: AsyncParsableCommand {
         }
         let project = Project(configuration: result.configuration, settings: result.settings)
         let shown = ProjectInitializer.relativePath(of: project.root, from: current)
-        print("Created \(shown)/: \(Project.configurationFileName), sets/, scenes/iphone/, scenes/ipad/ and edits/.")
+        print("Created \(shown)/: \(Project.configurationFileName), sets/, scenes/ and edits/.")
         if !result.starters.isEmpty {
             print(
                 "With a starter set, scene and edit: \(result.starters.dropLast().joined(separator: ", ")) and \(result.starters.last!). "

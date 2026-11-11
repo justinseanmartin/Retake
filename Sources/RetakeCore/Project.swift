@@ -38,12 +38,13 @@ public struct Project: Sendable, Equatable {
     public var sets: URL { root.appending(path: "sets", directoryHint: .isDirectory) }
     public var edits: URL { root.appending(path: "edits", directoryHint: .isDirectory) }
 
-    public func scenes(for type: DeviceType) -> URL {
+    /// `scenes/`, each scene naming the device types it plays on, every one unless it says.
+    public var scenes: URL { root.appending(path: "scenes", directoryHint: .isDirectory) }
+
+    /// Where an earlier Retake kept one device type's scenes, which nothing reads now.
+    public func oldScenes(for type: DeviceType) -> URL {
         root.appending(path: "scenes/\(type.rawValue)", directoryHint: .isDirectory)
     }
-
-    /// `scenes/`, whose scenes are every device type's but where a type has its own of the same name.
-    public var sharedScenes: URL { root.appending(path: "scenes", directoryHint: .isDirectory) }
 
     public func takes(for type: DeviceType) -> URL {
         output.appending(path: "takes/\(type.rawValue)", directoryHint: .isDirectory)

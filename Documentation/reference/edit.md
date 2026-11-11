@@ -17,7 +17,7 @@ the one it overrides key by key; a list, or a single value, replaces it. At the 
 | --- | --- | --- | --- |
 | `$schema` | string |  | The URL of the schema the file is written against, for editors. Optional; a file is read against this Retake's schema whatever it names. |
 | `intent` | string |  | What the video is there to show. Not read by the render. |
-| `devices` | list of `"iphone"` or `"ipad"`, at least 1, each once | required | The device types it makes a video for. |
+| `devices` | list of `"iphone"` or `"ipad"`, at least 1, each once |  | The device types it makes a video for; every one when not given. |
 | `music` | [music](#music) |  |  |
 | `tapSound` | [tap-sound](#tap-sound) |  |  |
 | `takeAudioVolume` | number ≥ 0 | `1` | The level of the take's own sound, where a clip plays it. |

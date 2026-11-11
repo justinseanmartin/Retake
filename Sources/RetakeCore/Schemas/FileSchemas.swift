@@ -161,9 +161,10 @@ extension SceneFile {
         step.oneOf = Step.Action.keys.map { key in var branch = Schema(); branch.required = [key]; return branch } + [holdOnly]
 
         let root = Schema.object(
-            "A scene: a set, and the steps played on it. In scenes/<type>/, one device type's; in scenes/, every type's but one with its own of the same name. Anything at the top or in a step can be given again under a device type, and applies only on that type.",
+            "A scene: a set, and the steps played on it, on each of its device types. Anything at the top or in a step can be given again under a device type, and applies only on that type.",
             [
                 FileSchema.schemaKey,
+                .init("devices", .array("The device types it plays on; every one when not given.", of: .choice(nil, DeviceType.allCases.map(\.rawValue)), minItems: 1, unique: true)),
                 .init("set", .string("The set the scene starts on; the project's defaultSet when not given.", nonEmpty: true)),
                 .init("setup", .array("Steps played before recording starts. Nothing anchors to them, so they have no id.", of: .ref("step"))),
                 .init("leadIn", .number("Seconds recorded before the first step. For a scene that records its launch, they start once the app is reachable, after the launch is recorded.", atLeast: 0).defaulting(to: defaultLeadIn)),
@@ -179,7 +180,7 @@ extension SceneFile {
         let definitions: [Schema.Property] = [.init("step", step), .init("element", element), .init("dragElement", dragElement)]
         return FileSchema(
             kind: "scene", title: "A scene",
-            root: root.overridden(by: devices, excluding: ["$schema"]),
+            root: root.overridden(by: devices, excluding: ["$schema", "devices"]),
             definitions: definitions.map { .init($0.name, $0.schema.overridden(by: devices, as: .ref("\($0.name)-override"))) }
                 + definitions.map { .init("\($0.name)-override", $0.schema.partial) },
         )
@@ -373,7 +374,7 @@ extension EditFile {
             [
                 FileSchema.schemaKey,
                 .init("intent", .string("What the video is there to show. Not read by the render.")),
-                .init("devices", .array("The device types it makes a video for.", of: .choice(nil, devices), minItems: 1, unique: true)),
+                .init("devices", .array("The device types it makes a video for; every one when not given.", of: .choice(nil, devices), minItems: 1, unique: true)),
                 .init("music", .ref("music")),
                 .init("tapSound", .ref("tap-sound")),
                 .init("takeAudioVolume", .number("The level of the take's own sound, where a clip plays it.", atLeast: 0).defaulting(to: Edit.defaultTakeAudioVolume)),
@@ -383,7 +384,7 @@ extension EditFile {
                 .init("touchColor", .ref("color", "The color touches are drawn in: a filled ring, its fill at 45% of the color's opacity and its rim at 90%.").defaulting(to: Edit.defaultTouchColor)),
                 .init("clips", .array(nil, of: .ref("clip"), minItems: 1)),
             ],
-            required: ["devices", "clips"],
+            required: ["clips"],
         )
 
         // Every object can be given again under a device type, as a partial copy laid over it.
@@ -415,7 +416,7 @@ extension TakeLog {
             "A take's step log, `<scene>.json` beside its movie `<scene>.mov` in the output directory's `takes/<type>/`, or `<scene>.previous.json` or `<scene>.failed.json` beside theirs: what was recorded, with what, and when each step happened on the movie's own clock, where it touched, and what was on screen after it. Retake writes it when it records the take, and reads it to list, clean and cut takes; a project doesn't write or edit it. Times are \(seconds); positions and sizes on the screen are its points, portrait, to the hundredth.",
             [
                 .init("format", format),
-                .init("scene", .string("The scene recorded, as its file in `scenes/<type>/` is named, without `.json`.", nonEmpty: true)),
+                .init("scene", .string("The scene recorded, as its file in `scenes/` is named, without `.json`.", nonEmpty: true)),
                 .init("take", Schema.integer(nil, atLeast: 1).deprecated("Deprecated: the take's number among the scene's, from 1, which takes recorded when they were numbered give. Still read, and ignored.")),
                 .init("set", .string("The set the scene started on.", nonEmpty: true)),
                 .init("state", .choice("The set's state, which the take's data started from.", SetFile.State.allCases.map(\.rawValue))),

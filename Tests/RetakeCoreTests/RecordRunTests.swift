@@ -16,7 +16,7 @@ struct RecordRunTests {
     /// Scenes `a`, `b` and `c` for the iPad; `a` has a take, `b` only a failure, `c` none; and an
     /// edit using `c` then `a`.
     func makeProject() throws {
-        for scene in ["a", "b", "c"] { try write("scenes/ipad/\(scene).json", #"{ "steps": [{ "hold": 1 }] }"#) }
+        for scene in ["a", "b", "c"] { try write("scenes/\(scene).json", #"{ "devices": ["ipad"], "steps": [{ "hold": 1 }] }"#) }
         try write("output/takes/ipad/a.json", JSONWriter.write(TakeLogReadingTests.log(scene: "a").json))
         try write("output/takes/ipad/a.mov", "")
         try write("output/takes/ipad/b.failed.json", JSONWriter.write(TakeLogReadingTests.log(scene: "b", failure: "step 1 didn't run").json))
@@ -48,8 +48,8 @@ struct RecordRunTests {
     @Test func stillsOnlyChoosesScenesThatCaptureWithoutCapturesYetUnlessForced() throws {
         try makeProject()
         defer { try? FileManager.default.removeItem(at: root) }
-        try write("scenes/ipad/home.json", #"{ "steps": [{ "capture": "home" }] }"#)
-        try write("scenes/ipad/list.json", #"{ "steps": [{ "capture": "list" }] }"#)
+        try write("scenes/home.json", #"{ "devices": ["ipad"], "steps": [{ "capture": "home" }] }"#)
+        try write("scenes/list.json", #"{ "devices": ["ipad"], "steps": [{ "capture": "list" }] }"#)
         try write("output/captures/ipad/home/home.png", "")
         let unforced = try RecordRun.scenes(named: [], edit: nil, force: false, stillsOnly: true, for: .ipad, in: project)
         #expect(unforced.chosen == ["list"] && unforced.alreadyTaken == ["home"])

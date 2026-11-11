@@ -106,12 +106,12 @@ the configuration file because devices belong to people, and the file is shared:
 spent on one device.
 
 The device's **type** — `iphone` or `ipad`, asked of the device itself — picks the folders a command
-works in: `scenes/<type>/`, beside the shared `scenes/`, and `output/takes/<type>/`.
+works in: the scenes in `scenes/` that name it among their `devices`, and `output/takes/<type>/`.
 
 ### Names
 
 Scenes, sets and edits are named by their file name without `.json`: `create-note` is
-`scenes/<type>/create-note.json` or the shared `scenes/create-note.json`, and `video1` is `edits/video1.json`. Takes are named by their
+`scenes/create-note.json`, and `video1` is `edits/video1.json`. Takes are named by their
 scene: for each device type, a scene has its take, `create-note.mov`, the take that one replaced,
 `create-note.previous.mov`, and its latest failure, `create-note.failed.mov`, each with its step
 log beside it. A video's record names each take it was cut from by its scene, device type and when
@@ -134,7 +134,7 @@ field:
 
 ```
 edits/video1.json: clips[3].from.fraction: 1.4 is outside -1 to 1
-scenes/ipad/create-note.json: steps[2]: unknown key "tapp"
+scenes/create-note.json: steps[2]: unknown key "tapp"
 ```
 
 A file may name its schema in a `"$schema"` key, for editors; Retake never adds one. A file without
@@ -211,16 +211,15 @@ and exits with the worst status among them.
 retake init [--config <path>] [--output-dir <dir>] [--bundle-id <id>] [--scheme <name>]
 ```
 
-Creates a project: `retake.json`, and beside it the folders `sets/`, `scenes/iphone/`,
-`scenes/ipad/` and `edits/`. They go in `Retake/` in the current directory, unless `--config` (or
+Creates a project: `retake.json`, and beside it the folders `sets/`, `scenes/` and `edits/`. They go in `Retake/` in the current directory, unless `--config` (or
 `RETAKE_CONFIG`) names the configuration file to create, such as `--config Previews/retake.json`.
 
 In a new project, those folders start with a file each, to record from at once and to show each
 file's shape:
 
 - `sets/base.json`, a `clean` set, which `retake.json` names as its `defaultSet`;
-- `scenes/iphone/launch.json` and `scenes/ipad/launch.json`, which record the app launching and
-  hold it, 15 seconds after the launch, the shortest an App Store preview runs;
+- `scenes/launch.json`, which records the app launching and holds it, on every device type, 15
+  seconds after the launch, the shortest an App Store preview runs;
 - `edits/preview.json`, which cuts the whole of `launch`'s take for both device types, with the
   caption "Recorded by Retake!" from once the app is up. With a take of only one type, cut it with
   `--type`.
@@ -483,7 +482,7 @@ A step runs as soon as it's given, and `compose` waits out its hold before answe
 does: a tap's from when the tap is sent, any other step's from when it ends, and the scene's
 `defaultHold` for a step that gives none. So the next step finds the app as it will in a take, and
 what's printed is the screen once the hold is over. One that runs is added to
-`scenes/<type>/<scene>.json`, and that screen is printed; one that doesn't is left out, saying why,
+`scenes/<scene>.json`, and that screen is printed; one that doesn't is left out, saying why,
 and the scene carries on from wherever the app is. Each step's action is named as its step is in a
 scene file, and takes the options its step does there; every one but `hold` also takes `--id
 <name>` and `--hold <seconds>`, both optional, and `hold` takes `--id`:
@@ -588,7 +587,7 @@ Records each scene chosen again:
 
 | Form | Records |
 | --- | --- |
-| `retake record` | Every scene the type has, in `scenes/<type>/` or `scenes/`, with no take yet. |
+| `retake record` | Every scene that plays on the type, with no take yet. |
 | `retake record --force` | Every scene the type has. |
 | `retake record --for <edit>` | Every scene the edit uses that has no take yet. |
 | `retake record --for <edit> --force` | Every scene the edit uses. |
@@ -1048,9 +1047,9 @@ changes a project's own files:
 
 | Path | What |
 | --- | --- |
-| `retake.json`, `sets/`, `scenes/iphone/`, `scenes/ipad/`, `edits/` | Created by `init`. |
+| `retake.json`, `sets/`, `scenes/`, `edits/` | Created by `init`. |
 | `.gitignore` | Created by `init`, or added to, naming the output directory. An output directory outside the project's folder goes in the current directory's `.gitignore` instead. |
-| `scenes/<type>/*.json` | Written by `compose`. |
+| `scenes/*.json` | Written by `compose`, which keeps the steps it doesn't change as the file has them. |
 | `edits/*.json` | Rewritten by `cut` when it turns times in plain seconds into anchors, keeping a `"$schema"` that names one of Retake's up to date. |
 
 **In the output directory**, `output/` in the project's folder unless [moved](#the-output-directory), and gitignored.

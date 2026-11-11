@@ -141,7 +141,7 @@ public enum Sharer {
     public static func source(_ clip: ShareRequest.Clip, in project: Project) async throws(RetakeError) -> Source {
         let files = ProjectFiles(project: project)
         let isEdit = FileManager.default.fileExists(atPath: files.editURL(clip.name).path)
-        let isScene = DeviceType.allCases.contains { FileManager.default.fileExists(atPath: files.sceneURL(clip.name, for: $0).path) }
+        let isScene = FileManager.default.fileExists(atPath: files.sceneURL(clip.name).path)
             || TakeStore.take(of: clip.name, for: clip.type, in: project) != nil
         if isEdit, isScene {
             throw RetakeError(.failed, "\(clip): \(ProjectFiles.sharedName(clip.name)).")

@@ -145,7 +145,7 @@ struct ComposeActionTests {
 
 struct SceneDocumentTests {
     @Test func aNewSceneNamesItsSetAndWritesAStepALine() {
-        var document = SceneDocument(url: URL(filePath: "/p/scenes/ipad/a.json"), scene: nil, text: nil, newOn: "returning-user")
+        var document = SceneDocument(url: URL(filePath: "/p/scenes/a.json"), scene: nil, text: nil, newOn: "returning-user")
         document.steps = [Step(id: "new-note", .tapElement(ElementTarget(label: "New Note")), hold: 0.8), Step(.waitFor(ElementTarget(label: "Synced"), gone: false, timeout: 10))]
         #expect(document.text == """
             {
@@ -157,6 +157,18 @@ struct SceneDocumentTests {
             }
 
             """)
+    }
+
+    @Test func aStepComposeDidntChangeKeepsItsOverridesAndDevices() throws {
+        let text = #"{ "set": "base", "steps": [{ "tap": { "label": "A" }, "hold": 1, "iphone": { "hold": 2 } }, { "orientation": "landscape-left", "devices": ["ipad"] }, { "tap": { "label": "B" }, "hold": 1, "ipad": { "hold": 3 } }] }"#
+        let scene = try #require(SceneFile.read(text, with: JSONReader(file: "a.json"), for: .iphone))
+        var document = SceneDocument(url: URL(filePath: "/p/a.json"), scene: scene, text: text, newOn: "ignored")
+        document.steps[2].hold = 0.5
+        document.steps.append(Step(.waitFor(ElementTarget(label: "C"), gone: false, timeout: 10)))
+        #expect(document.text.contains(#"{ "tap": { "label": "A" }, "hold": 1, "iphone": { "hold": 2 } },"#), "read for the iPhone, but written as the file has it")
+        #expect(document.text.contains(#"{ "orientation": "landscape-left", "devices": ["ipad"] },"#), "skipped on the iPhone, but kept")
+        #expect(document.text.contains(#"{ "tap": { "label": "B" }, "hold": 0.5, "ipad": { "hold": 3 } },"#), "its hold changed, the rest kept")
+        #expect(document.text.contains(#"{ "waitFor": { "label": "C" } }"#))
     }
 
     @Test func anExistingScenesOtherFieldsAreKept() throws {

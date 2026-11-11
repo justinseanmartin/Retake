@@ -10,7 +10,7 @@ extension OnDevice {
         func aDryRunPlaysEveryStep(_ scene: String) async throws {
             let example = try ExampleOnDevice()
             // `reorder` is only for the iPad so far; its points are the iPad's.
-            guard FileManager.default.fileExists(atPath: ProjectFiles(project: example.project).sceneURL(scene, for: example.device.type!).path) else { return }
+            guard FileManager.default.fileExists(atPath: ProjectFiles(project: example.project).sceneURL(scene).path) else { return }
             let played = Played()
             let player = Player(report: { if case .finished(let step, _) = $0 { played.add(step.number) } })
             let outcomes = await RecordRun.run([scene], in: example.project, on: example.device, capture: nil, dryRun: true, stopOnFailure: false, player: player)
@@ -21,7 +21,7 @@ extension OnDevice {
 
         @Test func aStepThatDoesntRunFailsNamingIt() async throws {
             let example = try ExampleOnDevice()
-            let scenes = example.project.scenes(for: example.device.type!)
+            let scenes = example.project.scenes
             let url = scenes.appending(path: "dry-run-failure-\(UUID().uuidString.prefix(6)).json")
             try #"{ "set": "returning-user", "steps": [{ "tap": { "label": "No such button" } }] }"#.write(to: url, atomically: true, encoding: .utf8)
             defer { try? FileManager.default.removeItem(at: url) }
@@ -40,7 +40,7 @@ extension OnDevice {
         @Test func aSceneIsComposedStepByStep() async throws {
             let example = try ExampleOnDevice()
             let name = "composed-\(UUID().uuidString.prefix(6))"
-            let url = ProjectFiles(project: example.project).sceneURL(name, for: example.device.type!)
+            let url = ProjectFiles(project: example.project).sceneURL(name)
             defer { try? FileManager.default.removeItem(at: url) }
             let input = Lines([
                 #"tap --label "New Note" --id new-note --hold 0.8"#,

@@ -1,8 +1,8 @@
 import Foundation
 import ThePlans
 
-/// A scene, as its file in `scenes/<type>/`, or in `scenes/` for every device type, says it for one
-/// type: a set and the steps played on it. See README.md, "Scenes: the walk through the app".
+/// A scene, as its file in `scenes/` says it for one device type: a set and the steps played on it.
+/// See README.md, "Scenes: the walk through the app".
 public struct SceneFile: Equatable, Sendable {
     public enum Orientation: String, CaseIterable, Sendable {
         case portrait
@@ -13,6 +13,8 @@ public struct SceneFile: Equatable, Sendable {
         public var isLandscape: Bool { self == .landscapeLeft || self == .landscapeRight }
     }
 
+    /// The device types it plays on.
+    public var devices: [DeviceType]
     /// The set the scene starts on; the project's `defaultSet` when nil.
     public var set: String?
     /// Played before recording starts.
@@ -37,6 +39,7 @@ public struct SceneFile: Equatable, Sendable {
     public static let defaultDefaultHold = 0.0
 
     public init(
+        devices: [DeviceType] = DeviceType.allCases,
         set: String? = nil,
         setup: [Step] = [],
         steps: [Step],
@@ -46,6 +49,7 @@ public struct SceneFile: Equatable, Sendable {
         orientation: Orientation = SceneFile.defaultOrientation,
         defaultHold: Double = SceneFile.defaultDefaultHold,
     ) {
+        self.devices = devices
         self.set = set
         self.defaultHold = defaultHold
         self.setup = setup
@@ -267,10 +271,29 @@ extension SceneFile {
     /// The scene in a file's text, or nil with problems in `reader`.
     /// The scene `text` says, for `type`: with each of its `iphone` or `ipad` overrides laid over
     /// what they override, as an edit's are, and its steps for other types skipped. Read for no type,
-    /// as a file is checked on its own, an override is refused.
+    /// as a file is checked on its own, it's read for each of its device types, each problem said
+    /// once, and the first type's scene returned.
     public static func read(_ text: String, with reader: JSONReader, for type: DeviceType? = nil) -> SceneFile? {
         guard let value = reader.parse(text) else { return nil }
-        guard let type, case .object(let object) = value else { return read(value, with: reader, for: type) }
+        guard case .object(let object) = value else { return read(value, with: reader, for: type) }
+        guard let type else {
+            var named: [DeviceType] = []
+            if case .array(let values)? = object["devices"] {
+                named = values.compactMap { if case .string(let name) = $0 { DeviceType(rawValue: name) } else { nil } }
+            }
+            var first: SceneFile?
+            var said = Set<String>()
+            for type in named.isEmpty ? DeviceType.allCases : named {
+                let typeReader = JSONReader(file: reader.file)
+                let scene = read(text, with: typeReader, for: type)
+                first = first ?? scene
+                for problem in typeReader.problems where said.insert(problem.description).inserted {
+                    reader.problem(problem.message, at: problem.path)
+                }
+            }
+            return said.isEmpty ? first : nil
+        }
+        if !checkDevices(object, reader) { return nil }
         var origins = Origins()
         let merged = Overrides.merge(object, for: type, at: .root, into: .root, origins: &origins, reader: reader)
         let typeReader = JSONReader(file: reader.file)
@@ -282,9 +305,49 @@ extension SceneFile {
         return typeReader.problems.isEmpty ? scene : nil
     }
 
+    /// What names device types in a scene names only its own `devices`, as in an edit: an override,
+    /// and a step's `devices`. Checked before the overrides are laid, which drops other types'.
+    static func checkDevices(_ object: JSONObject, _ reader: JSONReader) -> Bool {
+        let problems = reader.problems.count
+        let named: Set<DeviceType>
+        if let value = object["devices"] {
+            guard let devices = DeviceType.readList(value, at: JSONPath.root.appending("devices"), reader) else { return false }
+            named = Set(devices)
+        } else {
+            named = Set(DeviceType.allCases)
+        }
+        func walk(_ value: JSONValue, at path: JSONPath, inStep: Bool) {
+            switch value {
+            case .object(let object):
+                for entry in object.entries {
+                    let at = path.appending(entry.key)
+                    if let type = DeviceType(rawValue: entry.key), !named.contains(type) {
+                        reader.problem("overrides \(type.rawValue), which isn't one of this scene's devices", at: at)
+                    }
+                    if inStep, entry.key == "devices", case .array(let values) = entry.value {
+                        for (index, value) in values.enumerated() {
+                            if case .string(let name) = value, let type = DeviceType(rawValue: name), !named.contains(type) {
+                                reader.problem("\"\(name)\" isn't one of this scene's devices", at: at.appending(index))
+                            }
+                        }
+                    }
+                    let steps = path.components.isEmpty && (entry.key == "steps" || entry.key == "setup")
+                    walk(entry.value, at: at, inStep: false || steps)
+                }
+            case .array(let values):
+                for (index, value) in values.enumerated() { walk(value, at: path.appending(index), inStep: inStep) }
+            default:
+                break
+            }
+        }
+        walk(.object(object), at: .root, inStep: false)
+        return reader.problems.count == problems
+    }
+
     static func read(_ value: JSONValue, with reader: JSONReader, for type: DeviceType?) -> SceneFile? {
         guard var object = reader.root(value, kind: "scene") else { return nil }
         let problemsBefore = reader.problems.count
+        let devices = object.optional("devices") { DeviceType.readList($0, at: $1, reader) } ?? DeviceType.allCases
         let set = object.optional("set", reader.nonEmptyString)
         let setup = object.optional("setup") { readSteps($0, $1, reader, isSetup: true, for: type) } ?? []
         let steps = object.required("steps") { readSteps($0, $1, reader, isSetup: false, for: type) }
@@ -304,7 +367,7 @@ extension SceneFile {
         object.finish()
         guard reader.problems.count == problemsBefore, let steps else { return nil }
         return SceneFile(
-            set: set, setup: setup, steps: steps,
+            devices: devices, set: set, setup: setup, steps: steps,
             leadIn: leadIn, tail: tail, recordsLaunch: recordsLaunch, orientation: orientation, defaultHold: defaultHold,
         )
     }

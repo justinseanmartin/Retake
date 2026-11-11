@@ -327,12 +327,12 @@ public enum TakeStore {
         }
         // Whether each scene captures, so its definition and captures are needed: nil when it can't be read.
         func captures(_ scene: String, for type: DeviceType) -> Bool? {
-            guard FileManager.default.fileExists(atPath: projectFiles.sceneURL(scene, for: type).path) else { return false }
+            guard FileManager.default.fileExists(atPath: projectFiles.sceneURL(scene).path) else { return false }
             return projectFiles.readScene(scene, for: type, into: ProjectFiles.Report()).map { $0.steps.contains { $0.action?.capture != nil } }
         }
         let unusedScenes = types.flatMap { type in
             projectFiles.sceneNames(for: type).filter { needed[type]?.contains($0) != true && captures($0, for: type) == false }
-                .map { projectFiles.sceneURL($0, for: type) }
+                .map { projectFiles.sceneURL($0) }
         }
         let unusedCaptures = types.flatMap { type in
             CaptureStore.scenes(for: type, in: project).filter { captures($0, for: type) == false }.map { CaptureStore.folder(of: $0, for: type, in: project) }

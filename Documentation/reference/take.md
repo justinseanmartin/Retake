@@ -11,7 +11,7 @@ Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `format` | `1` |  | The step log's format. Retake doesn't write it: a log without it is format 1, the only one so far. A log of a later format was recorded by a newer Retake, and this one refuses it, saying to update Retake. |
-| `scene` | string, not empty | required | The scene recorded, as its file in `scenes/<type>/` is named, without `.json`. |
+| `scene` | string, not empty | required | The scene recorded, as its file in `scenes/` is named, without `.json`. |
 | `take` | integer ≥ 1 |  | Deprecated: the take's number among the scene's, from 1, which takes recorded when they were numbered give. Still read, and ignored. |
 | `set` | string, not empty | required | The set the scene started on. |
 | `state` | `"clean"`, `"cloned"` or `"live"` | required | The set's state, which the take's data started from. |
