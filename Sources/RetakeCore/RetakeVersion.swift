@@ -25,7 +25,7 @@ public struct RetakeVersion: Codable, Equatable, Sendable {
     }
 
     public static let current = RetakeVersion(
-        version: "0.0.2",
+        version: "0.0.3-dev",
         buttonHeist: ButtonHeist(version: buttonHeistVersion.description, commit: nil, clonePath: nil),
     )
 
