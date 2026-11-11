@@ -336,7 +336,11 @@ Each step does one thing, led by what it does:
   `duration` seconds, 0.5 unless given. An element is touched at its activation point, as the
   screen has it just before the drag, so dragging a list's row by its handle to another row's handle
   needs no coordinates: `{ "from": { "label": "Reorder Book club" }, "to": { "label": "Reorder
-  Weekend plans" } }`.
+  Weekend plans" } }`. An end the element places rather than sits under, such as a game piece the
+  app draws above the finger, moves its activation point by `offset`, in points, and
+  `offsetPercent`, in percent of the element's width and height, both `x` and `y` and either sign:
+  `{ "label": "Row 2, column 3", "offsetPercent": { "x": 50, "y": 150 } }` lifts half a cell right
+  and a cell and a half below that cell's middle.
 - **`type`** types `text` key by key on the on-screen keyboard, where `\n` presses return, into the
   element `into` names, or the field already being typed in. It fails if typing changed nothing on
   screen, not a field's value nor whether it's being edited, as when the field lost its focus first;

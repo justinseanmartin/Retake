@@ -6,6 +6,13 @@ to what's there without breaking it. Pin a version with `mise use github:justins
 
 ## 0.0.3 (unreleased)
 
+**Drags**
+
+- **A drag's end on an element can be moved off it**, by `offset` in points and `offsetPercent` in
+  percent of the element's width and height, from its activation point: for a finger that has to
+  lift somewhere the element places rather than on it, such as a game piece drawn above the finger.
+  A start with an offset is touched where Retake finds it. Nothing breaks.
+
 **Fixes**
 
 - **`retake compose` waits out each step's hold** before answering, as `record` does, rather than

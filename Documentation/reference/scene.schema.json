@@ -110,7 +110,7 @@
           ]
         },
         "drag": {
-          "description": "A straight one-finger drag from one point or element to another. An element is touched at its activation point, as the screen has it just before the drag.",
+          "description": "A straight one-finger drag from one point or element to another. An element is touched at its activation point, as the screen has it just before the drag, moved by its offset and offsetPercent.",
           "type": "object",
           "properties": {
             "from": {
@@ -152,7 +152,7 @@
                   "additionalProperties": false
                 },
                 {
-                  "$ref": "#/$defs/element"
+                  "$ref": "#/$defs/dragElement"
                 }
               ]
             },
@@ -195,7 +195,7 @@
                   "additionalProperties": false
                 },
                 {
-                  "$ref": "#/$defs/element"
+                  "$ref": "#/$defs/dragElement"
                 }
               ]
             },
@@ -516,6 +516,144 @@
           "description": "Which of several matching elements, counted from 1 in the order VoiceOver reads the screen. A last resort, since it breaks when the layout changes: name the element closely enough, by its traits, identifier, value or hint, that only it matches.",
           "type": "integer",
           "minimum": 1
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": ["label"]
+        },
+        {
+          "required": ["value"]
+        },
+        {
+          "required": ["identifier"]
+        },
+        {
+          "required": ["hint"]
+        },
+        {
+          "required": ["traits"]
+        }
+      ]
+    },
+    "dragElement": {
+      "description": "An element on screen, as VoiceOver knows it, touched at its activation point moved by offset and offsetPercent, which add up when both are given: for an end placed by the element rather than on it, such as a game piece dropped below the cell it lands in.",
+      "type": "object",
+      "properties": {
+        "label": {
+          "description": "Its accessibility label.",
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "description": "Its value: a text field's placeholder, or what's typed in it.",
+          "type": "string"
+        },
+        "identifier": {
+          "description": "The accessibilityIdentifier the app gives it.",
+          "type": "string",
+          "minLength": 1
+        },
+        "hint": {
+          "description": "Its accessibility hint: what VoiceOver says it does.",
+          "type": "string",
+          "minLength": 1
+        },
+        "traits": {
+          "description": "Traits it has, every one, by The Button Heist's names, as `retake compose` prints them.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "adjustable",
+              "alert",
+              "allowsDirectInteraction",
+              "autoCorrectCandidate",
+              "backButton",
+              "button",
+              "causesPageTurn",
+              "deleteKey",
+              "draggable",
+              "footer",
+              "header",
+              "image",
+              "inactive",
+              "isEditing",
+              "keyboardKey",
+              "launchIcon",
+              "link",
+              "map",
+              "menuItem",
+              "notEnabled",
+              "pickerElement",
+              "playsSound",
+              "popupButton",
+              "radioButton",
+              "searchField",
+              "secureTextField",
+              "selected",
+              "selectionDismissesItem",
+              "spacer",
+              "startsMediaSession",
+              "staticText",
+              "statusBarElement",
+              "summaryElement",
+              "switchButton",
+              "tabBar",
+              "tabBarItem",
+              "tableIndex",
+              "textArea",
+              "textEntry",
+              "textOperationsAvailable",
+              "updatesFrequently",
+              "visited",
+              "webContent"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "examples": [
+            ["header"],
+            ["button", "selected"]
+          ]
+        },
+        "occurrence": {
+          "description": "Which of several matching elements, counted from 1 in the order VoiceOver reads the screen. A last resort, since it breaks when the layout changes: name the element closely enough, by its traits, identifier, value or hint, that only it matches.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "offset": {
+          "description": "Screen points from the element's activation point.",
+          "type": "object",
+          "properties": {
+            "x": {
+              "description": "Points to the right; negative for left.",
+              "type": "number"
+            },
+            "y": {
+              "description": "Points down; negative for up.",
+              "type": "number"
+            }
+          },
+          "required": ["x", "y"],
+          "additionalProperties": false
+        },
+        "offsetPercent": {
+          "description": "Percentages of the element's width and height from its activation point: 50 is half its width or height, 250 two and a half.",
+          "type": "object",
+          "properties": {
+            "x": {
+              "description": "Percent of its width or height to the right; negative for left.",
+              "type": "number"
+            },
+            "y": {
+              "description": "Percent of its width or height down; negative for up.",
+              "type": "number"
+            }
+          },
+          "required": ["x", "y"],
+          "additionalProperties": false
         }
       },
       "additionalProperties": false,

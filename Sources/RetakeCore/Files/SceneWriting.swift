@@ -56,8 +56,15 @@ extension Length {
 extension Spot {
     var fileJSON: JSONValue {
         switch self {
-        case .position(let position): position.fileJSON
-        case .element(let element): element.json
+        case .position(let position): return position.fileJSON
+        case .element(let element, let offset):
+            guard case .object(var object) = element.json else { return element.json }
+            func point(_ point: Point) -> JSONValue {
+                .object(JSONObject([.init(key: "x", value: .number(point.x)), .init(key: "y", value: .number(point.y))]))
+            }
+            if offset.points != SpotOffset.none.points { object.entries.append(.init(key: "offset", value: point(offset.points))) }
+            if offset.percent != SpotOffset.none.percent { object.entries.append(.init(key: "offsetPercent", value: point(offset.percent))) }
+            return .object(object)
         }
     }
 }
