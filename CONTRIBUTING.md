@@ -82,6 +82,12 @@ and turns Pages on the first time. It publishes only `main` with nothing uncommi
 replace a version's schemas once they're published, since files name them by their URL; `--force`
 does all three.
 
+The README's video is on GitHub Pages too, since GitHub plays no video in a README but its own
+uploads: the README shows a poster that links to `showcase/`, a page that plays it. Once the
+example's showcase is recorded and cut on both an iPhone and an iPad, `Example/run.sh --cut-only
+--readme` publishes it with `Scripts/publish-showcase.sh`, which copies the side by side into
+`showcase/` on `gh-pages` with its poster and page, and pushes, replacing the one before.
+
 ## Working on Retake and The Button Heist together
 
 For changes that span both, point Retake at a local clone of The Button Heist:

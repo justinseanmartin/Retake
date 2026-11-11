@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Runs the Notes example from a fresh clone of Retake: builds retake and what it installs, signs
 # Notes with your team, installs it on the connected device, records its scenes, cuts its video,
-# and, once both an iPhone's and an iPad's are cut, shares the two side by side, small enough to
-# upload as the README's video. See Example/README.md.
+# and, once both an iPhone's and an iPad's are cut, shares the two side by side, the README's
+# video. See Example/README.md.
 set -euo pipefail
 
 usage() {
@@ -16,9 +16,9 @@ Usage: Example/run.sh [--team <id>] [--device <device>] [--setup | --cut-only] [
   --setup            Stop once retake is built and Notes can be signed, and say what to run next.
   --cut-only         Cut from the takes already recorded, with no device: after changing an edit.
                      Give --device or set RETAKE_DEVICE_TYPE (iphone or ipad) to say whose.
-  --readme           Say how to upload the iPhone's and iPad's showcases, side by side, as the
-                     README's video: both devices' cuts are needed. GitHub plays only video
-                     uploaded to it, so the README links to an upload rather than a file.
+  --readme           Publish the iPhone's and iPad's showcases, side by side, as the README's
+                     video, to GitHub Pages with Scripts/publish-showcase.sh: both devices' cuts
+                     are needed.
 
 It cuts edits/showcase.json, every feature in one video, for the device's type. Once both an
 iPhone's and an iPad's are cut, `retake share` writes the two side by side, a small MP4 with
@@ -169,14 +169,5 @@ fi
 if ((${#made[@]})); then ls -l "${made[@]}"; fi
 if $readme; then
     [[ -f "$both" ]] || fail "--readme shows the iPhone's and the iPad's side by side: record and cut on both, then run this again with --cut-only --readme."
-    cat <<EOF
-
-To put it in the README, upload it to GitHub, which plays only video uploaded to it:
-  1. On github.com, open a new issue in Retake's repository, and drag
-     $EXAMPLE/$both
-     into its description.
-  2. Once it has uploaded, copy the https://github.com/user-attachments/assets/... link it adds,
-     and close the page without creating the issue.
-  3. Put that link in README.md in place of the old one, on a line of its own.
-EOF
+    "$ROOT/Scripts/publish-showcase.sh"
 fi

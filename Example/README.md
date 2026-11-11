@@ -55,7 +55,7 @@ again. Its options:
 | `--device <device>` | The device, by alias, UDID or name, when several are connected. |
 | `--setup` | Only build Retake and sign the example, then say what to run. |
 | `--cut-only` | Cut from the takes already recorded, without a device: after changing an edit. |
-| `--readme` | Say how to make the iPhone's and iPad's side by side the README's video. GitHub plays only video uploaded to it, so the README links to an upload: drag the file from `Retake/output/share/` into a new issue's description on github.com, copy the link it adds without creating the issue, and put it in the README in place of the old. |
+| `--readme` | Publish the iPhone's and iPad's side by side as the README's video, with [`Scripts/publish-showcase.sh`](../Scripts/publish-showcase.sh). GitHub plays no video in a README but its own uploads, so the README shows a poster that links to the video on GitHub Pages. |
 
 Nothing it writes is checked in: the build is in `.build/` (or
 `RETAKE_SCRATCH_PATH`), the team in `Config/Signing.local.xcconfig`, and the rest in

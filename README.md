@@ -8,9 +8,9 @@ transitions, sound and music. Everything that makes the video is a file kept wit
 the app changes you record again and render the same edits: no screen recording by hand, no
 timeline to rebuild, and no guessing which frames you used last time.
 
-https://github.com/user-attachments/assets/416e4ecd-30a8-4cd1-bf05-2343f5dca131
+[![The example's showcase, cut by Retake: touches, cuts, a spotlight, a blur, a drag, a turn, a card and a montage, each captioned. Play it.](https://justinseanmartin.github.io/Retake/showcase/poster.jpg)](https://justinseanmartin.github.io/Retake/showcase/)
 
-Every frame of the video above was made by Retake from [the example app](Example),
+Every frame of [the video above](https://justinseanmartin.github.io/Retake/showcase/) was made by Retake from [the example app](Example),
 recorded on a physical iPhone and iPad, and cut for each from the one
 [`showcase`](Example/Retake/edits/showcase.json) edit.
 
