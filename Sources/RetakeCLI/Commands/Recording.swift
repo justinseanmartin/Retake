@@ -8,9 +8,10 @@ struct Compose: AsyncParsableCommand {
         discussion: """
             Launches the app on the scene's set, replays its steps, prints what's on screen, then \
             takes actions, one a line: a step's action with its options, such as tap --label "New \
-            Note", which runs at once and is added to the scene when it runs, or one that acts on \
-            the scene, such as inspect, undo, replay or quit. `help` lists them. Reads standard input, so a \
-            script or an agent can drive it; --json answers each line with a line of JSON.
+            Note", which runs at once, waits out its hold as record does, and is added to the scene \
+            when it runs, or one that acts on the scene, such as inspect, undo, replay or quit. \
+            `help` lists them. Reads standard input, so a script or an agent can drive it; --json \
+            answers each line with a line of JSON.
             """,
     )
 

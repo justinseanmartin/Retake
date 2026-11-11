@@ -187,9 +187,10 @@ final class ScriptedInput: ComposeInput, @unchecked Sendable {
     func ask(_ question: String) async -> String? { answers.isEmpty ? nil : answers.removeFirst() }
 }
 
-/// The replies a session made.
+/// The replies a session made, and when each step added was replied to, on a `FakeTime`'s clock.
 final class Replies: @unchecked Sendable {
     var all: [Composer.Reply] = []
+    var addedAt: [Double] = []
     var failures: [String] { all.compactMap { if case .failed(let message) = $0 { message } else { nil } } }
 }
 
@@ -199,13 +200,15 @@ struct ComposerSessionTests {
 
     func session(
         _ lines: [String], answers: [String] = [], driver: FakeDriver = FakeDriver(), steps: [Step] = [], time: FakeTime = FakeTime(),
+        defaultHold: Double = SceneFile.defaultDefaultHold,
     ) async throws -> (Composer.Ending, Composer.State, Replies) {
         var document = SceneDocument(url: url, scene: nil, text: nil, newOn: "base")
         document.steps = steps
-        let state = Composer.State(document: document, scene: SceneFile(set: "base", steps: []))
+        let state = Composer.State(document: document, scene: SceneFile(set: "base", steps: [], defaultHold: defaultHold))
         let replies = Replies()
         let ending = try await Composer.session("a", state: state, on: driver, input: ScriptedInput(lines, answers: answers), player: time.player()) {
             replies.all.append($0)
+            if case .added = $0 { replies.addedAt.append(time.now) }
         }
         return (ending, state, replies)
     }
@@ -238,12 +241,19 @@ struct ComposerSessionTests {
         #expect(ending == .relaunch && state.document.steps == steps)
     }
 
-    @Test func aReplayWaitsOutEachStepsHoldButAStepGivenNowDoesnt() async throws {
+    @Test func eachStepWaitsOutItsHoldBeforeItsReplyAsARecordingDoes() async throws {
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         let time = FakeTime()
+        let driver = FakeDriver()
+        driver.answering = (time, 0.5)
         let steps = [Step(.tapElement(ElementTarget(label: "A")), hold: 1.5), Step(nil, hold: 0.5)]
-        _ = try await session([#"tap --label "B" --hold 2"#, "quit"], steps: steps, time: time)
-        #expect(time.pauses == [1.5, 0.5])
+        let lines = [#"tap --label "B" --hold 2"#, "hold --seconds 0.75", #"activate --label "C""#, "quit"]
+        let (_, state, replies) = try await session(lines, driver: driver, steps: steps, time: time, defaultHold: 0.25)
+        // Replayed, then given now: a tap's hold from when it was sent, the rest from when they ended,
+        // and a step with no hold of its own the scene's `defaultHold`.
+        #expect(time.pauses == [1, 0.5, 1.5, 0.75, 0.25])
+        #expect(replies.addedAt == [4, 4.75, 5.5], "each reply, and the screen in it, comes once the hold is over")
+        #expect(state.document.steps.last == Step(.activate(ElementTarget(label: "C"))), "the default isn't written into the step")
     }
 
     @Test func inspectWithAnElementListsOnlyItsMatchesInOrder() async throws {
