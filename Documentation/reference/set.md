@@ -4,7 +4,7 @@
 
 A set: the state a take starts from — the app's data, its settings and its launch environment.
 
-Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.2/set.schema.json>, and `retake schema set` prints it.
+Its schema is published at <https://justinseanmartin.github.io/Retake/schemas/0.0.3/set.schema.json>, and `retake schema set` prints it.
 
 ## Fields
 

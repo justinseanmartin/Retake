@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.2/retake.schema.json",
+  "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.3/retake.schema.json",
   "title": "retake.json",
   "description": "A Retake project's configuration. Every field is optional.",
   "type": "object",
