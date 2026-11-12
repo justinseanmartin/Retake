@@ -1,10 +1,10 @@
 # Releases
 
-What each release of Retake adds and changes, newest first. Until 1.0, a breaking change comes with
-a new minor version, from 0.1 to 0.2, and is spelled out here; a patch version, such as 0.0.2, adds
-to what's there without breaking it. Pin a version with `mise use github:justinseanmartin/Retake@<version>`.
+What each release of Retake adds and changes, newest first. Until 1.0, any release can break what
+came before; a breaking change is spelled out first in its release's entry, with how to move a
+project. Pin a version with `mise use github:justinseanmartin/Retake@<version>`.
 
-## 0.0.3 (unreleased)
+## 0.0.3 (2026-11-11)
 
 **Breaking: scenes pick their device types as edits do.** A project's scenes move out of
 `scenes/iphone/` and `scenes/ipad/`, which aren't read any more, into `scenes/`. Retake names any
