@@ -31,9 +31,8 @@ guard let context = CGContext(
 context.draw(frame, in: CGRect(x: 0, y: 0, width: width, height: height))
 
 let diameter = CGFloat(min(width, height)) * 0.16
-// Centred across, and two thirds down, in the showcase's first frame between the iPad's button and
-// its caption, where it covers nothing. CoreGraphics counts y up from the bottom.
-let center = CGPoint(x: CGFloat(width) / 2, y: CGFloat(height) * 0.34)
+// Centred in the frame, where a play button is looked for.
+let center = CGPoint(x: CGFloat(width) / 2, y: CGFloat(height) / 2)
 context.setShadow(offset: .zero, blur: diameter * 0.15, color: CGColor(gray: 0, alpha: 0.4))
 context.setFillColor(CGColor(gray: 0, alpha: 0.6))
 context.fillEllipse(in: CGRect(x: center.x - diameter / 2, y: center.y - diameter / 2, width: diameter, height: diameter))
