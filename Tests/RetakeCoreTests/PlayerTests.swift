@@ -212,6 +212,19 @@ struct PlayerTests {
         #expect(touched.points[1] == [Point(x: 597, y: 100), nil], "half the screen's width as it faces, turned")
     }
 
+    @Test func aTapOnAnElementWithAnOffsetIsFoundOnTheScreenAndMoved() async throws {
+        let driver = FakeDriver()
+        driver.screens = [[ScreenElement(label: "Puzzle", frame: .init(x: 100, y: 300, width: 200, height: 40))]]
+        let touched = Touched()
+        let player = Player(pause: { _ in }, report: { event in
+            if case .finished(_, let timing) = event { touched.points.append([timing.evidence.touched, timing.evidence.lifted]) }
+        })
+        let offset = SpotOffset(points: Point(x: 0, y: -8), percent: Point(x: -25, y: 0))
+        try await player.play(SceneFile(steps: [Step(.tapElement(ElementTarget(label: "Puzzle"), offset: offset))]), named: "tap", on: driver)
+        #expect(touched.points == [[Point(x: 150, y: 312), nil]], "its frame's middle, a quarter of its width left and 8 points up")
+        #expect(driver.done == ["look", "run"], "the screen's read once, before the tap")
+    }
+
     @Test func aShareOfAScreenWhoseSizeIsntKnownSaysSo() async {
         await #expect(throws: RetakeError.self) {
             try await Player(pause: { _ in }).play(SceneFile(steps: [Step(.tapPosition(x: .share(0.5), y: .share(0.5)))]), named: "a", on: FakeDriver())

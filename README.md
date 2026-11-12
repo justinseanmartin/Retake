@@ -330,8 +330,8 @@ project's `defaultSet` unless it names one:
 
 Each step does one thing, led by what it does:
 
-- **`tap`** touches a point, `x` and `y`, or an element, at its activation point. Either is drawn in
-  the video.
+- **`tap`** touches a point, `x` and `y`, or an element, at its activation point, moved by `offset`
+  and `offsetPercent` as a drag's end is. Either is drawn in the video.
 - **`drag`** is a straight one-finger drag `from` one point or element `to` another, over
   `duration` seconds, 0.5 unless given. An element is touched at its activation point, as the
   screen has it just before the drag, so dragging a list's row by its handle to another row's handle

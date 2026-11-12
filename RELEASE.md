@@ -31,12 +31,13 @@ scene left behind, in `validate` and `record`, and records nothing until it's mo
 - **`retake init`** starts a project with `scenes/` and one `launch` scene for every type.
 - **An edit's `devices`** is every type unless it names some, as a scene's is.
 
-**Drags**
+**Taps and drags**
 
-- **A drag's end on an element can be moved off it**, by `offset` in points and `offsetPercent` in
-  percent of the element's width and height, from its activation point: for a finger that has to
-  lift somewhere the element places rather than on it, such as a game piece drawn above the finger.
-  A start with an offset is touched where Retake finds it. Nothing breaks.
+- **A tap or a drag's end on an element can be moved off it**, by `offset` in points and
+  `offsetPercent` in percent of the element's width and height, from its activation point: for a
+  finger that has to touch or lift somewhere the element places rather than on it, such as a game
+  piece drawn above the finger. A tap or a drag's start with an offset is touched where Retake finds
+  it on the screen just before. Nothing breaks.
 
 **Fixes**
 

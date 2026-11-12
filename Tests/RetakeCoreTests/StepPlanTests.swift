@@ -53,6 +53,18 @@ struct StepPlanTests {
         #expect(throws: RetakeError.self, "an offset start needs the player to have found it") { try StepPlay.make(for: step) }
     }
 
+    @Test func aTapOnAnElementWithAnOffsetTouchesWhereThePlayerFoundIt() throws {
+        let step = Step(.tapElement(ElementTarget(label: "Puzzle"), offset: SpotOffset(points: Point(x: 0, y: -8))))
+        guard case .heist(let plan) = try StepPlay.make(for: step, touch: Point(x: 200, y: 312)),
+              case .action(let action)? = plan.body.first, case .oneFingerTap(let tap) = action.command
+        else {
+            Issue.record("not a tap")
+            return
+        }
+        #expect(tap.selection == .coordinate(ScreenPoint(x: 200, y: 312)), "The Button Heist would touch the element itself, not the offset")
+        #expect(throws: RetakeError.self, "an offset tap needs the player to have found it") { try StepPlay.make(for: step) }
+    }
+
     @Test func anOffsetMovesTheActivationPointByPointsAndShareOfTheElementsSize() throws {
         let cell = ScreenElement(label: "Row 2, column 3", frame: .init(x: 356.5, y: 631.5, width: 60, height: 60), activationPoint: Point(x: 386.5, y: 661.5))
         let offset = SpotOffset(points: Point(x: 1, y: -1), percent: Point(x: 50, y: 150))

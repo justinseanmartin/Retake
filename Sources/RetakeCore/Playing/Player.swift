@@ -181,10 +181,11 @@ public struct Player: Sendable {
         }
     }
 
-    /// Where a tap at a point, or a drag, touches and lifts, in points: a share of the screen as the
-    /// device faces, and a drag's end on an element where the screen has it now, read just before
-    /// the drag, moved by its offset. A drag that starts on an element with no offset is touched where
-    /// The Button Heist finds it, but its start is found here too, for the step log.
+    /// Where a tap at a point or with an offset, or a drag, touches and lifts, in points: a share of
+    /// the screen as the device faces, and an element where the screen has it now, read just before
+    /// the touch, moved by its offset. A tap on an element with no offset is touched where The Button
+    /// Heist finds it; so is a drag that starts on one, but its start is found here too, for the step
+    /// log.
     @ButtonHeistActor
     func points(for action: Step.Action?, facing orientation: SceneFile.Orientation, on driver: some AppDriver) async throws(RetakeError) -> (touch: Point?, end: Point?) {
         let facing = screen.map { orientation.isLandscape ? CGSize(width: $0.height, height: $0.width) : $0 }
@@ -197,6 +198,8 @@ public struct Player: Sendable {
         switch action {
         case .tapPoint(let position)?:
             return (try onScreen(position), nil)
+        case .tapElement(let target, let offset)? where !offset.isNone:
+            return (try Self.point(of: target, in: try await driver.elements(), movedBy: offset), nil)
         case .drag(let from, let to, _)?:
             var elements: [ScreenElement]?
             func find(_ spot: Spot) async throws(RetakeError) -> Point {
@@ -291,7 +294,8 @@ public struct Player: Sendable {
     /// The element a step has The Button Heist find, which it may find several of.
     static func heistTarget(of action: Step.Action?) -> ElementTarget? {
         switch action {
-        case .tapElement(let target)?, .activate(let target)?, .waitFor(let target, _, _)?, .type(_, let target?)?: target
+        case .tapElement(let target, let offset)? where offset.isNone: target
+        case .activate(let target)?, .waitFor(let target, _, _)?, .type(_, let target?)?: target
         case .drag(.element(let target, let offset), _, _)? where offset.isNone: target
         default: nil
         }

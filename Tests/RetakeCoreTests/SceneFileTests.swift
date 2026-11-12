@@ -153,6 +153,23 @@ struct SceneFileTests {
         #expect(steps(step).problems == [expected])
     }
 
+    @Test func aTapsElementCanBeMovedByAnOffsetAsADragsEndCan() {
+        let step = #"{"tap": {"label": "Puzzle", "offset": {"x": 0, "y": -8}, "offsetPercent": {"x": -25, "y": 0}}}"#
+        let scene = steps(step).scene
+        #expect(scene?.steps.map(\.action) == [
+            .tapElement(ElementTarget(label: "Puzzle"), offset: SpotOffset(points: Point(x: 0, y: -8), percent: Point(x: -25, y: 0))),
+        ])
+        #expect(scene?.steps.map(\.json) == [try! JSONParser.parse(step)], "written back as given")
+    }
+
+    @Test(arguments: [
+        (#"{"tap": {"x": 1, "y": 2, "offset": {"x": 1, "y": 1}}}"#, #"scenes/create-note.json: steps[0].tap: offset and offsetPercent move an element's activation point; a point is given where it's meant"#),
+        (#"{"activate": {"label": "A", "offset": {"x": 1, "y": 1}}}"#, #"scenes/create-note.json: steps[0].activate: unknown key "offset""#),
+    ])
+    func anOffsetOnlyMovesAnElementThatsTouched(_ step: String, _ expected: String) {
+        #expect(steps(step).problems == [expected])
+    }
+
     @Test func elementsCanBeNamedEveryWayTogether() {
         let scene = steps(#"{"tap": {"label": "Delete", "identifier": "row.delete", "occurrence": 2}}, {"type": {"text": "a"}}, {"orientation": "landscape-left"}"#).scene
         #expect(scene?.steps.map(\.action) == [
@@ -181,7 +198,7 @@ struct SceneFileTests {
         (#"{"tapp": {"label": "a"}}"#, #"scenes/create-note.json: steps[0]: unknown key "tapp"; did you mean "tap"?"#),
         (#"{"tap": {"label": "a"}, "drag": {"from": {"x": 1, "y": 1}, "to": {"x": 2, "y": 2}}}"#, #"scenes/create-note.json: steps[0]: does one thing, so "tap" and "drag" can't be given together"#),
         (#"{"id": "pause"}"#, "scenes/create-note.json: steps[0]: has nothing to do: give an action (tap, drag, type, activate, orientation, waitFor, capture) or a hold"),
-        (#"{"tap": {"x": 10, "y": 10, "label": "a"}}"#, #"scenes/create-note.json: steps[0].tap: taps a point ("x" and "y") or an element, not both"#),
+        (#"{"tap": {"x": 10, "y": 10, "label": "a"}}"#, #"scenes/create-note.json: steps[0].tap: is a point ("x" and "y") or an element, not both"#),
         (#"{"tap": {"x": 10}}"#, #"scenes/create-note.json: steps[0].tap: is missing "y""#),
         (#"{"tap": {"occurrence": 2}}"#, #"scenes/create-note.json: steps[0].tap: needs an element to name: its "label", "value", "identifier", "hint" or "traits""#),
         (#"{"tap": {"label": "a", "occurrence": 0}}"#, "scenes/create-note.json: steps[0].tap.occurrence: 0 must be at least 1"),

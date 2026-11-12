@@ -112,10 +112,10 @@ extension SceneFile {
             .init("y", .length("Screen points from the top, or a percentage of the screen's height as the device faces.")),
         ], required: ["x", "y"])
         let actions: [Schema.Property] = [
-            .init("tap", .oneOf("Touches a point, x and y, or an element. An element is touched at its activation point, which the step log records, so either is drawn in the video.", [point, .ref("element")])),
+            .init("tap", .oneOf("Touches a point, x and y, or an element. An element is touched at its activation point, as the screen has it just before the tap, moved by its offset and offsetPercent; the step log records where, so either is drawn in the video.", [point, .ref("touchElement")])),
             .init("drag", .object("A straight one-finger drag from one point or element to another. An element is touched at its activation point, as the screen has it just before the drag, moved by its offset and offsetPercent.", [
-                .init("from", .oneOf("Where the finger comes down: a point, x and y, or an element.", [point, .ref("dragElement")])),
-                .init("to", .oneOf("Where it lifts: a point, x and y, or an element.", [point, .ref("dragElement")])),
+                .init("from", .oneOf("Where the finger comes down: a point, x and y, or an element.", [point, .ref("touchElement")])),
+                .init("to", .oneOf("Where it lifts: a point, x and y, or an element.", [point, .ref("touchElement")])),
                 .init("duration", .number("Seconds the drag takes.", above: 0).defaulting(to: Step.defaultDragDuration)),
             ], required: ["from", "to"])),
             .init("type", .object("Types text key by key on the on-screen keyboard.", [
@@ -177,7 +177,7 @@ extension SceneFile {
             required: ["steps"],
         )
         let devices = DeviceType.allCases.map(\.rawValue)
-        let definitions: [Schema.Property] = [.init("step", step), .init("element", element), .init("dragElement", dragElement)]
+        let definitions: [Schema.Property] = [.init("step", step), .init("element", element), .init("touchElement", touchElement)]
         return FileSchema(
             kind: "scene", title: "A scene",
             root: root.overridden(by: devices, excluding: ["$schema", "devices"]),
@@ -201,8 +201,8 @@ extension SceneFile {
         ]
     }
 
-    /// A drag's end on an element, at its activation point moved by an offset.
-    static var dragElement: Schema {
+    /// A tap or a drag's end on an element, at its activation point moved by an offset.
+    static var touchElement: Schema {
         func offset(_ description: String, _ unit: String) -> Schema {
             .object(description, [
                 .init("x", .number("\(unit) to the right; negative for left.")),
@@ -210,7 +210,7 @@ extension SceneFile {
             ], required: ["x", "y"])
         }
         return Schema.object(
-            "An element on screen, as VoiceOver knows it, touched at its activation point moved by offset and offsetPercent, which add up when both are given: for an end placed by the element rather than on it, such as a game piece dropped below the cell it lands in.",
+            "An element on screen, as VoiceOver knows it, touched at its activation point moved by offset and offsetPercent, which add up when both are given: for a touch placed by the element rather than on it, such as a game piece dropped below the cell it lands in.",
             elementProperties + [
                 .init("offset", offset("Screen points from the element's activation point.", "Points")),
                 .init("offsetPercent", offset("Percentages of the element's width and height from its activation point: 50 is half its width or height, 250 two and a half.", "Percent of its width or height")),

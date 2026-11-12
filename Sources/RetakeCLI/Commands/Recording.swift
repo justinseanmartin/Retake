@@ -64,7 +64,7 @@ enum ComposeOutput {
             for match in elements { print("  \(match.name?.options ?? "(nothing to name it by)")  ·  \(match.element.line)") }
         case .added(let step, let number, let elements, let suggestion):
             print("✓ step \(number)\(step.id.map { " (\($0))" } ?? ""): \(step.line)")
-            if case .tapElement(let target)? = suggestion?.action {
+            if case .tapElement(let target, _)? = suggestion?.action {
                 if target.occurrence == nil {
                     print("  That point is on \(target), which a step can name and follow wherever the layout puts it: undo, then tap \(target.options)")
                 } else {

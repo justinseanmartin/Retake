@@ -16,7 +16,7 @@ extension Step.Action {
     var json: JSONValue {
         switch self {
         case .tapPoint(let position): return position.fileJSON
-        case .tapElement(let element): return element.json
+        case .tapElement(let element, let offset): return Spot.element(element, offset: offset).fileJSON
         case .drag(let from, let to, let duration):
             var entries: [JSONObject.Entry] = [.init(key: "from", value: from.fileJSON), .init(key: "to", value: to.fileJSON)]
             if duration != Step.defaultDragDuration { entries.append(.init(key: "duration", value: .number(duration))) }
