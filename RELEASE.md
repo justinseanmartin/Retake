@@ -1,8 +1,9 @@
 # Releases
 
-What each release of Retake adds and changes, newest first. Until 1.0, any release can break what
-came before; a breaking change is spelled out first in its release's entry, with how to move a
-project. Pin a version with `mise use github:justinseanmartin/Retake@<version>`.
+What each release of Retake adds and changes, newest first. Until 0.1.0, any release can break what
+came before. From 0.1.0 until 1.0, a breaking change comes with a new minor version, from 0.1 to
+0.2, and a patch version adds to what's there without breaking it. Either way, a breaking change is
+spelled out first in its release's entry, with how to move a project. Pin a version with `mise use github:justinseanmartin/Retake@<version>`.
 
 ## 0.0.3 (2026-11-11)
 
