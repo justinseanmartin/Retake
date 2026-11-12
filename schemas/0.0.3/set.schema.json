@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://justinseanmartin.github.io/Retake/schemas/0.0.3/set.schema.json",
+  "title": "A set",
+  "description": "A set: the state a take starts from — the app's data, its settings and its launch environment.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "The URL of the schema the file is written against, for editors. Optional; a file is read against this Retake's schema whatever it names.",
+      "type": "string"
+    },
+    "extends": {
+      "description": "Another set this one builds on: its fields are laid under this set's.",
+      "type": "string",
+      "minLength": 1
+    },
+    "state": {
+      "description": "What the app's data starts as for a take, and whether the take's changes are kept. clean: empty but for the set's files and defaults. cloned: the app's real data with the set's on top, the take's changes thrown away. live: the real data, the take's changes kept.",
+      "type": "string",
+      "enum": ["clean", "cloned", "live"],
+      "default": "clean"
+    },
+    "files": {
+      "description": "Files and folders put in the app's data before launch: each key is where it goes in the app's data, such as Documents/notes.json, and its value a path relative to the directory holding retake.json. The source may use .. to share fixtures outside the project. A folder ends in / on both sides.",
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[^/]"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      },
+      "examples": [
+        {
+          "Documents/notes.sqlite": "data/returning-user/notes.sqlite"
+        }
+      ]
+    },
+    "defaults": {
+      "description": "What UserDefaults.standard holds at launch: strings, numbers, booleans, and lists and dictionaries of them. null can't be stored.",
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "number", "boolean", "array", "object"]
+      }
+    },
+    "environment": {
+      "description": "Environment variables added to the launch, for the app's own flags. DYLD_, INSIDEJOB_ and RETAKE_ are Retake's own.",
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+        "not": {
+          "type": "string",
+          "pattern": "^(DYLD_|INSIDEJOB_|RETAKE_)"
+        }
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "arguments": {
+      "description": "Arguments added to the launch, such as -AppleLanguages (en).",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "previewAspect": {
+      "description": "Sizes the app's window to the App Store preview's shape for the device type recorded, 886:1920 on iPhone and 3:4 on iPad, turned in landscape; the edit crops away the rest of the screen. Otherwise the app fills the screen.",
+      "type": "boolean",
+      "default": false
+    },
+    "appearance": {
+      "description": "Holds the app to light or dark, whatever the device is set to. The launch screen, drawn before the app runs, still follows the device.",
+      "type": "string",
+      "enum": ["light", "dark"]
+    }
+  },
+  "additionalProperties": false
+}
