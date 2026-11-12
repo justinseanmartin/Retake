@@ -18,8 +18,8 @@ public enum StepPlay: Equatable, Sendable {
 
     /// The plan for `step`, its touch at `touch`, and a drag's end at `end`, as the player works
     /// them out where the step gives an element or a share of the screen; or why The Button Heist
-    /// can't take it, as a failure (1) naming nothing: the caller names the step. A drag that starts
-    /// on an element starts on it, wherever The Button Heist finds it.
+    /// can't take it, as a failure (1) naming nothing: the caller names the step. A tap on an element,
+    /// or a drag that starts on one, with no offset, is aimed at it wherever The Button Heist finds it.
     public static func make(for step: Step, touch: Point? = nil, end: Point? = nil) throws(RetakeError) -> StepPlay {
         guard let action = step.action else { return .pause }
         do {
@@ -27,8 +27,11 @@ public enum StepPlay: Equatable, Sendable {
             case .tapPoint(let position):
                 guard let point = touch ?? position.point(on: nil) else { throw RetakeError(.failed, "its point is a share of a screen whose size isn't known") }
                 return .heist(try plan(.oneFingerTap(TapTarget(selection: .coordinate(screenPoint(point))))))
-            case .tapElement(let element):
+            case .tapElement(let element, let offset) where offset.isNone:
                 return .heist(try plan(.oneFingerTap(TapTarget(selection: .element(target(element))))))
+            case .tapElement(let element, _):
+                guard let touch else { throw RetakeError(.failed, "where it touches, \(element) moved by its offset, wasn't looked for on the screen") }
+                return .heist(try plan(.oneFingerTap(TapTarget(selection: .coordinate(screenPoint(touch))))))
             case .drag(let fromSpot, let toSpot, let duration):
                 let start: GesturePointSelection
                 switch fromSpot {
@@ -107,7 +110,7 @@ extension Step {
         guard let action else { return "hold \(Self.seconds(hold ?? 0))" }
         switch action {
         case .tapPoint(let position): return "tap \(position)"
-        case .tapElement(let element): return "tap \(element)"
+        case .tapElement(let element, let offset): return "tap \(Spot.element(element, offset: offset))"
         case .drag(let from, let to, _): return "drag \(from) to \(to)"
         case .type(let text, let into):
             let typed = "type \(JSONWriter.quote(text))"

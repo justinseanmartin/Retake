@@ -189,7 +189,7 @@
       "type": "object",
       "properties": {
         "tap": {
-          "description": "Touches a point, x and y, or an element. An element is touched at its activation point, which the step log records, so either is drawn in the video.",
+          "description": "Touches a point, x and y, or an element. An element is touched at its activation point, as the screen has it just before the tap, moved by its offset and offsetPercent; the step log records where, so either is drawn in the video.",
           "oneOf": [
             {
               "type": "object",
@@ -227,7 +227,7 @@
               "additionalProperties": false
             },
             {
-              "$ref": "#/$defs/element"
+              "$ref": "#/$defs/touchElement"
             }
           ]
         },
@@ -274,7 +274,7 @@
                   "additionalProperties": false
                 },
                 {
-                  "$ref": "#/$defs/dragElement"
+                  "$ref": "#/$defs/touchElement"
                 }
               ]
             },
@@ -317,7 +317,7 @@
                   "additionalProperties": false
                 },
                 {
-                  "$ref": "#/$defs/dragElement"
+                  "$ref": "#/$defs/touchElement"
                 }
               ]
             },
@@ -685,8 +685,8 @@
         }
       ]
     },
-    "dragElement": {
-      "description": "An element on screen, as VoiceOver knows it, touched at its activation point moved by offset and offsetPercent, which add up when both are given: for an end placed by the element rather than on it, such as a game piece dropped below the cell it lands in.",
+    "touchElement": {
+      "description": "An element on screen, as VoiceOver knows it, touched at its activation point moved by offset and offsetPercent, which add up when both are given: for a touch placed by the element rather than on it, such as a game piece dropped below the cell it lands in.",
       "type": "object",
       "properties": {
         "label": {
@@ -804,11 +804,11 @@
           "additionalProperties": false
         },
         "iphone": {
-          "$ref": "#/$defs/dragElement-override",
+          "$ref": "#/$defs/touchElement-override",
           "description": "Overrides for iphone's video, laid over the rest key by key."
         },
         "ipad": {
-          "$ref": "#/$defs/dragElement-override",
+          "$ref": "#/$defs/touchElement-override",
           "description": "Overrides for ipad's video, laid over the rest key by key."
         }
       },
@@ -836,7 +836,7 @@
       "type": "object",
       "properties": {
         "tap": {
-          "description": "Touches a point, x and y, or an element. An element is touched at its activation point, which the step log records, so either is drawn in the video.",
+          "description": "Touches a point, x and y, or an element. An element is touched at its activation point, as the screen has it just before the tap, moved by its offset and offsetPercent; the step log records where, so either is drawn in the video.",
           "oneOf": [
             {
               "type": "object",
@@ -873,7 +873,7 @@
               "additionalProperties": false
             },
             {
-              "$ref": "#/$defs/element-override"
+              "$ref": "#/$defs/touchElement-override"
             }
           ]
         },
@@ -919,7 +919,7 @@
                   "additionalProperties": false
                 },
                 {
-                  "$ref": "#/$defs/dragElement-override"
+                  "$ref": "#/$defs/touchElement-override"
                 }
               ]
             },
@@ -961,7 +961,7 @@
                   "additionalProperties": false
                 },
                 {
-                  "$ref": "#/$defs/dragElement-override"
+                  "$ref": "#/$defs/touchElement-override"
                 }
               ]
             },
@@ -1223,8 +1223,8 @@
       },
       "additionalProperties": false
     },
-    "dragElement-override": {
-      "description": "An element on screen, as VoiceOver knows it, touched at its activation point moved by offset and offsetPercent, which add up when both are given: for an end placed by the element rather than on it, such as a game piece dropped below the cell it lands in.",
+    "touchElement-override": {
+      "description": "An element on screen, as VoiceOver knows it, touched at its activation point moved by offset and offsetPercent, which add up when both are given: for a touch placed by the element rather than on it, such as a game piece dropped below the cell it lands in.",
       "type": "object",
       "properties": {
         "label": {

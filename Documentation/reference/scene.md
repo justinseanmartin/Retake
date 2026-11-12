@@ -34,7 +34,7 @@ One thing the scene does, led by what it does, and the pause after it. A step ca
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `tap` | [object](#steptap-with-x), or [element](#element) |  | Touches a point, x and y, or an element. An element is touched at its activation point, which the step log records, so either is drawn in the video. |
+| `tap` | [object](#steptap-with-x), or [touchElement](#touchElement) |  | Touches a point, x and y, or an element. An element is touched at its activation point, as the screen has it just before the tap, moved by its offset and offsetPercent; the step log records where, so either is drawn in the video. |
 | `drag` | [object](#stepdrag) |  | A straight one-finger drag from one point or element to another. An element is touched at its activation point, as the screen has it just before the drag, moved by its offset and offsetPercent. |
 | `type` | [object](#steptype) |  | Types text key by key on the on-screen keyboard. |
 | `activate` | [element](#element) |  | An accessibility activation of an element, with no touch, for getting somewhere off camera. |
@@ -60,8 +60,8 @@ A straight one-finger drag from one point or element to another. An element is t
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `from` | [object](#stepdragfrom-with-x), or [dragElement](#dragElement) | required | Where the finger comes down: a point, x and y, or an element. |
-| `to` | [object](#stepdragto-with-x), or [dragElement](#dragElement) | required | Where it lifts: a point, x and y, or an element. |
+| `from` | [object](#stepdragfrom-with-x), or [touchElement](#touchElement) | required | Where the finger comes down: a point, x and y, or an element. |
+| `to` | [object](#stepdragto-with-x), or [touchElement](#touchElement) | required | Where it lifts: a point, x and y, or an element. |
 | `duration` | number > 0 | `0.5` | Seconds the drag takes. |
 
 #### `step.type`
@@ -119,9 +119,9 @@ An element on screen, as VoiceOver knows it: by any of its label, value, identif
 
 Gives at least one of `label`, `value`, `identifier`, `hint` and `traits`.
 
-### dragElement
+### touchElement
 
-An element on screen, as VoiceOver knows it, touched at its activation point moved by offset and offsetPercent, which add up when both are given: for an end placed by the element rather than on it, such as a game piece dropped below the cell it lands in.
+An element on screen, as VoiceOver knows it, touched at its activation point moved by offset and offsetPercent, which add up when both are given: for a touch placed by the element rather than on it, such as a game piece dropped below the cell it lands in.
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -131,12 +131,12 @@ An element on screen, as VoiceOver knows it, touched at its activation point mov
 | `hint` | string, not empty |  | Its accessibility hint: what VoiceOver says it does. |
 | `traits` | list of `"adjustable"`, `"alert"`, `"allowsDirectInteraction"`, `"autoCorrectCandidate"`, `"backButton"`, `"button"`, `"causesPageTurn"`, `"deleteKey"`, `"draggable"`, `"footer"`, `"header"`, `"image"`, `"inactive"`, `"isEditing"`, `"keyboardKey"`, `"launchIcon"`, `"link"`, `"map"`, `"menuItem"`, `"notEnabled"`, `"pickerElement"`, `"playsSound"`, `"popupButton"`, `"radioButton"`, `"searchField"`, `"secureTextField"`, `"selected"`, `"selectionDismissesItem"`, `"spacer"`, `"startsMediaSession"`, `"staticText"`, `"statusBarElement"`, `"summaryElement"`, `"switchButton"`, `"tabBar"`, `"tabBarItem"`, `"tableIndex"`, `"textArea"`, `"textEntry"`, `"textOperationsAvailable"`, `"updatesFrequently"`, `"visited"` or `"webContent"`, at least 1, each once |  | Traits it has, every one, by The Button Heist's names, as `retake compose` prints them. |
 | `occurrence` | integer ≥ 1 |  | Which of several matching elements, counted from 1 in the order VoiceOver reads the screen. A last resort, since it breaks when the layout changes: name the element closely enough, by its traits, identifier, value or hint, that only it matches. |
-| `offset` | [object](#dragelementoffset) |  | Screen points from the element's activation point. |
-| `offsetPercent` | [object](#dragelementoffsetpercent) |  | Percentages of the element's width and height from its activation point: 50 is half its width or height, 250 two and a half. |
+| `offset` | [object](#touchelementoffset) |  | Screen points from the element's activation point. |
+| `offsetPercent` | [object](#touchelementoffsetpercent) |  | Percentages of the element's width and height from its activation point: 50 is half its width or height, 250 two and a half. |
 
 Gives at least one of `label`, `value`, `identifier`, `hint` and `traits`.
 
-#### `dragElement.offset`
+#### `touchElement.offset`
 
 Screen points from the element's activation point.
 
@@ -145,7 +145,7 @@ Screen points from the element's activation point.
 | `x` | number | required | Points to the right; negative for left. |
 | `y` | number | required | Points down; negative for up. |
 
-#### `dragElement.offsetPercent`
+#### `touchElement.offsetPercent`
 
 Percentages of the element's width and height from its activation point: 50 is half its width or height, 250 two and a half.
 

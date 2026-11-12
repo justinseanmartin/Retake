@@ -82,7 +82,7 @@ public struct Step: Equatable, Sendable {
 
     public enum Action: Equatable, Sendable {
         case tapPoint(Position)
-        case tapElement(ElementTarget)
+        case tapElement(ElementTarget, offset: SpotOffset = .none)
         case drag(from: Spot, to: Spot, duration: Double)
         case type(text: String, into: ElementTarget?)
         case activate(ElementTarget)
@@ -148,10 +148,10 @@ public struct Step: Equatable, Sendable {
     }
 }
 
-/// How far a drag's end is from its element's activation point: `points`, plus `percent` of the
-/// element's width and height, either of them negative for up or left. For an end that isn't on the
-/// element itself but placed by it, such as a game piece dropped a piece's height below the cell it
-/// lands in.
+/// How far a tap or a drag's end is from its element's activation point: `points`, plus `percent` of
+/// the element's width and height, either of them negative for up or left. For a touch that isn't on
+/// the element itself but placed by it, such as a game piece dropped a piece's height below the cell
+/// it lands in.
 public struct SpotOffset: Equatable, Sendable {
     public var points: Point
     /// Percentages: 50 is half the element's width or height.
@@ -471,23 +471,19 @@ extension SceneFile {
                 return nil
             }
             return .capture(name)
+        case "tap":
+            return readSpot(value, path, reader).map { spot in
+                switch spot {
+                case .position(let position): .tapPoint(position)
+                case .element(let element, let offset): .tapElement(element, offset: offset)
+                }
+            }
         default:
             break
         }
         guard var object = reader.object(value, at: path) else { return nil }
         defer { object.finish() }
         switch key {
-        case "tap":
-            object.know("x", "y", "occurrence")
-            object.know(ElementTarget.keys[0], ElementTarget.keys[1], ElementTarget.keys[2])
-            let hasPoint = object.object["x"] != nil || object.object["y"] != nil
-            let hasElement = (ElementTarget.keys + ["occurrence"]).contains { object.object[$0] != nil }
-            if hasPoint, hasElement {
-                reader.problem("taps a point (\"x\" and \"y\") or an element, not both", at: path)
-                return nil
-            }
-            if hasPoint { return readPosition(&object, reader).map(Step.Action.tapPoint) }
-            return readElement(&object, reader).map(Step.Action.tapElement)
         case "activate":
             return readElement(&object, reader).map(Step.Action.activate)
         case "drag":
@@ -545,8 +541,8 @@ extension SceneFile {
         return .share(percent / 100)
     }
 
-    /// A drag's end: a point, `x` and `y`, or an element, not both, with an element's `offset` and
-    /// `offsetPercent`.
+    /// Where a tap touches or a drag's end is: a point, `x` and `y`, or an element, not both, with an
+    /// element's `offset` and `offsetPercent`.
     static func readSpot(_ value: JSONValue, _ path: JSONPath, _ reader: JSONReader) -> Spot? {
         guard var object = reader.object(value, at: path) else { return nil }
         defer { object.finish() }
