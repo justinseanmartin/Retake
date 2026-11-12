@@ -88,6 +88,27 @@ example's showcase is recorded and cut on both an iPhone and an iPad, `Example/r
 --readme` publishes it with `Scripts/publish-showcase.sh`, which copies the side by side into
 `showcase/` on `gh-pages` with its poster and page, and pushes, replacing the one before.
 
+## Releasing
+
+Releases are built and published from a maintainer's Mac, not by CI: signing and notarizing take a
+Developer ID and a notary profile that only the maintainer's keychain has. Once the release's pull
+request, which sets `RetakeVersion.current` and dates its RELEASE.md entry, is merged:
+
+```sh
+git switch main && git pull
+git tag -a v<version> -m "Retake <version>" && git push origin v<version>
+Scripts/release.sh <output-dir>
+gh release create v<version> --title "Retake <version>" \
+    --notes-file <(Scripts/release-notes.sh <version>) <output-dir>/retake-*.tar.gz*
+Scripts/publish-schemas.sh
+```
+
+`Scripts/release.sh` builds from the checkout, so run it from a clean one at the tag. It reads the
+Developer ID and notary profile from `Scripts/release.local.env` (see its `.example`), and refuses
+to build until RELEASE.md dates the version and the docs name no other release.
+`Scripts/release-notes.sh` prints the version's RELEASE.md section, which is the GitHub release's
+notes, so what a release breaks is said there too.
+
 ## Working on Retake and The Button Heist together
 
 For changes that span both, point Retake at a local clone of The Button Heist:
