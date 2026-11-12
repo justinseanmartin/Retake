@@ -298,12 +298,11 @@ and turns light as the app's first frame comes up.
 
 A scene is a set and the steps played on it. The way to write one is **`retake compose`**, on the
 device: it launches the app on the set, shows what's on screen, and takes each step as an action
-with named options, such as `tap --label "New Note"`, running it at once, waiting out its hold as
-`record` does, and adding it to the scene when it runs, so a scene is only ever made of steps that
-worked. `undo` takes the last one back. An agent can drive it just as well: `retake compose
-<scene> --json` reads actions a line each from standard input and answers each with a line of JSON,
-saying what ran, what failed and why, and what's on screen now. See
-[`retake compose`](Documentation/cli.md#retake-compose).
+with named options, such as `tap --label "New Note"`, running it at once and adding it to the scene
+when it runs, so a scene is only ever made of steps that worked. `undo` takes the last one back. An
+agent can drive it just as well: `retake compose <scene> --json` reads actions a line each from
+standard input and answers each with a line of JSON, saying what ran, what failed and why, and
+what's on screen now. See [`retake compose`](Documentation/cli.md#retake-compose).
 
 Scenes are JSON files, so they can be written or changed by hand too. A scene's `set` is the
 project's `defaultSet` unless it names one:
@@ -330,17 +329,13 @@ project's `defaultSet` unless it names one:
 
 Each step does one thing, led by what it does:
 
-- **`tap`** touches a point, `x` and `y`, or an element, at its activation point, moved by `offset`
-  and `offsetPercent` as a drag's end is. Either is drawn in the video.
+- **`tap`** touches a point, `x` and `y`, or an element, at its activation point. Either is drawn in
+  the video.
 - **`drag`** is a straight one-finger drag `from` one point or element `to` another, over
   `duration` seconds, 0.5 unless given. An element is touched at its activation point, as the
   screen has it just before the drag, so dragging a list's row by its handle to another row's handle
   needs no coordinates: `{ "from": { "label": "Reorder Book club" }, "to": { "label": "Reorder
-  Weekend plans" } }`. An end the element places rather than sits under, such as a game piece the
-  app draws above the finger, moves its activation point by `offset`, in points, and
-  `offsetPercent`, in percent of the element's width and height, both `x` and `y` and either sign:
-  `{ "label": "Row 2, column 3", "offsetPercent": { "x": 50, "y": 150 } }` lifts half a cell right
-  and a cell and a half below that cell's middle.
+  Weekend plans" } }`.
 - **`type`** types `text` key by key on the on-screen keyboard, where `\n` presses return, into the
   element `into` names, or the field already being typed in. It fails if typing changed nothing on
   screen, not a field's value nor whether it's being edited, as when the field lost its focus first;
